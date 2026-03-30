@@ -1,0 +1,36 @@
+{
+  // ─── Formato general ───────────────────────────────────────────
+  "semi": false,               // sin punto y coma al final — estándar moderno en JS/TS
+  "singleQuote": true,         // comillas simples: import { x } from 'y'
+  "quoteProps": "as-needed",   // comillas en props de objetos solo cuando son necesarias
+  "trailingComma": "es5",      // coma al final en objetos y arrays multilínea (válido en ES5+)
+  "bracketSpacing": true,      // { foo: bar } con espacios dentro de las llaves
+  "bracketSameLine": false,    // el > de JSX va en línea propia, más legible
+  "arrowParens": "always",     // (x) => x en vez de x => x — consistencia
+
+  // ─── Líneas ────────────────────────────────────────────────────
+  "printWidth": 100,           // máximo 100 caracteres por línea — balance entre legibilidad y pantalla
+  "tabWidth": 2,               // 2 espacios de indentación — estándar en JS/TS
+  "useTabs": false,            // espacios, no tabs — evita diferencias entre editores
+
+  // ─── JSX / React ───────────────────────────────────────────────
+  "jsxSingleQuote": false,     // en JSX mantener comillas dobles: className="foo"
+
+  // ─── Archivos específicos ──────────────────────────────────────
+  "overrides": [
+    {
+      "files": ["*.json", "*.jsonc"],
+      "options": {
+        "printWidth": 80,      // JSON más compacto
+        "tabWidth": 2
+      }
+    },
+    {
+      "files": ["*.md", "*.mdx"],
+      "options": {
+        "printWidth": 80,
+        "proseWrap": "always"  // en markdown, ajusta líneas largas automáticamente
+      }
+    }
+  ]
+}

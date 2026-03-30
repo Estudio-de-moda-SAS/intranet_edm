@@ -1,0 +1,58 @@
+{
+  "compilerOptions": {
+    // ─── Compilación ───────────────────────────────────────────────
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+
+    // ─── Interoperabilidad ─────────────────────────────────────────
+    "allowJs": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "incremental": true,
+
+    // ─── Strictness — nivel profesional ────────────────────────────
+    "strict": true,                        // base: activa todas las reglas estrictas
+    "noUncheckedIndexedAccess": true,      // array[0] puede ser undefined, oblíganos a verificar
+    "noImplicitReturns": true,             // toda función debe retornar explícitamente
+    "noFallthroughCasesInSwitch": true,    // evita bugs de switch sin break
+    "noUnusedLocals": true,                // variables declaradas y no usadas = error
+    "noUnusedParameters": true,            // parámetros no usados = error
+    "exactOptionalPropertyTypes": true,    // distingue entre propiedad ausente y propiedad = undefined
+
+    // ─── Plugins Next.js ───────────────────────────────────────────
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+
+    // ─── Alias de imports ──────────────────────────────────────────
+    // Uso: import { Button } from '@/components/Button'
+    // En vez de: import { Button } from '../../../components/Button'
+    "paths": {
+      "@/*": ["./*"],
+      "@components/*": ["./components/*"],
+      "@services/*":   ["./services/*"],
+      "@hooks/*":      ["./hooks/*"],
+      "@types/*":      ["./types/*"],
+      "@utils/*":      ["./utils/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.mts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
