@@ -1,10 +1,39 @@
 import { getSharedData, getToken } from "@/lib/graph/shared.service";
-import { callGraph } from "@/lib/graph/graphClient";
-import type { HomeData } from "@/types/home";
+import { callGraph }               from "@/lib/graph/graphClient";
+import type { GraphPage }          from "@/lib/graph/graphClient";
+import type { HomeData }           from "@/types/home";
 
 const IS_BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
-// ── Datos mock para desarrollo (temporal, reemplazar con APIs) ──
+// ── Tipos de Graph ────────────────────────────────────────────────────────────
+
+type GraphEvent = {
+  id:       string;
+  subject:  string;
+  start:    { dateTime: string };
+  location: { displayName: string };
+};
+
+type GraphTodoList = {
+  id:          string;
+  displayName: string;
+};
+
+type GraphTask = {
+  id:          string;
+  title:       string;
+  dueDateTime: { dateTime: string } | null;
+};
+
+type GraphUser = {
+  id:          string;
+  displayName: string;
+  department:  string | null;
+  birthday:    string | null;
+};
+
+// ── Datos mock para desarrollo (temporal, reemplazar con APIs) ────────────────
+
 const MOCK_DATA = {
   announcements: [
     { id: "a1", title: "Mantenimiento programado de POS",       summary: "Sábado 9:00–11:00 habrá indisponibilidad parcial.",  publishedAt: new Date().toISOString(), imageUrl: "https://picsum.photos/800/600?1" },
@@ -29,6 +58,28 @@ const MOCK_DATA = {
   ],
 };
 
+// Función en vez de constante para que TypeScript infiera T[] mutable en cada uso
+function emptyPage<T>(): GraphPage<T> { return { value: [] }; }
+
+// ── Helper: obtener tareas del primer To-Do list ──────────────────────────────
+
+async function getTasks(token: string): Promise<GraphPage<GraphTask>> {
+  const lists = await callGraph<GraphPage<GraphTodoList>>(
+    "/me/todo/lists?$top=1",
+    token,
+  ).catch(() => emptyPage<GraphTodoList>());
+
+  const listId = lists.value[0]?.id;
+  if (!listId) return emptyPage<GraphTask>();
+
+  return callGraph<GraphPage<GraphTask>>(
+    `/me/todo/lists/${listId}/tasks?$filter=status ne 'completed'&$top=5&$select=title,dueDateTime`,
+    token,
+  ).catch(() => emptyPage<GraphTask>());
+}
+
+// ── Service principal ─────────────────────────────────────────────────────────
+
 export async function getHomeData(): Promise<HomeData> {
   const shared = await getSharedData();
 
@@ -44,48 +95,41 @@ export async function getHomeData(): Promise<HomeData> {
   // ── Producción: datos reales de Graph ──
   const token = await getToken();
 
-const [eventsRes, tasksRes, membersRes] = await Promise.all([
-  callGraph(
-    `/me/events?$select=subject,start,location&$orderby=start/dateTime&$top=5&$filter=start/dateTime ge '${new Date().toISOString()}'`,
-    token
-  ).catch(() => ({ value: [] })) as Promise<{ value: any[] }>,
+  const [eventsRes, tasksRes, membersRes] = await Promise.all([
+    callGraph<GraphPage<GraphEvent>>(
+      `/me/events?$select=subject,start,location&$orderby=start/dateTime&$top=5&$filter=start/dateTime ge '${new Date().toISOString()}'`,
+      token,
+    ).catch(() => emptyPage<GraphEvent>()),
 
-  callGraph("/me/todo/lists?$top=1", token)
-    .then((lists: any) => {
-      const listId = lists?.value?.[0]?.id;
-      if (!listId) return { value: [] };
-      return callGraph(
-        `/me/todo/lists/${listId}/tasks?$filter=status ne 'completed'&$top=5&$select=title,dueDateTime`,
-        token
-      );
-    })
-    .catch(() => ({ value: [] })) as Promise<{ value: any[] }>,
+    getTasks(token),
 
-  callGraph("/users?$select=displayName,department,birthday&$top=10", token)
-    .catch(() => ({ value: [] })) as Promise<{ value: any[] }>,
-]);
+    callGraph<GraphPage<GraphUser>>(
+      "/users?$select=id,displayName,department,birthday&$top=10",
+      token,
+    ).catch(() => emptyPage<GraphUser>()),
+  ]);
 
   return {
     user:       shared.user,
     quickLinks: [],
     announcements: MOCK_DATA.announcements, // ⏳ Reemplazar con SharePoint API cuando haya permisos
-    events: (eventsRes.value ?? []).map((e: any) => ({
+    events: eventsRes.value.map((e) => ({
       id:       e.id,
       title:    e.subject,
       date:     e.start?.dateTime ?? new Date().toISOString(),
       location: e.location?.displayName ?? "Sin ubicación",
     })),
-    tasks: (tasksRes.value ?? []).map((t: any) => ({
+    tasks: tasksRes.value.map((t) => ({
       id:    t.id,
       title: t.title,
       due:   t.dueDateTime?.dateTime?.split("T")[0] ?? "",
     })),
-    birthdays: (membersRes.value ?? [])
-      .filter((u: any) => u.birthday)
-      .map((u: any) => ({
+    birthdays: membersRes.value
+      .filter((u) => u.birthday !== null)
+      .map((u) => ({
         id:   u.id,
         name: u.displayName,
-        date: u.birthday?.split("T")[0] ?? "",
+        date: (u.birthday ?? "").split("T")[0] ?? "",
         area: u.department ?? "",
       })),
   };
