@@ -21,12 +21,6 @@ export const DEPARTMENTS: Department[] = [
     show: true,
   },
   {
-    id: "logistica",
-    label: "Logística",
-    href: "/departments/logistics",
-    show: true,
-  },
-  {
     id: "producto",
     label: "Producto",
     href: "/departments/product",

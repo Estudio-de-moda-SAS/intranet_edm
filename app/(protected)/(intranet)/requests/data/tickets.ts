@@ -4,8 +4,8 @@
 // Cuando tengas API real, reemplaza MOCK_REQUESTS y buildDetail por tus fetches.
 
 // ─── Si tienes DEPARTMENTS en @/lib/config, reemplaza este import ────────────
-import { DEPARTMENTS } from "@/lib/config";
-export { DEPARTMENTS } from "@/lib/config";
+import { DEPARTMENTS } from "@/config/config";
+export { DEPARTMENTS } from "@/config/config";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -10,7 +10,6 @@ export type AccessLevel =
   | 'admin'          // Superadministradores de la plataforma — todo
   | 'finance'        // Equipo de Finanzas
   | 'legal'          // Equipo Jurídico
-  | 'logistics'      // Equipo de Logística
   | 'retail'         // Equipo Retail / Comercial
   | 'hr'             // Recursos Humanos
   | 'it'             // Equipo de TI — infraestructura y sistemas
@@ -30,7 +29,6 @@ const LEVEL_HIERARCHY: AccessLevel[] = [
   'hr',
   'retail',
   'product',
-  'logistics',
   'it',
   'legal',
   'finance',
@@ -51,7 +49,6 @@ const DEPARTMENT_LEVEL_MAP: Record<string, AccessLevel> = {
   'Finanzas':                  'finance',
   'Jurídica':                  'legal',
   'Legal':                     'legal',
-  'Logística':                 'logistics',
   'Retail':                    'retail',
   'Comercial':                 'retail',
   'E-Commerce':                'retail',
@@ -140,15 +137,6 @@ export type Permission =
   | 'legal:view_litigation'
   | 'legal:view_documents'
   | 'legal:view_team'
-  // Logística
-  | 'logistics:view_statbar'
-  | 'logistics:view_quicklinks'
-  | 'logistics:view_operations'
-  | 'logistics:view_shipments'
-  | 'logistics:view_kpi_performance'
-  | 'logistics:view_warehouses'
-  | 'logistics:view_analytics'
-  | 'logistics:view_team'
   // Retail
   | 'retail:view_kpis'
   | 'retail:view_quicklinks'
@@ -251,16 +239,6 @@ const PERMISSION_MAP: Record<Permission, PermissionRule> = {
   'legal:view_litigation':    { allowedLevels: ['legal', 'admin']             },
   'legal:view_documents':     { allowedLevels: ['legal', 'admin']             },
   'legal:view_team':          { minLevel: 'employee'                          },
-
-  // ── Logística ─────────────────────────────────────────────────
-  'logistics:view_statbar':         { minLevel: 'employee'                              },
-  'logistics:view_quicklinks':      { minLevel: 'employee'                              },
-  'logistics:view_team':            { minLevel: 'employee'                              },
-  'logistics:view_operations':      { allowedLevels: ['logistics', 'manager', 'admin'] },
-  'logistics:view_shipments':       { allowedLevels: ['logistics', 'manager', 'admin'] },
-  'logistics:view_kpi_performance': { allowedLevels: ['logistics', 'manager', 'admin'] },
-  'logistics:view_warehouses':      { allowedLevels: ['logistics', 'admin']             },
-  'logistics:view_analytics':       { allowedLevels: ['logistics', 'admin']             },
 
   // ── Retail ────────────────────────────────────────────────────
   'retail:view_kpis':         { allowedLevels: ['retail', 'manager', 'admin'] },

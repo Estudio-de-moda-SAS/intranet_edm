@@ -37,20 +37,19 @@ export function HomePageContent({ data }: Props) {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
 
-          {/* Left column — News + Solicitudes + Events */}
-          <div className="flex flex-col gap-6 lg:col-span-8">
-            <AnimatedCard delay={0}>
-              <NewsSection announcements={data.announcements} />
-            </AnimatedCard>
+{/* Left column — News + Solicitudes */}
+<div className="flex flex-col gap-6 lg:col-span-9 lg:w-[96%] order-1 lg:order-none">
+  <AnimatedCard delay={0}>
+    <NewsSection announcements={data.announcements} />
+  </AnimatedCard>
 
-            <AnimatedCard delay={0.08}>
-              <RequestsPanel />
-            </AnimatedCard>
-          </div>
+  <AnimatedCard delay={0.08}>
+    <RequestsPanel />
+  </AnimatedCard>
+</div>
 
-          {/* ── Aside ── */}
-          <aside className="lg:col-span-4 flex flex-col gap-5">
-
+{/* Aside */}
+<aside className="lg:col-span-3 flex flex-col gap-5 lg:w-[112%] lg:-ml-[12%] order-2 lg:order-none">
             {/* 1. Favoritos */}
             <AnimatedCard delay={0.08}>
               <FavoritesCard />

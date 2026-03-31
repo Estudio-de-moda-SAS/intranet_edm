@@ -15,7 +15,6 @@ import { adminQuickLinks }    from "@/app/(protected)/(intranet)/departments/adm
 import { documentQuickLinks } from "@/app/(protected)/(intranet)/departments/documents/config/documentQuickLinks";
 import { financeQuickLinks }  from "@/app/(protected)/(intranet)/departments/finance/config/financeQuickLinks";
 import { legalQuickLinks }    from "@/app/(protected)/(intranet)/departments/legal/config/legalQuickLinks";
-import { logisticsQuickLinks } from "@/app/(protected)/(intranet)/departments/logistics/config/logisticsQuickLinks";
 import { retailQuickLinks }   from "@/app/(protected)/(intranet)/departments/retail/config/retailQuickLinks";
 
 import { can, type AccessLevel, type Permission } from "@/lib/roles";
@@ -155,7 +154,6 @@ const RAW: CatalogApp[] = [
   ...toCatalog(documentQuickLinks, "documents",              "quicklink"),
   ...toCatalog(financeQuickLinks,  "finance",                "quicklink"),
   ...toCatalog(legalQuickLinks,    "legal",                  "quicklink"),
-  ...toCatalog(logisticsQuickLinks,"logistics",              "quicklink"),
   ...toCatalog(retailQuickLinks,   "retail",                 "quicklink"),
 ];
 

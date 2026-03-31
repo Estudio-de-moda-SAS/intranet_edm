@@ -113,13 +113,6 @@ export function AnimatedHeroBanner({ user }: Props) {
             </div>
             <UserGreetingWrapper fallbackUser={user} />
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-[12px] font-medium text-emerald-600">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-                </span>
-                Todos los sistemas operativos
-              </span>
               <span className="rounded-full bg-violet-50 border border-violet-200 px-3 py-1 text-[12px] font-medium text-violet-500">
                 6 eventos esta semana
               </span>

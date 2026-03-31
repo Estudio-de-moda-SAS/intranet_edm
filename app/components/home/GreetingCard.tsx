@@ -19,12 +19,12 @@ export function GreetingCard({ user }: { user: User }) {
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {user.role && (
-          <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-0.5 text-xs font-medium text-violet-700">
+          <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-[12px] font-medium text-emerald-600">
             {user.role}
           </span>
         )}
-        {user.location && (
-          <span className="rounded-full border border-slate-200 bg-white px-3 py-0.5 text-xs font-medium text-slate-500">
+        {user.location && ( 
+          <span className="flex items-center gap-1.5 rounded-full bg-white border border-slate-200 px-3 py-1 text-[12px] font-medium text-slate-500">
             📍 {user.location}
           </span>
         )}

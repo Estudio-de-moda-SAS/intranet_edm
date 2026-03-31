@@ -42,37 +42,24 @@ export function NewsSection({ announcements }: Props) {
         </Link>
       </div>
 
-      {/* Grid principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 h-[580px]">
+{/* Grid principal */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:h-[580px]">
 
-        {/* Columna izquierda: Carousel */}
-        <div className="h-full">
-          <NewsCarousel announcements={announcements} />
-        </div>
+  {/* Columna izquierda: Carousel */}
+  <div className="h-[340px] lg:h-full">
+    <NewsCarousel announcements={announcements} />
+  </div>
 
-        {/*
-          Columna derecha — grid 2×2:
-            Fila 1: KnowUsCard (mitad) | PoliciesCard (mitad)
-            Fila 2: QuickLinksSection  — col-span-2
-                    ← antes era PoliciesCard aquí, ahora Accesos Rápidos
-                       (movidos desde el aside del home)
-        */}
-        <div className="grid grid-cols-2 grid-rows-2 gap-2 h-full">
+  {/* Columna derecha */}
+  <div className="grid grid-cols-2 grid-rows-2 gap-2 lg:h-full">
+    <KnowUsCard />
+    <PoliciesCardAside />
+    <div className="col-span-2 lg:h-full">
+      <QuickLinksSection quickLinks={homeQuickLinks} />
+    </div>
+  </div>
 
-          {/* Fila 1 — izquierda */}
-          <KnowUsCard />
-
-          {/* Fila 1 — derecha: Políticas compacta */}
-          <PoliciesCardAside />
-
-          {/* Fila 2: Accesos Rápidos — ancho completo */}
-          <div className="col-span-2 h-full">
-            <QuickLinksSection quickLinks={homeQuickLinks} />
-          </div>
-
-        </div>
-
-      </div>
+</div>
     </section>
   );
 }

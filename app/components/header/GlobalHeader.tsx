@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Menu } from 'lucide-react';
 
-import { DEPARTMENTS, BRAND, Department } from '@/lib/config';
+import { DEPARTMENTS, BRAND, Department } from '@/config/config';
 import { useDevSession } from '@/lib/useDevSession';
 import UserMenu from './UserMenu';
 import CorporateBot from './chatbot/ChatBot';

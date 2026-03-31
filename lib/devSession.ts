@@ -55,7 +55,7 @@ const DEV_USER_RAW = {
   image:       null,
   role:        'Aprendiz TI 2',
   department:  'Tecnologia',
-  location:    'Bogotá, Colombia',
+  location:    'Medellín, Colombia',
   employeeId:  'EMP-00142',
   joined:      'marzo 2024',
   phone:       '+57 310 555 0192',
