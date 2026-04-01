@@ -4,7 +4,8 @@ import { SessionProvider } from "next-auth/react";
 import { Session } from "next-auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { MotionConfig } from "framer-motion";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -12,32 +13,73 @@ interface ProvidersProps {
 }
 
 const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
+const STORAGE_KEY = "edm_intranet_settings";
+
+function getAnimationsEnabled(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return true;
+    return JSON.parse(raw)?.appearance?.animations ?? true;
+  } catch {
+    return true;
+  }
+}
 
 export default function Providers({ children, session }: ProvidersProps) {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 1000 * 60,
-        retry: 2,
-        refetchOnWindowFocus: false,
-      },
-    },
-  }));
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 1000 * 60,
+            retry: 2,
+            refetchOnWindowFocus: false,
+          },
+        },
+      })
+  );
+
+  // Lee el setting de animaciones — se sincroniza en tiempo real
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+
+  useEffect(() => {
+    setAnimationsEnabled(getAnimationsEnabled());
+
+    // Escucha cambios desde la página de configuración (mismo tab)
+    const handleCustom = (e: Event) => {
+      const enabled = (e as CustomEvent<{ enabled: boolean }>).detail.enabled;
+      setAnimationsEnabled(enabled);
+    };
+
+    // Escucha cambios desde otras pestañas (via localStorage)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) setAnimationsEnabled(getAnimationsEnabled());
+    };
+
+    window.addEventListener("edm:animations", handleCustom);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("edm:animations", handleCustom);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   const content = (
     <QueryClientProvider client={queryClient}>
-      {children}
+      {/* MotionConfig envuelve toda la app — reducedMotion="always" desactiva Framer Motion globalmente */}
+      <MotionConfig reducedMotion={animationsEnabled ? "never" : "always"}>
+        {children}
+      </MotionConfig>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 
-  // ✅ Bypass activo → no montar SessionProvider (evita el error de Response object)
   if (isBypass) return content;
 
-  // ✅ Producción → SessionProvider normal con Microsoft
-return (
-  <SessionProvider session={session ?? null}>
-    {content}
-  </SessionProvider>
-);
+  return (
+    <SessionProvider session={session ?? null}>
+      {content}
+    </SessionProvider>
+  );
 }

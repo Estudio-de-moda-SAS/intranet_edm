@@ -1,21 +1,17 @@
-// components/configuracion/tabs/IntegrationsTab.tsx
+// app/configuracion/components/tabs/IntegrationsTab.tsx
 'use client';
 
-import { useState }       from 'react';
-import { ChevronRight }   from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { SectionCard, Toggle } from '@/app/components/ui/IntranetUI';
-import { INTEGRATIONS }   from '../config/settingsValues';
+import { INTEGRATIONS } from '@/app/(protected)/settings/config/settingsValues';
 
-export function IntegrationsTab() {
-  const [states, setStates] = useState<Record<string, boolean>>(
-    Object.fromEntries(INTEGRATIONS.map((i) => [i.id, i.connected]))
-  );
+interface Props {
+  settings: Record<string, boolean>;
+  onChange: (id: string, connected: boolean) => void;
+}
 
-  const toggle = (id: string, v: boolean) =>
-    setStates((p) => ({ ...p, [id]: v }));
-
-  // ✅ Fix: helper con ?? false para garantizar boolean, nunca boolean | undefined
-  const isConnected = (id: string): boolean => states[id] ?? false;
+export function IntegrationsTab({ settings, onChange }: Props) {
+  const isConnected = (id: string): boolean => settings[id] ?? false;
 
   return (
     <div className="space-y-4">
@@ -25,24 +21,30 @@ export function IntegrationsTab() {
             <div className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl ${intg.color}`}>
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl ${intg.color}`}
+                    aria-hidden="true"
+                  >
                     {intg.icon}
                   </div>
                   <div>
                     <p className="text-[13px] font-semibold text-slate-800">{intg.name}</p>
-                    <span className={`inline-block rounded-full px-2 py-px text-[10px] font-semibold ${
-                      isConnected(intg.id)
-                        ? 'bg-emerald-50 text-emerald-600'
-                        : 'bg-slate-100 text-slate-400'
-                    }`}>
+                    <span
+                      className={`inline-block rounded-full px-2 py-px text-[10px] font-semibold transition-colors ${
+                        isConnected(intg.id)
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : 'bg-slate-100 text-slate-400'
+                      }`}
+                    >
                       {isConnected(intg.id) ? 'Conectado' : 'Desconectado'}
                     </span>
                   </div>
                 </div>
+
                 <Toggle
                   size="sm"
                   value={isConnected(intg.id)}
-                  onChange={(v) => toggle(intg.id, v)}
+                  onChange={(v) => onChange(intg.id, v)}
                 />
               </div>
 

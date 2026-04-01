@@ -1,42 +1,70 @@
-// components/configuracion/ConfigShell.tsx
-// Único Client Component de la página — maneja tab activo y estado de guardado
+// app/configuracion/components/SettingsShell.tsx
 'use client';
 
-import { useState }         from 'react';
-import { SaveBar }          from '@/app/components/ui/IntranetUI';
-import { ConfigSidebar }    from './ConfigSidebar';
-import { NotificationsTab } from './NotificationsTab';
-import { AppearanceTab }    from './AppearanceTab';
-import { AccessibilityTab } from './AccessibilityTab';
-import { IntegrationsTab }  from './IntegrationsTab';
-import type { ConfigTab }   from '@/types/settings';
+import { useState, useEffect } from 'react';
+import { useSettings }         from '../hooks/useSettings';
+import { useApplySettings }    from '../hooks/useApplySettings';
+import { ConfigSidebar }       from './ConfigSidebar';
+import { NotificationsTab }    from './tabs/NotificationsTab';
+import { AppearanceTab }       from './tabs/AppearanceTab';
+import { AccessibilityTab }    from './tabs/AccessibilityTab';
+import { IntegrationsTab }     from './tabs/IntegrationsTab';
+import { SaveBar }             from './SaveBar';
+import type { ConfigTab, NotificationSettings, AppearanceSettings, AccessibilitySettings } from '@/types/settings';
 
 const TAB_META: Record<ConfigTab, { label: string; description: string }> = {
-  notifications: { label: 'Notificaciones', description: 'Canales y eventos que te notifican'          },
-  appearance:    { label: 'Apariencia',     description: 'Tema, colores y densidad de la interfaz'     },
-  accessibility: { label: 'Accesibilidad',  description: 'Fuente, contraste y opciones de movilidad'   },
-  integrations:  { label: 'Integraciones',  description: 'Apps conectadas a la intranet corporativa'   },
+  notifications: { label: 'Notificaciones', description: 'Canales y eventos que te notifican'        },
+  appearance:    { label: 'Apariencia',     description: 'Tema, colores y densidad de la interfaz'   },
+  accessibility: { label: 'Accesibilidad',  description: 'Fuente, contraste y opciones de movilidad' },
+  integrations:  { label: 'Integraciones',  description: 'Apps conectadas a la intranet corporativa' },
 };
+
+/** Observa el header sticky y publica su altura en --header-h */
+function useHeaderHeight() {
+  useEffect(() => {
+    const header = document.querySelector('header');
+    if (!header) return;
+
+    const update = () => {
+      document.documentElement.style.setProperty(
+        '--header-h',
+        `${header.getBoundingClientRect().height}px`,
+      );
+    };
+
+    update(); // valor inicial
+    const ro = new ResizeObserver(update);
+    ro.observe(header);
+    return () => ro.disconnect();
+  }, []);
+}
 
 export function ConfigShell() {
   const [activeTab, setActiveTab] = useState<ConfigTab>('notifications');
-  const [dirty,     setDirty]     = useState(false);
-  const [saved,     setSaved]     = useState(false);
 
-  const markDirty = () => { setDirty(true); setSaved(false); };
+  const {
+    settings, dirty, saveStatus, save, discard,
+    updateNotifications, updateAppearance, updateAccessibility, updateIntegration,
+  } = useSettings();
 
-  const handleSave = () => {
-    // TODO: persistir en API
-    setDirty(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  useApplySettings(settings.appearance, settings.accessibility);
+  useHeaderHeight();
 
   const { label, description } = TAB_META[activeTab];
 
   return (
     <div className="flex flex-col lg:flex-row gap-8">
-      <ConfigSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Sidebar — top dinámico según el header real */}
+      <aside className="w-full lg:w-56 shrink-0">
+        <nav
+          className="space-y-1 lg:sticky"
+          style={{ top: 'calc(var(--header-h, 112px) + 1.5rem)' }}
+          aria-label="Secciones de configuración"
+        >
+          <ConfigSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        </nav>
+      </aside>
 
       <main className="flex-1 min-w-0">
         <div className="mb-5">
@@ -44,13 +72,39 @@ export function ConfigShell() {
           <p className="mt-0.5 text-[12px] text-slate-400">{description}</p>
         </div>
 
-        {activeTab === 'notifications' && <NotificationsTab onChange={markDirty} />}
-        {activeTab === 'appearance'    && <AppearanceTab    onChange={markDirty} />}
-        {activeTab === 'accessibility' && <AccessibilityTab onChange={markDirty} />}
-        {activeTab === 'integrations'  && <IntegrationsTab />}
+        {activeTab === 'notifications' && (
+          <NotificationsTab
+            settings={settings.notifications}
+            onChange={(key: keyof NotificationSettings, value: boolean) =>
+              updateNotifications(key, value)
+            }
+          />
+        )}
+        {activeTab === 'appearance' && (
+          <AppearanceTab
+            settings={settings.appearance}
+            onChange={(key: keyof AppearanceSettings, value: AppearanceSettings[keyof AppearanceSettings]) =>
+              updateAppearance(key, value)
+            }
+          />
+        )}
+        {activeTab === 'accessibility' && (
+          <AccessibilityTab
+            settings={settings.accessibility}
+            onChange={(key: keyof AccessibilitySettings, value: AccessibilitySettings[keyof AccessibilitySettings]) =>
+              updateAccessibility(key, value)
+            }
+          />
+        )}
+        {activeTab === 'integrations' && (
+          <IntegrationsTab
+            settings={settings.integrations}
+            onChange={updateIntegration}
+          />
+        )}
       </main>
 
-      <SaveBar dirty={dirty} onSave={handleSave} saved={saved} />
+      <SaveBar dirty={dirty} saveStatus={saveStatus} onSave={save} onDiscard={discard} />
     </div>
   );
 }

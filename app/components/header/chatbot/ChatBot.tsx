@@ -38,7 +38,7 @@ export default function CorporateBot({ variant = 'default', iconOnly = false }: 
           hover:shadow-xl hover:shadow-violet-300/50
           hover:scale-[1.015] hover:brightness-110
         ">
-          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl transition-all duration-300 group-hover:bg-white/20" />
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl" />
           <div className="pointer-events-none absolute -bottom-4 left-1/3 h-16 w-16 rounded-full bg-fuchsia-400/20 blur-lg" />
 
           <div className="relative flex items-center gap-3">
@@ -50,19 +50,34 @@ export default function CorporateBot({ variant = 'default', iconOnly = false }: 
               <p className="text-[12px] text-white/75 leading-none mb-2">
                 Hola, soy <span className="font-semibold text-white">Stilo</span> · ¿En qué te ayudo?
               </p>
-              <div className="flex items-center rounded-lg bg-white/95 px-3 py-2 gap-2 shadow-inner transition-all focus-within:bg-white focus-within:ring-2 focus-within:ring-white/40">
+
+              {/* Input — usa variables CSS para que dark mode funcione */}
+              <div className="
+                flex items-center rounded-lg px-3 py-2 gap-2 shadow-inner
+                transition-all focus-within:ring-2 focus-within:ring-white/40
+                bg-white/95 dark:bg-[var(--bg-subtle)]
+              ">
                 <input
-                  id="chatbot-input" 
+                  id="chatbot-input"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Haz tu pregunta aquí..."
-                  className="flex-1 bg-transparent text-sm text-slate-700 placeholder:text-slate-400 outline-none"
+                  className="
+                    flex-1 bg-transparent outline-none text-sm
+                    text-slate-700 placeholder:text-slate-400
+                    dark:text-[var(--text-body)] dark:placeholder:text-[var(--text-faint)]
+                  "
                 />
                 <button
                   type="button"
                   onClick={handleSend}
-                  className="flex items-center justify-center rounded-md p-1.5 text-violet-400 transition-colors hover:text-violet-600 hover:bg-violet-50"
+                  className="
+                    flex items-center justify-center rounded-md p-1.5
+                    text-violet-400 transition-colors
+                    hover:text-violet-600 hover:bg-violet-50
+                    dark:hover:bg-white/10 dark:hover:text-white
+                  "
                 >
                   <Send className="h-3.5 w-3.5" />
                 </button>

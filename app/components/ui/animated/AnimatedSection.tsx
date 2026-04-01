@@ -1,35 +1,35 @@
 "use client";
 
-// 📁 UBICACIÓN CANÓNICA: app/components/ui/animated/AnimatedSection.tsx
+// 📁 app/components/ui/animated/AnimatedSection.tsx
 //
 // Contenedor con staggerChildren para grids y columnas.
-// Reemplaza el patrón motion.div variants={sectionReveal} que se repite
-// en CommercialPageClient, y que también aparecerá en RRHH, Producción, etc.
+// Fusiona AnimatedSection + el patrón container/card de AnimatedKPIStrip y demás.
 //
 // Uso:
 //   <AnimatedSection className="grid grid-cols-12 gap-6">
 //     <AnimatedCard><MiCard /></AnimatedCard>
-//     <AnimatedCard delay={0.1}><OtraCard /></AnimatedCard>
 //   </AnimatedSection>
 
 import { motion, type Variants } from "framer-motion";
+import { useAnimationsEnabled } from "@/app/hooks/useAnimationsEnabled";
 
 type Props = {
   children:   React.ReactNode;
   className?: string;
-  delay?:     number;      // delayChildren
-  stagger?:   number;      // staggerChildren (default 0.1)
+  delay?:     number;
+  stagger?:   number;
 };
 
-const container = (delay: number, stagger: number): Variants => ({
-  hidden: {},
-  show:   { transition: { staggerChildren: stagger, delayChildren: delay } },
-});
-
 export function AnimatedSection({ children, className, delay = 0.2, stagger = 0.1 }: Props) {
+  const animated = useAnimationsEnabled();
+
+  const container: Variants = animated
+    ? { hidden: {}, show: { transition: { staggerChildren: stagger, delayChildren: delay } } }
+    : { hidden: {}, show: {} };
+
   return (
     <motion.div
-      variants={container(delay, stagger)}
+      variants={container}
       initial="hidden"
       animate="show"
       className={className}

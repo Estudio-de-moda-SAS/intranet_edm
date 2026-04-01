@@ -1,14 +1,19 @@
-// components/configuracion/ConfigSidebar.tsx
+// app/configuracion/components/ConfigSidebar.tsx
 'use client';
 
 import { Bell, Palette, Accessibility, Plug } from 'lucide-react';
 import type { ConfigTab } from '@/types/settings';
 
-const TABS: { id: ConfigTab; label: string; Icon: React.ElementType; description: string }[] = [
-  { id: 'notifications', label: 'Notificaciones', Icon: Bell,          description: 'Canales y eventos'   },
-  { id: 'appearance',    label: 'Apariencia',     Icon: Palette,       description: 'Tema y densidad'     },
-  { id: 'accessibility', label: 'Accesibilidad',  Icon: Accessibility, description: 'Fuente y contraste'  },
-  { id: 'integrations',  label: 'Integraciones',  Icon: Plug,          description: 'Apps conectadas'     },
+const TABS: {
+  id:          ConfigTab;
+  label:       string;
+  Icon:        React.ElementType;
+  description: string;
+}[] = [
+  { id: 'notifications', label: 'Notificaciones', Icon: Bell,          description: 'Canales y eventos'  },
+  { id: 'appearance',    label: 'Apariencia',     Icon: Palette,       description: 'Tema y densidad'    },
+  { id: 'accessibility', label: 'Accesibilidad',  Icon: Accessibility, description: 'Fuente y contraste' },
+  { id: 'integrations',  label: 'Integraciones',  Icon: Plug,          description: 'Apps conectadas'    },
 ];
 
 interface Props {
@@ -18,14 +23,22 @@ interface Props {
 
 export function ConfigSidebar({ activeTab, onTabChange }: Props) {
   return (
+    // El aside NO es sticky — el nav interno sí lo es con el offset correcto
     <aside className="w-full lg:w-56 shrink-0">
-      <nav className="space-y-1 lg:sticky lg:top-6">
+      <nav
+        className="space-y-1"
+        // top = altura del header de la intranet (navbar) + padding de la página
+        // Ajusta este valor si tu header mide diferente
+        style={{ top: 'calc(var(--header-h, 64px) + 1.5rem)' }}
+        aria-label="Secciones de configuración"
+      >
         {TABS.map(({ id, label, Icon, description }) => {
           const active = activeTab === id;
           return (
             <button
               key={id}
               onClick={() => onTabChange(id)}
+              aria-current={active ? 'page' : undefined}
               className={`
                 w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-all
                 ${active

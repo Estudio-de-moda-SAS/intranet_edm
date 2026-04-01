@@ -1,12 +1,12 @@
 import { saludo } from "@/lib/format";
 import type { User } from "@/types/home";
 
-// Rendered inside the light hero banner — uses dark text on light bg.
-
 export function GreetingCard({ user }: { user: User }) {
   return (
     <div className="select-none">
-      <h1 className="text-2xl font-semibold text-violet-950 leading-snug tracking-tight sm:text-3xl">
+      <h1 className="text-2xl font-semibold leading-snug tracking-tight sm:text-3xl
+                      text-violet-950
+                      dark:text-white">
         {saludo(user?.name)}{" "}
         <span
           className="inline-block origin-bottom-right"
@@ -19,12 +19,16 @@ export function GreetingCard({ user }: { user: User }) {
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {user.role && (
-          <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-[12px] font-medium text-emerald-600">
+          <span className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium
+                           bg-emerald-50 border-emerald-200 text-emerald-600
+                           dark:bg-emerald-500/15 dark:border-emerald-400/25 dark:text-emerald-300">
             {user.role}
           </span>
         )}
-        {user.location && ( 
-          <span className="flex items-center gap-1.5 rounded-full bg-white border border-slate-200 px-3 py-1 text-[12px] font-medium text-slate-500">
+        {user.location && (
+          <span className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium
+                           bg-white border-slate-200 text-slate-500
+                           dark:bg-white/10 dark:border-white/15 dark:text-slate-300">
             📍 {user.location}
           </span>
         )}

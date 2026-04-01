@@ -15,7 +15,7 @@ export default async function PerfilPage() {
     const profile: ProfileData = {
       id:         u.id,
       name:       u.name,
-      image:      u.image ?? null,   // ✅ nunca undefined
+      image:      u.image ?? null,
       role:       u.role,
       email:      u.email,
       department: u.department,
@@ -31,27 +31,26 @@ export default async function PerfilPage() {
 
   // ── Producción: datos desde Entra ID + Graph API ──────────────
   const session = await auth();
-const profile: ProfileData = {
-  id:         session?.user?.id         ?? '',
-  name:       session?.user?.name       ?? 'Usuario',
-  image:      session?.user?.image      ?? null,
-  role:       session?.user?.role       ?? '',
-  email:      session?.user?.email      ?? '',
-  department: session?.user?.department ?? '',
-  timezone:   '',
-  language:   '',
-};
+  const profile: ProfileData = {
+    id:         session?.user?.id         ?? '',
+    name:       session?.user?.name       ?? 'Usuario',
+    image:      session?.user?.image      ?? null,
+    role:       session?.user?.role       ?? '',
+    email:      session?.user?.email      ?? '',
+    department: session?.user?.department ?? '',
+    timezone:   '',
+    language:   '',
+  };
 
-// ✅ || undefined descarta tanto null como undefined → solo asigna string puro
-const employeeId = session?.user?.employeeId || undefined;
-const joined     = session?.user?.joined     || undefined;
-const phone      = session?.user?.phone      || undefined;
-const location   = session?.user?.location   || undefined;
+  const employeeId = session?.user?.employeeId || undefined;
+  const joined     = session?.user?.joined     || undefined;
+  const phone      = session?.user?.phone      || undefined;
+  const location   = session?.user?.location   || undefined;
 
-if (employeeId) profile.employeeId = employeeId;
-if (joined)     profile.joined     = joined;
-if (phone)      profile.phone      = phone;
-if (location)   profile.location   = location;
+  if (employeeId) profile.employeeId = employeeId;
+  if (joined)     profile.joined     = joined;
+  if (phone)      profile.phone      = phone;
+  if (location)   profile.location   = location;
 
   return <ProfilePageClient initialProfile={profile} />;
 }

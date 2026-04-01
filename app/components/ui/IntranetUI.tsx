@@ -1,11 +1,13 @@
 // components/ui/IntranetUI.tsx
-// Componentes UI atómicos reutilizables en perfil, configuración y resto de la intranet
-
 'use client';
 
 import { Save, X } from 'lucide-react';
 
-// ─── Toggle ───────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   Todos los componentes usan variables semánticas de dark.css
+   (--bg-card, --border, --text-primary, etc.)
+   → el dark mode se aplica automáticamente al togglear html.dark
+   ────────────────────────────────────────────────────────────── */
 
 interface ToggleProps {
   value:    boolean;
@@ -29,7 +31,7 @@ export function Toggle({ value, onChange, size = 'md', disabled = false }: Toggl
         relative inline-flex ${track} shrink-0 cursor-pointer rounded-full border-2 border-transparent
         transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-violet-500/30
         disabled:opacity-40 disabled:cursor-not-allowed
-        ${value ? 'bg-violet-600' : 'bg-slate-200'}
+        ${value ? 'bg-violet-600' : 'bg-slate-200 dark:bg-slate-600'}
       `}
     >
       <span
@@ -42,8 +44,6 @@ export function Toggle({ value, onChange, size = 'md', disabled = false }: Toggl
   );
 }
 
-// ─── SectionCard ─────────────────────────────────────────────────
-
 interface SectionCardProps {
   children:  React.ReactNode;
   className?: string;
@@ -51,13 +51,18 @@ interface SectionCardProps {
 
 export function SectionCard({ children, className = '' }: SectionCardProps) {
   return (
-    <div className={`rounded-2xl border border-slate-200/80 bg-white shadow-sm ${className}`}>
+    <div
+      className={`rounded-2xl border ${className}`}
+      style={{
+        backgroundColor: 'var(--bg-card)',
+        borderColor:     'var(--border)',
+        boxShadow:       'var(--shadow-card)',
+      }}
+    >
       {children}
     </div>
   );
 }
-
-// ─── SectionHeader ────────────────────────────────────────────────
 
 interface SectionHeaderProps {
   icon:      React.ElementType;
@@ -71,23 +76,30 @@ export function SectionHeader({
   icon: Icon,
   title,
   subtitle,
-  iconBg    = 'bg-violet-50',
-  iconColor = 'text-violet-600',
+  iconBg    = 'bg-violet-50 dark:bg-violet-500/10',
+  iconColor = 'text-violet-600 dark:text-violet-400',
 }: SectionHeaderProps) {
   return (
-    <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
+    <div
+      className="flex items-center gap-3 border-b px-6 py-4"
+      style={{ borderColor: 'var(--border-subtle)' }}
+    >
       <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconBg}`}>
         <Icon className={`h-4 w-4 ${iconColor}`} />
       </div>
       <div>
-        <p className="text-[13px] font-bold text-slate-800">{title}</p>
-        {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
+        <p className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
+          {title}
+        </p>
+        {subtitle && (
+          <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            {subtitle}
+          </p>
+        )}
       </div>
     </div>
   );
 }
-
-// ─── RowSetting ───────────────────────────────────────────────────
 
 interface RowSettingProps {
   label:        string;
@@ -98,19 +110,27 @@ interface RowSettingProps {
 
 export function RowSetting({ label, description, children, border = true }: RowSettingProps) {
   return (
-    <div className={`flex items-center justify-between gap-6 px-6 py-4 ${border ? 'border-b border-slate-50' : ''}`}>
+    <div
+      className={`flex items-center justify-between gap-6 px-6 py-4 ${border ? 'border-b' : ''}`}
+      style={border ? { borderColor: 'var(--border-subtle)' } : undefined}
+    >
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium text-slate-700">{label}</p>
+        <p className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+          {label}
+        </p>
         {description && (
-          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{description}</p>
+          <p
+            className="mt-0.5 text-[11px] leading-relaxed"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            {description}
+          </p>
         )}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
   );
 }
-
-// ─── EditableField ────────────────────────────────────────────────
 
 interface EditableFieldProps {
   label:       string;
@@ -131,7 +151,10 @@ export function EditableField({
   return (
     <div className="group flex items-center justify-between gap-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <p
+          className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
+          style={{ color: 'var(--text-muted)' }}
+        >
           {label}
         </p>
         {editing ? (
@@ -141,11 +164,19 @@ export function EditableField({
             value={value}
             placeholder={placeholder}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full rounded-lg border border-violet-300 bg-violet-50/30 px-3 py-1.5 text-[13px] text-slate-800 outline-none ring-2 ring-violet-500/20 transition-all"
+            className="w-full rounded-lg border border-violet-300 dark:border-violet-500/40
+                       bg-violet-50/30 dark:bg-violet-500/10
+                       px-3 py-1.5 text-[13px] outline-none
+                       ring-2 ring-violet-500/20 transition-all"
+            style={{ color: 'var(--text-primary)' }}
           />
         ) : (
-          <p className="text-[13px] text-slate-700 truncate">
-            {value || <span className="italic text-slate-300">Sin completar</span>}
+          <p className="text-[13px] truncate" style={{ color: 'var(--text-secondary)' }}>
+            {value || (
+              <span style={{ color: 'var(--text-faint)' }} className="italic">
+                Sin completar
+              </span>
+            )}
           </p>
         )}
       </div>
@@ -155,13 +186,18 @@ export function EditableField({
           <div className="flex gap-1">
             <button
               onClick={onSave}
-              className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-lg
+                         bg-violet-600 text-white hover:bg-violet-700 transition-colors"
             >
               <Save className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={onCancel}
-              className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+              style={{
+                backgroundColor: 'var(--bg-muted)',
+                color:           'var(--text-muted)',
+              }}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -169,10 +205,12 @@ export function EditableField({
         ) : (
           <button
             onClick={onEdit}
-            className="opacity-0 group-hover:opacity-100 flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all"
+            className="opacity-0 group-hover:opacity-100 flex h-7 w-7 items-center
+                       justify-center rounded-lg transition-all
+                       hover:bg-slate-100 dark:hover:bg-slate-700"
+            style={{ color: 'var(--text-muted)' }}
             aria-label={`Editar ${label}`}
           >
-            {/* Pencil inline para evitar import extra */}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -183,8 +221,6 @@ export function EditableField({
     </div>
   );
 }
-
-// ─── SaveBar ──────────────────────────────────────────────────────
 
 interface SaveBarProps {
   dirty:   boolean;
@@ -197,22 +233,35 @@ export function SaveBar({ dirty, onSave, saved }: SaveBarProps) {
 
   return (
     <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
-      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-xl shadow-slate-200/60">
+      <div
+        className="flex items-center gap-3 rounded-2xl border px-5 py-3"
+        style={{
+          backgroundColor: 'var(--bg-card)',
+          borderColor:     'var(--border)',
+          boxShadow:       '0 8px 30px rgb(0 0 0 / 0.12)',
+        }}
+      >
         {saved ? (
           <>
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-3.5 w-3.5 text-emerald-600">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}
+                   className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <p className="text-[13px] font-medium text-slate-700">Cambios guardados</p>
+            <p className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Cambios guardados
+            </p>
           </>
         ) : (
           <>
-            <p className="text-[13px] text-slate-500">Tienes cambios sin guardar</p>
+            <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
+              Tienes cambios sin guardar
+            </p>
             <button
               onClick={onSave}
-              className="rounded-xl bg-violet-600 px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-violet-700 transition-colors shadow-sm shadow-violet-200"
+              className="rounded-xl bg-violet-600 px-4 py-1.5 text-[12px] font-semibold
+                         text-white hover:bg-violet-700 transition-colors shadow-sm"
             >
               Guardar
             </button>

@@ -11,11 +11,6 @@ export const metadata: Metadata = {
 
 async function getEmployees() {
   // 🔄 TODO: Reemplazar con Microsoft Graph API
-  // GET https://graph.microsoft.com/v1.0/users
-  // ?$select=id,displayName,givenName,surname,jobTitle,department,
-  //   mail,mobilePhone,businessPhones,officeLocation,city,
-  //   onPremisesExtensionAttributes
-  // &$top=999
   return MOCK_EMPLOYEES;
 }
 
@@ -23,10 +18,12 @@ export default async function DirectoryPage() {
   const employees = await getEmployees();
 
   return (
-    <main className="min-h-screen w-full bg-[#f4f6f9]">
+    <main className="min-h-screen w-full" style={{ backgroundColor: 'var(--bg-base)' }}>
 
       {/* ── Page Header ── */}
-      <div className="bg-gradient-to-br from-[#1e3a5f] via-[#1e40af] to-[#1d4ed8] px-4 lg:px-14 py-10 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#1e3a5f] via-[#1e40af] to-[#1d4ed8]
+                       dark:from-[#0d1829] dark:via-[#111d3a] dark:to-[#0f2347]
+                       px-4 lg:px-14 py-10 relative overflow-hidden">
         {/* Decoración */}
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: "radial-gradient(circle at 80% 50%, white 0%, transparent 60%)" }}

@@ -61,16 +61,16 @@ export default function ChatBotPanel({ open, onClose }: Props) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-setMessages((prev) => {
-  const copy = [...prev];
-  const last = copy[copy.length - 1];
-  if (!last) return prev;
-  copy[copy.length - 1] = {
-    role: "assistant",
-    text: last.text + chunk,
-  };
-  return copy;
-});
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (!last) return prev;
+          copy[copy.length - 1] = {
+            role: "assistant",
+            text: last.text + chunk,
+          };
+          return copy;
+        });
       }
     } catch (err) {
       setMessages((prev) => {

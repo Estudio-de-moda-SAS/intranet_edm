@@ -23,10 +23,11 @@ type Props = { data: any };
 export function HomePageContent({ data }: Props) {
   return (
     <main
-      className="min-h-screen w-full bg-[#f4f6f9]"
+      className="min-h-screen w-full"
       style={{
         fontFamily: "'DM Sans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
         marginTop: "calc(-1 * var(--layout-pt, 0px))",
+        backgroundColor: "var(--bg-base)",
       }}
     >
       <AnimatedHeroBanner user={data.user} />
@@ -37,19 +38,19 @@ export function HomePageContent({ data }: Props) {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
 
-{/* Left column — News + Solicitudes */}
-<div className="flex flex-col gap-6 lg:col-span-9 lg:w-[96%] order-1 lg:order-none">
-  <AnimatedCard delay={0}>
-    <NewsSection announcements={data.announcements} />
-  </AnimatedCard>
+          {/* Left column — News + Solicitudes */}
+          <div className="flex flex-col gap-6 lg:col-span-9 lg:w-[96%] order-1 lg:order-none">
+            <AnimatedCard delay={0}>
+              <NewsSection announcements={data.announcements} />
+            </AnimatedCard>
 
-  <AnimatedCard delay={0.08}>
-    <RequestsPanel />
-  </AnimatedCard>
-</div>
+            <AnimatedCard delay={0.08}>
+              <RequestsPanel />
+            </AnimatedCard>
+          </div>
 
-{/* Aside */}
-<aside className="lg:col-span-3 flex flex-col gap-5 lg:w-[112%] lg:-ml-[12%] order-2 lg:order-none">
+          {/* Aside */}
+          <aside className="lg:col-span-3 flex flex-col gap-5 lg:w-[112%] lg:-ml-[12%] order-2 lg:order-none">
             {/* 1. Favoritos */}
             <AnimatedCard delay={0.08}>
               <FavoritesCard />
@@ -73,7 +74,6 @@ export function HomePageContent({ data }: Props) {
             <AnimatedCard delay={0.28}>
               <BirthdaysCard birthdays={data.birthdays} />
             </AnimatedCard>
-
           </aside>
 
         </div>

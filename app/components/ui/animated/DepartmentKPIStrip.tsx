@@ -1,7 +1,10 @@
 "use client";
 
+// 📁 app/components/ui/animated/DepartmentKPIStrip.tsx
+
 import { motion, type Variants } from "framer-motion";
 import type { ElementType } from "react";
+import { useAnimationsEnabled } from "@/app/hooks/useAnimationsEnabled";
 
 export type DeptKpiItem = {
   label:       string;
@@ -24,44 +27,35 @@ function TrendBadge({ trend }: { trend: DeptKpiItem["trend"] }) {
   return <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">—</span>;
 }
 
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
+const lgColsClass: Record<number, string> = {
+  1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3",
+  4: "lg:grid-cols-4", 5: "lg:grid-cols-5", 6: "lg:grid-cols-6",
+  7: "lg:grid-cols-7", 8: "lg:grid-cols-8",
+};
+const smColsClass: Record<number, string> = {
+  1: "sm:grid-cols-1", 2: "sm:grid-cols-2", 3: "sm:grid-cols-3",
+  4: "sm:grid-cols-4", 5: "sm:grid-cols-3", 6: "sm:grid-cols-3",
+  7: "sm:grid-cols-4", 8: "sm:grid-cols-4",
 };
 
-const card: Variants = {
+const cardVariant: Variants = {
   hidden: { opacity: 0, y: 14 },
   show:   { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] } },
 };
-
-// Mapea cualquier cantidad de items al grid-cols correcto en lg
-const lgColsClass: Record<number, string> = {
-  1: "lg:grid-cols-1",
-  2: "lg:grid-cols-2",
-  3: "lg:grid-cols-3",
-  4: "lg:grid-cols-4",
-  5: "lg:grid-cols-5",
-  6: "lg:grid-cols-6",
-  7: "lg:grid-cols-7",
-  8: "lg:grid-cols-8",
-};
-
-// En sm siempre la mitad redondeada arriba (máx 4) para no desbordarse
-const smColsClass: Record<number, string> = {
-  1: "sm:grid-cols-1",
-  2: "sm:grid-cols-2",
-  3: "sm:grid-cols-3",
-  4: "sm:grid-cols-4",
-  5: "sm:grid-cols-3",
-  6: "sm:grid-cols-3",
-  7: "sm:grid-cols-4",
-  8: "sm:grid-cols-4",
+const cardInstant: Variants = {
+  hidden: { opacity: 1, y: 0 },
+  show:   { opacity: 1, y: 0 },
 };
 
 export function DepartmentKPIStrip({ items }: Props) {
-  const count = items.length;
-  const lgCols = lgColsClass[count] ?? "lg:grid-cols-6";
-  const smCols = smColsClass[count] ?? "sm:grid-cols-3";
+  const animated = useAnimationsEnabled();
+  const count    = items.length;
+  const lgCols   = lgColsClass[count] ?? "lg:grid-cols-6";
+  const smCols   = smColsClass[count] ?? "sm:grid-cols-3";
+
+  const container: Variants = animated
+    ? { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } } }
+    : { hidden: {}, show: {} };
 
   return (
     <motion.div
@@ -73,7 +67,7 @@ export function DepartmentKPIStrip({ items }: Props) {
       {items.map((kpi) => (
         <motion.div
           key={kpi.label}
-          variants={card}
+          variants={animated ? cardVariant : cardInstant}
           className={`group relative flex flex-col gap-3 rounded-xl border border-l-4 ${kpi.borderColor} border-slate-200 bg-white p-4 shadow-sm cursor-default transition-all duration-200 hover:shadow-md hover:-translate-y-0.5`}
         >
           <div className="flex items-start justify-between">
