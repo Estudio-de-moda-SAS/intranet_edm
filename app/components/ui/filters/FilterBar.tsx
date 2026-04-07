@@ -1,19 +1,19 @@
 "use client";
 
-import SearchInput  from "@/app/components/ui/search/SearchInput";
+import SearchInput from "@/app/components/ui/search/SearchInput";
 import FilterSelect from "./FilterSelect";
 
 type Filter = {
-  value:    string;
+  value: string;
   onChange: (value: string) => void;
-  options:  { value: string; label: string }[];
+  options: { value: string; label: string }[];
 };
 
-type FilterBarProps = {
-  search:             string;
-  setSearch:          (value: string) => void;
+type Props = {
+  search: string;
+  setSearch: (value: string) => void;
   searchPlaceholder?: string;
-  filters?:           Filter[];
+  filters?: Filter[];
 };
 
 export default function FilterBar({
@@ -21,11 +21,10 @@ export default function FilterBar({
   setSearch,
   searchPlaceholder = "Buscar...",
   filters = [],
-}: FilterBarProps) {
+}: Props) {
   return (
-    <div className="flex items-center gap-3 px-5 py-3
-                    border-b border-slate-100 bg-slate-50/50
-                    dark:border-[#21262d] dark:bg-[#1c2128]/40">
+    <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+
       <div className="flex-1">
         <SearchInput
           value={search}
@@ -42,6 +41,7 @@ export default function FilterBar({
           options={filter.options}
         />
       ))}
+
     </div>
   );
 }
