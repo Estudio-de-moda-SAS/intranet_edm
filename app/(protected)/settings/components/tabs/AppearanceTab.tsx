@@ -1,4 +1,3 @@
-// app/configuracion/components/tabs/AppearanceTab.tsx
 'use client';
 
 import { Palette, Settings, Layers, Sun, Moon, Monitor, Check, Zap, ZapOff } from 'lucide-react';
@@ -53,19 +52,28 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
                   aria-pressed={active}
                   className={`group flex flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 transition-all ${
                     active
-                      ? 'border-[var(--accent-500)] bg-[var(--accent-50)] shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      /* Activo: borde con acento, fondo neutro que funciona en ambos modos */
+                      ? 'border-[var(--accent-500)] bg-[var(--bg-subtle)] shadow-sm'
+                      /* Inactivo: hover discreto */
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-[#30363d] dark:hover:border-[#444c56] dark:hover:bg-[#1c2128]'
                   }`}
                 >
                   {/* Mini preview del tema */}
                   <div className={`h-8 w-12 rounded-md border-2 ${preview} flex items-center justify-center`}>
                     <Icon className={`h-3.5 w-3.5 ${value === 'dark' ? 'text-slate-300' : 'text-slate-500'}`} />
                   </div>
-                  <span className={`text-[12px] font-medium ${active ? 'text-[var(--accent-600)]' : 'text-slate-500'}`}>
+                  <span
+                    className="text-[12px] font-medium"
+                    style={{ color: active ? 'var(--accent-600)' : undefined }}
+                    {...(!active && { className: 'text-[12px] font-medium text-slate-500 dark:text-[#768390]' })}
+                  >
                     {label}
                   </span>
                   {active && (
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--accent-500)' }} />
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: 'var(--accent-500)' }}
+                    />
                   )}
                 </button>
               );
@@ -96,8 +104,10 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
                     active ? 'scale-110' : ''
                   }`}
                   style={{
-                    background:  `linear-gradient(135deg, hsl(${hue},70%,55%), hsl(${hue + 20},65%,45%))`,
-                    boxShadow:   active ? `0 0 0 2px white, 0 0 0 4px hsl(${hue},70%,55%)` : undefined,
+                    background: `linear-gradient(135deg, hsl(${hue},70%,55%), hsl(${hue + 20},65%,45%))`,
+                    boxShadow:  active
+                      ? `0 0 0 2px var(--bg-card), 0 0 0 4px hsl(${hue},70%,55%)`
+                      : undefined,
                   }}
                 >
                   {active && <Check className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow" />}
@@ -106,16 +116,24 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
             })}
           </div>
 
-          {/* Live preview con el color seleccionado */}
-          <div className="mt-4 flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+          {/* Live preview */}
+          <div
+            className="mt-4 flex items-center gap-3 rounded-xl px-4 py-3"
+            style={{
+              border:          '1px solid var(--border-subtle)',
+              backgroundColor: 'var(--bg-subtle)',
+            }}
+          >
             <div
               className="h-7 w-7 rounded-lg shadow-sm"
               style={{ background: 'var(--accent-500)' }}
               aria-hidden="true"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold text-slate-600">Vista previa en vivo</p>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                Vista previa en vivo
+              </p>
+              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                 El color se aplica inmediatamente al guardar.
               </p>
             </div>
@@ -136,8 +154,14 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
       <SectionCard>
         <SectionHeader icon={Settings} title="Densidad y comportamiento" />
 
-        <div className="px-6 py-4 border-b border-slate-50">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <div
+          className="px-6 py-4"
+          style={{ borderBottom: '1px solid var(--border-subtle)' }}
+        >
+          <p
+            className="mb-3 text-[10px] font-semibold uppercase tracking-wider"
+            style={{ color: 'var(--text-faint)' }}
+          >
             Densidad de la interfaz
           </p>
           <div className="flex gap-2">
@@ -152,7 +176,7 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
                   className={`rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-all ${
                     active
                       ? 'border-[var(--accent-200)] bg-[var(--accent-50)] text-[var(--accent-700)]'
-                      : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300 dark:border-[#30363d] dark:text-[#768390] dark:hover:border-[#444c56]'
                   }`}
                 >
                   {label}
@@ -170,7 +194,7 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
           <div className="flex items-center gap-2">
             {s.animations
               ? <Zap    className="h-4 w-4 text-[var(--accent-500)]" />
-              : <ZapOff className="h-4 w-4 text-slate-400" />}
+              : <ZapOff className="h-4 w-4 text-slate-400 dark:text-[#545d68]" />}
             <Toggle value={s.animations} onChange={(v) => onChange('animations', v)} />
           </div>
         </RowSetting>
