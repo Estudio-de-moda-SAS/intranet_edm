@@ -32,52 +32,68 @@ export default function CorporateBot({ variant = 'default', iconOnly = false }: 
       {variant === 'expanded' ? (
         <div className="
           w-full max-w-2xl relative overflow-hidden rounded-xl
-          bg-gradient-to-r from-violet-600 via-violet-500 to-purple-600
-          px-5 py-4 shadow-lg shadow-violet-200
           transition-all duration-300 cursor-pointer
+          hover:scale-[1.012]
+
+          /* ── Light: gradiente vivo ── */
+          bg-gradient-to-r from-violet-600 via-violet-500 to-purple-600
+          shadow-lg shadow-violet-200/70
           hover:shadow-xl hover:shadow-violet-300/50
-          hover:scale-[1.015] hover:brightness-110
+          hover:brightness-105
+
+          /* ── Dark: tono apagado, sin neon ── */
+          dark:bg-none dark:bg-[#1c2128]
+          dark:border dark:border-violet-500/20
+          dark:shadow-none dark:hover:border-violet-500/35
+          dark:hover:brightness-100
+
+          px-5 py-4
         ">
-          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl" />
-          <div className="pointer-events-none absolute -bottom-4 left-1/3 h-16 w-16 rounded-full bg-fuchsia-400/20 blur-lg" />
+          {/* Decoración light-only */}
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl dark:hidden" />
+          <div className="pointer-events-none absolute -bottom-4 left-1/3 h-16 w-16 rounded-full bg-fuchsia-400/20 blur-lg dark:hidden" />
+
+          {/* Decoración dark-only: acento sutil en esquina */}
+          <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-violet-500/[0.08] blur-2xl hidden dark:block" />
 
           <div className="relative flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 border border-white/20 backdrop-blur-sm">
-              <Sparkles className="h-4 w-4 text-white" />
+            {/* Icono */}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
+                            bg-white/15 border border-white/20
+                            dark:bg-violet-500/[0.12] dark:border-violet-500/25">
+              <Sparkles className="h-4 w-4 text-white dark:text-violet-400" />
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-[12px] text-white/75 leading-none mb-2">
-                Hola, soy <span className="font-semibold text-white">Stilo</span> · ¿En qué te ayudo?
+              {/* Label */}
+              <p className="text-[12px] leading-none mb-2
+                            text-white/80 dark:text-[#768390]">
+                Hola, soy{" "}
+                <span className="font-semibold text-white dark:text-[#cdd9e5]">Stilo</span>
+                {" "}· ¿En qué te ayudo?
               </p>
 
-              {/* Input — usa variables CSS para que dark mode funcione */}
-              <div className="
-                flex items-center rounded-lg px-3 py-2 gap-2 shadow-inner
-                transition-all focus-within:ring-2 focus-within:ring-white/40
-                bg-white/95 dark:bg-[var(--bg-subtle)]
-              ">
+              {/* Input */}
+              <div className="flex items-center rounded-lg px-3 py-2 gap-2 transition-all
+                              bg-white/95 focus-within:ring-2 focus-within:ring-white/40
+                              dark:bg-[#161b22] dark:border dark:border-[#30363d]
+                              dark:focus-within:border-violet-500/50 dark:focus-within:ring-violet-500/15">
                 <input
                   id="chatbot-input"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Haz tu pregunta aquí..."
-                  className="
-                    flex-1 bg-transparent outline-none text-sm
-                    text-slate-700 placeholder:text-slate-400
-                    dark:text-[var(--text-body)] dark:placeholder:text-[var(--text-faint)]
-                  "
+                  className="flex-1 bg-transparent outline-none text-sm
+                             text-slate-700 placeholder:text-slate-400
+                             dark:text-[#cdd9e5] dark:placeholder:text-[#545d68]"
                 />
                 <button
                   type="button"
                   onClick={handleSend}
-                  className="
-                    flex items-center justify-center rounded-md p-1.5
-                    text-violet-400 transition-colors
-                    hover:text-violet-600 hover:bg-violet-50
-                    dark:hover:bg-white/10 dark:hover:text-white
-                  "
+                  className="flex items-center justify-center rounded-md p-1.5 transition-colors
+                             text-violet-400 hover:text-violet-600 hover:bg-violet-50
+                             dark:text-[#545d68] dark:hover:text-violet-400 dark:hover:bg-violet-500/[0.10]"
                 >
                   <Send className="h-3.5 w-3.5" />
                 </button>

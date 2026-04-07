@@ -20,7 +20,7 @@ export function NewsTileSquare({ news, variant = "small" }: Props) {
         relative overflow-hidden rounded-2xl shadow-md h-full
         transition-all duration-300 ease-in-out
         hover:shadow-xl hover:scale-[1.015]
-        hover:ring-2 hover:ring-violet-500/60
+        hover:ring-2 hover:ring-violet-500/40 dark:hover:ring-violet-500/25
         cursor-pointer
       "
     >
@@ -34,7 +34,7 @@ export function NewsTileSquare({ news, variant = "small" }: Props) {
         }}
       />
 
-      {/* Overlay — stronger at bottom for legibility */}
+      {/* Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent pointer-events-none" />
 
       {/* Category chip */}
@@ -45,7 +45,7 @@ export function NewsTileSquare({ news, variant = "small" }: Props) {
       </div>
 
       {/* Text content */}
-      <div className={`absolute bottom-0 left-0 right-0 p-4 text-white ${isLarge ? "p-6" : "p-3"}`}>
+      <div className={`absolute bottom-0 left-0 right-0 text-white ${isLarge ? "p-6" : "p-3"}`}>
         <h3 className={`font-semibold leading-tight ${isLarge ? "text-2xl" : "text-sm"}`}>
           {news.title}
         </h3>

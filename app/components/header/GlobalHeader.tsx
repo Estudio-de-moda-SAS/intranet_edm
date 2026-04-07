@@ -25,16 +25,16 @@ export default function GlobalHeader() {
   const hasLogo  = Boolean((BRAND as any).logoUrl);
   const pathname = usePathname();
 
-  const [isScrolled, setIsScrolled]         = useState(false);
-  const [searchOpen, setSearchOpen]         = useState(false);
+  const [isScrolled,     setIsScrolled]     = useState(false);
+  const [searchOpen,     setSearchOpen]     = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const searchInputRef      = useRef<HTMLInputElement>(null);
-  const searchContainerRef  = useRef<HTMLDivElement>(null);
-  const ticking             = useRef(false);
-  const scrolledRef         = useRef(false);
-  const stateRef            = useRef(false);
-  const lockRef             = useRef(false);
+  const searchInputRef     = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const ticking            = useRef(false);
+  const scrolledRef        = useRef(false);
+  const stateRef           = useRef(false);
+  const lockRef            = useRef(false);
 
   const devSession  = useDevSession();
   const sessionUser = devSession?.user ?? null;
@@ -130,7 +130,8 @@ export default function GlobalHeader() {
               ) : (
                 <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-violet-600 to-purple-700 shadow-sm" />
               )}
-              <span className="brand-title font-bold text-[15px] text-violet-900 dark:text-[#e2d9f8] truncate leading-none">
+              <span className="brand-title font-bold text-[15px] truncate leading-none
+                               text-violet-900 dark:text-[#e2d9f8]">
                 ESTUDIO DE MODA
               </span>
             </Link>
@@ -183,7 +184,7 @@ export default function GlobalHeader() {
                         href={dept.href}
                         className={`flex items-center px-3 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
                           isActive
-                            ? 'text-violet-700 bg-violet-50 dark:text-violet-400 dark:bg-violet-500/10'
+                            ? 'text-violet-700 bg-violet-50 dark:text-violet-400 dark:bg-violet-500/[0.10]'
                             : 'text-slate-600 dark:text-[#adbac7] hover:text-violet-700 dark:hover:text-violet-400 hover:bg-slate-50 dark:hover:bg-[#21262d]'
                         }`}
                       >
@@ -279,9 +280,8 @@ export default function GlobalHeader() {
                       onChange={(e) => setQuery(e.target.value)}
                       className="
                         w-full rounded-lg border py-2 text-[13px]
-                        pl-9 pr-4
-                        transition-all duration-200
-                        border-slate-200  bg-slate-50  text-slate-700  placeholder:text-slate-400
+                        pl-9 pr-4 transition-all duration-200
+                        border-slate-200 bg-slate-50 text-slate-700 placeholder:text-slate-400
                         dark:border-[#30363d] dark:bg-[#21262d] dark:text-[#cdd9e5] dark:placeholder:text-[#545d68]
                         focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50
                         focus:bg-white dark:focus:bg-[#1c2128]
@@ -304,28 +304,34 @@ export default function GlobalHeader() {
         </div>
 
         {/* ── DESKTOP — nav bar ─────────────────────────────────── */}
+        {/*
+          FIX: El hover de departamentos era demasiado claro en dark.
+          Antes: hover:text-violet-700 sin dark: → texto light sobre fondo oscuro, casi invisible.
+          Ahora: hover usa dark:text-violet-400 + dark:bg-[#21262d] como fondo sutil de hover.
+        */}
         <div className={`hidden md:block w-full border-b relative z-10 transition-all duration-300 ${
           isScrolled
             ? 'bg-white/95 dark:bg-[#161b22]/95 backdrop-blur-xl border-slate-100 dark:border-[#21262d]'
             : 'bg-slate-50 dark:bg-[#0d1117] border-slate-100 dark:border-[#21262d]'
         }`}>
-          <nav className="mx-auto max-w-7xl px-6 flex items-center gap-1">
+          <nav className="mx-auto max-w-7xl px-6 flex items-center gap-0.5">
             {DEPARTMENTS.map((dept: Department) => {
               const isActive = pathname.startsWith(dept.href);
               return (
                 <Link
                   key={dept.id}
                   href={dept.href}
-                  className={`group relative px-3 py-3 text-[13px] font-medium transition-colors duration-150 whitespace-nowrap ${
+                  className={`group relative px-3 py-3 text-[13px] font-medium transition-colors duration-150 whitespace-nowrap rounded-md ${
                     isActive
                       ? 'text-violet-700 dark:text-violet-400'
-                      : 'text-slate-500 dark:text-[#768390] hover:text-violet-700 dark:hover:text-violet-400'
+                      : 'text-slate-500 dark:text-[#768390] hover:text-violet-700 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-[#21262d]'
                   }`}
                 >
                   {dept.label}
+                  {/* Underline indicator */}
                   <span
                     aria-hidden
-                    className={`absolute bottom-0 left-3 right-3 h-[2px] rounded-full transition-all duration-250 ease-out
+                    className={`absolute bottom-0 left-3 right-3 h-[2px] rounded-full transition-all duration-200 ease-out
                                 bg-violet-600 dark:bg-violet-400 ${
                       isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'
                     }`}
@@ -348,10 +354,8 @@ export default function GlobalHeader() {
                        bg-white/97 dark:bg-[#161b22]/97 backdrop-blur-xl"
           >
             <div className="flex items-center gap-3 px-5 pt-5">
-              <Search className="h-5 w-5 shrink-0
-                                 text-slate-400 dark:text-[#545d68]" />
+              <Search className="h-5 w-5 shrink-0 text-slate-400 dark:text-[#545d68]" />
               <input
-                id="global-search-input"
                 ref={searchInputRef}
                 type="search"
                 placeholder="Buscar en la intranet..."
@@ -371,8 +375,7 @@ export default function GlobalHeader() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="mx-5 mt-3 h-px
-                            bg-slate-100 dark:bg-[#30363d]" />
+            <div className="mx-5 mt-3 h-px bg-slate-100 dark:bg-[#30363d]" />
             <div className="px-5 mt-4">
               {query ? (
                 <GlobalSearchResults
@@ -381,8 +384,7 @@ export default function GlobalHeader() {
                   onSelect={() => setSearchOpen(false)}
                 />
               ) : (
-                <p className="mt-6 text-center text-sm
-                              text-slate-300 dark:text-[#545d68]">
+                <p className="mt-6 text-center text-sm text-slate-300 dark:text-[#545d68]">
                   Escribe para buscar noticias, personas, documentos…
                 </p>
               )}
@@ -391,5 +393,45 @@ export default function GlobalHeader() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+// ── AreaSelectHeader ──────────────────────────────────────────────────────────
+
+import { useRouter } from 'next/navigation';
+
+export type Area = { id: string; label: string; href: string };
+
+export function AreaSelectHeader({ areas }: { areas: Area[] }) {
+  const router = useRouter();
+  const [val, setVal] = useState('');
+
+  return (
+    <div className="hidden items-center gap-2 sm:flex">
+      <span className="text-xs text-slate-500 dark:text-[#768390]">
+        Home de área:
+      </span>
+      <select
+        value={val}
+        onChange={(e) => {
+          const href = e.target.value;
+          setVal('');
+          if (href) router.push(href);
+        }}
+        aria-label="Cambiar a home de área"
+        className="rounded-lg border px-2 py-1 text-xs transition-colors
+                   border-slate-200 bg-white text-slate-700
+                   dark:border-[#30363d] dark:bg-[#21262d] dark:text-[#cdd9e5]
+                   focus:outline-none focus:ring-2 focus:ring-violet-500/30
+                   focus:border-violet-400 dark:focus:border-violet-500/50"
+      >
+        <option value="">Selecciona…</option>
+        {areas.map((a) => (
+          <option key={a.id} value={a.href}>
+            {a.label}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }

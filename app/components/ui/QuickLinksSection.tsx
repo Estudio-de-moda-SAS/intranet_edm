@@ -51,7 +51,6 @@ export type QuickLinkItem = {
   color?:       QuickLinkColor;
   disabled?:    boolean;
   disabledMsg?: string;
-  // ↓ Si existe, ejecuta la acción en lugar de navegar al href
   action?:      () => void;
 };
 
@@ -63,33 +62,93 @@ type QuickLinksSectionProps = {
 };
 
 // ─── Color map ────────────────────────────────────────────────────────────────
+// Cada color tiene:
+//  · iconBg   — fondo del icono (base + dark)
+//  · iconText — color del icono (base + dark)
+//  · border   — borde izquierdo de acento (base + dark)
+//  · hover    — estado hover completo (base + dark), SIN gradiente forzado
 
 const colorMap: Record<QuickLinkColor, {
-  bg: string; icon: string; border: string;
-  hoverBg: string; hoverBorder: string; arrow: string;
+  iconBg:    string;
+  iconText:  string;
+  border:    string;
+  hoverCard: string;
+  arrow:     string;
 }> = {
-  purple: { bg:"bg-[#EEEDFE]", icon:"text-[#534AB7]", border:"border-l-[#7F77DD]", hoverBg:"hover:bg-[#EEEDFE]", hoverBorder:"hover:border-l-[#534AB7]", arrow:"text-[#AFA9EC]" },
-  teal:   { bg:"bg-[#E1F5EE]", icon:"text-[#0F6E56]", border:"border-l-[#1D9E75]", hoverBg:"hover:bg-[#E1F5EE]", hoverBorder:"hover:border-l-[#0F6E56]", arrow:"text-[#9FE1CB]" },
-  blue:   { bg:"bg-[#E6F1FB]", icon:"text-[#185FA5]", border:"border-l-[#378ADD]", hoverBg:"hover:bg-[#E6F1FB]", hoverBorder:"hover:border-l-[#185FA5]", arrow:"text-[#B5D4F4]" },
-  amber:  { bg:"bg-[#FAEEDA]", icon:"text-[#854F0B]", border:"border-l-[#BA7517]", hoverBg:"hover:bg-[#FAEEDA]", hoverBorder:"hover:border-l-[#854F0B]", arrow:"text-[#FAC775]" },
-  pink:   { bg:"bg-[#FBEAF0]", icon:"text-[#993556]", border:"border-l-[#D4537E]", hoverBg:"hover:bg-[#FBEAF0]", hoverBorder:"hover:border-l-[#993556]", arrow:"text-[#F4C0D1]" },
-  green:  { bg:"bg-[#EAF3DE]", icon:"text-[#3B6D11]", border:"border-l-[#639922]", hoverBg:"hover:bg-[#EAF3DE]", hoverBorder:"hover:border-l-[#3B6D11]", arrow:"text-[#C0DD97]" },
-  coral:  { bg:"bg-[#FAECE7]", icon:"text-[#993C1D]", border:"border-l-[#D85A30]", hoverBg:"hover:bg-[#FAECE7]", hoverBorder:"hover:border-l-[#993C1D]", arrow:"text-[#F5C4B3]" },
+  purple: {
+    iconBg:    "bg-[#EEEDFE] dark:bg-violet-500/[0.15]",
+    iconText:  "text-[#534AB7] dark:text-violet-400",
+    border:    "border-l-[#7F77DD] dark:border-l-violet-500/60",
+    hoverCard: "hover:bg-violet-50 hover:border-l-[#534AB7] dark:hover:bg-violet-500/[0.08] dark:hover:border-l-violet-400",
+    arrow:     "text-[#AFA9EC] dark:text-violet-500/60",
+  },
+  teal: {
+    iconBg:    "bg-[#E1F5EE] dark:bg-teal-500/[0.15]",
+    iconText:  "text-[#0F6E56] dark:text-teal-400",
+    border:    "border-l-[#1D9E75] dark:border-l-teal-500/60",
+    hoverCard: "hover:bg-teal-50 hover:border-l-[#0F6E56] dark:hover:bg-teal-500/[0.08] dark:hover:border-l-teal-400",
+    arrow:     "text-[#9FE1CB] dark:text-teal-500/60",
+  },
+  blue: {
+    iconBg:    "bg-[#E6F1FB] dark:bg-blue-500/[0.15]",
+    iconText:  "text-[#185FA5] dark:text-blue-400",
+    border:    "border-l-[#378ADD] dark:border-l-blue-500/60",
+    hoverCard: "hover:bg-blue-50 hover:border-l-[#185FA5] dark:hover:bg-blue-500/[0.08] dark:hover:border-l-blue-400",
+    arrow:     "text-[#B5D4F4] dark:text-blue-500/60",
+  },
+  amber: {
+    iconBg:    "bg-[#FAEEDA] dark:bg-amber-500/[0.15]",
+    iconText:  "text-[#854F0B] dark:text-amber-400",
+    border:    "border-l-[#BA7517] dark:border-l-amber-500/60",
+    hoverCard: "hover:bg-amber-50 hover:border-l-[#854F0B] dark:hover:bg-amber-500/[0.08] dark:hover:border-l-amber-400",
+    arrow:     "text-[#FAC775] dark:text-amber-500/60",
+  },
+  pink: {
+    iconBg:    "bg-[#FBEAF0] dark:bg-pink-500/[0.15]",
+    iconText:  "text-[#993556] dark:text-pink-400",
+    border:    "border-l-[#D4537E] dark:border-l-pink-500/60",
+    hoverCard: "hover:bg-pink-50 hover:border-l-[#993556] dark:hover:bg-pink-500/[0.08] dark:hover:border-l-pink-400",
+    arrow:     "text-[#F4C0D1] dark:text-pink-500/60",
+  },
+  green: {
+    iconBg:    "bg-[#EAF3DE] dark:bg-green-500/[0.15]",
+    iconText:  "text-[#3B6D11] dark:text-green-400",
+    border:    "border-l-[#639922] dark:border-l-green-500/60",
+    hoverCard: "hover:bg-green-50 hover:border-l-[#3B6D11] dark:hover:bg-green-500/[0.08] dark:hover:border-l-green-400",
+    arrow:     "text-[#C0DD97] dark:text-green-500/60",
+  },
+  coral: {
+    iconBg:    "bg-[#FAECE7] dark:bg-orange-500/[0.15]",
+    iconText:  "text-[#993C1D] dark:text-orange-400",
+    border:    "border-l-[#D85A30] dark:border-l-orange-500/60",
+    hoverCard: "hover:bg-orange-50 hover:border-l-[#993C1D] dark:hover:bg-orange-500/[0.08] dark:hover:border-l-orange-400",
+    arrow:     "text-[#F5C4B3] dark:text-orange-500/60",
+  },
 };
 
 const DEFAULT_COLOR = colorMap["purple"]!;
 
-// ─── Clases compartidas para el item activo ───────────────────────────────────
+// ─── Clases del item activo ───────────────────────────────────────────────────
 
 function activeItemClasses(c: typeof DEFAULT_COLOR) {
   return cn(
+    // Layout
     "flex items-center gap-2.5 rounded-[10px] h-full w-full",
-    "border border-slate-200 border-l-[3px] bg-slate-50",
+    // Borde
+    "border border-l-[3px]",
+    // Base light
+    "border-slate-200 bg-slate-50",
+    // Base dark
+    "dark:border-[#30363d] dark:bg-[#1c2128]",
+    // Padding
     "px-3 py-2 pr-8",
-    "transition-all duration-300 ease-out",
-    "group-hover:-translate-y-[3px] group-hover:scale-[1.02] group-hover:shadow-md",
-    "group-hover:bg-gradient-to-r group-hover:from-violet-100 group-hover:to-purple-200",
-    c.border, c.hoverBg, c.hoverBorder,
+    // Transición
+    "transition-all duration-200 ease-out",
+    // Hover lift
+    "group-hover:-translate-y-[2px] group-hover:scale-[1.015] group-hover:shadow-sm",
+    // Hover color (por color, sin gradiente forzado)
+    c.border,
+    c.hoverCard,
   );
 }
 
@@ -113,27 +172,74 @@ export function QuickLinksSection({
 
   const activeCount = quickLinks.filter((l) => !l.disabled).length;
 
+  // ─── Contenido interno del item (icono + label + flecha) ──────────────────
+  function ItemContent({ link, c }: { link: QuickLinkItem; c: typeof DEFAULT_COLOR }) {
+    const Icon = resolveIcon(link.icon);
+    return (
+      <>
+        <span className={cn(
+          "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px]",
+          "transition-transform duration-200 group-hover:scale-110",
+          c.iconBg,
+        )}>
+          <Icon size={13} className={c.iconText} />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[12.5px] font-medium leading-tight truncate transition-colors duration-200
+                           text-slate-700 group-hover:text-violet-700
+                           dark:text-[#cdd9e5] dark:group-hover:text-violet-400">
+            {link.label}
+          </span>
+          {link.description && (
+            <span className="block text-[11px] leading-tight truncate mt-0.5
+                             text-slate-400 dark:text-[#545d68]">
+              {link.description}
+            </span>
+          )}
+        </span>
+        <ChevronRight
+          size={12}
+          className={cn(
+            "shrink-0 transition-all duration-200",
+            "group-hover:translate-x-0.5 group-hover:opacity-0",
+            c.arrow,
+          )}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <section className={cn(
-        "rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col overflow-hidden",
+        "rounded-xl border shadow-sm flex flex-col overflow-hidden",
+        "border-slate-200 bg-white",
+        "dark:border-[#30363d] dark:bg-[#161b22]",
         fillHeight && "h-full",
       )}>
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 shrink-0
+                        border-b border-slate-100 dark:border-[#21262d]">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-violet-50">
-              <Zap className="h-3.5 w-3.5 text-violet-600" />
+            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg
+                             bg-violet-50 dark:bg-violet-500/[0.12]">
+              <Zap className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
             </span>
             <div>
-              <p className="text-[13px] font-semibold text-slate-800 leading-none">{title}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5 leading-none">
+              <p className="text-[13px] font-semibold leading-none
+                            text-slate-800 dark:text-[#e6edf3]">
+                {title}
+              </p>
+              <p className="text-[11px] mt-0.5 leading-none
+                            text-slate-400 dark:text-[#545d68]">
                 Accede directamente a lo que más usas
               </p>
             </div>
           </div>
-          <span className="text-[11px] font-medium bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full">
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full
+                           bg-violet-50 text-violet-600
+                           dark:bg-violet-500/[0.12] dark:text-violet-400">
             {activeCount} enlaces
           </span>
         </div>
@@ -146,7 +252,6 @@ export function QuickLinksSection({
           columns === 4 && "grid-cols-4",
         )}>
           {quickLinks.map((link) => {
-            const Icon     = resolveIcon(link.icon);
             const c        = colorMap[link.color ?? "purple"] ?? DEFAULT_COLOR;
             const isFav    = favoriteHrefs.includes(link.href);
             const disabled = link.disabled ?? false;
@@ -161,29 +266,55 @@ export function QuickLinksSection({
                 >
                   <div className={cn(
                     "flex items-center gap-2.5 rounded-[10px] h-full",
-                    "border border-slate-100 border-l-[3px] border-l-slate-200 bg-slate-50/50",
-                    "px-3 py-2 pr-8 cursor-not-allowed opacity-50 select-none",
+                    "border border-l-[3px] border-slate-100 border-l-slate-200 bg-slate-50/50",
+                    "dark:border-[#21262d] dark:border-l-[#30363d] dark:bg-[#1c2128]/40",
+                    "px-3 py-2 pr-8 cursor-not-allowed opacity-40 select-none",
                   )}>
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-slate-100">
-                      <Icon size={13} className="text-slate-400" />
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px]
+                                     bg-slate-100 dark:bg-[#21262d]">
+                      <Lock size={11} className="text-slate-400 dark:text-[#545d68]" />
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-[12.5px] font-medium text-slate-400 leading-tight truncate">
+                      <span className="block text-[12.5px] font-medium leading-tight truncate
+                                       text-slate-400 dark:text-[#444c56]">
                         {link.label}
                       </span>
                       {link.description && (
-                        <span className="block text-[11px] text-slate-300 leading-tight truncate mt-0.5">
+                        <span className="block text-[11px] leading-tight truncate mt-0.5
+                                         text-slate-300 dark:text-[#30363d]">
                           {link.description}
                         </span>
                       )}
                     </span>
-                    <Lock size={11} className="shrink-0 text-slate-300" />
+                    <Lock size={11} className="shrink-0 text-slate-300 dark:text-[#30363d]" />
                   </div>
                 </li>
               );
             }
 
-            // ── Acción (abre modal) ────────────────────────────
+            // ── Estrella compartida ────────────────────────────
+            const StarButton = (
+              <button
+                onClick={() => handleStarClick(link)}
+                title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
+                className={cn(
+                  "absolute top-1.5 right-1.5 z-10",
+                  "flex h-5 w-5 items-center justify-center rounded-full",
+                  "transition-all duration-200",
+                  "group-hover:-translate-y-[2px] group-hover:scale-[1.015]",
+                  isFav
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400 dark:text-[#444c56] dark:hover:text-amber-400",
+                )}
+              >
+                <Star
+                  size={11}
+                  className={cn("transition-all", isFav ? "fill-amber-400 text-amber-400" : "fill-none")}
+                />
+              </button>
+            );
+
+            // ── Acción (abre modal u otra función) ─────────────
             if (link.action) {
               return (
                 <li key={link.href} className="relative group min-h-0">
@@ -192,48 +323,9 @@ export function QuickLinksSection({
                     onClick={link.action}
                     className={activeItemClasses(c)}
                   >
-                    <span className={cn(
-                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px]",
-                      "transition-transform duration-300 group-hover:scale-110",
-                      c.bg,
-                    )}>
-                      <Icon size={13} className={c.icon} />
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-[12.5px] font-medium text-slate-700 leading-tight truncate transition-colors duration-300 group-hover:text-violet-700">
-                        {link.label}
-                      </span>
-                      {link.description && (
-                        <span className="block text-[11px] text-slate-400 leading-tight truncate mt-0.5">
-                          {link.description}
-                        </span>
-                      )}
-                    </span>
-                    <ChevronRight
-                      size={12}
-                      className={cn("shrink-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-0", c.arrow)}
-                    />
+                    <ItemContent link={link} c={c} />
                   </button>
-
-                  {/* Estrella — usa href como key aunque no navegue */}
-                  <button
-                    onClick={() => handleStarClick(link)}
-                    title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
-                    className={cn(
-                      "absolute top-1.5 right-1.5 z-10",
-                      "flex h-5 w-5 items-center justify-center rounded-full",
-                      "transition-all duration-300",
-                      "group-hover:-translate-y-[3px] group-hover:scale-[1.02]",
-                      isFav
-                        ? "opacity-100"
-                        : "opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400",
-                    )}
-                  >
-                    <Star
-                      size={11}
-                      className={cn("transition-all", isFav ? "fill-amber-400 text-amber-400" : "fill-none")}
-                    />
-                  </button>
+                  {StarButton}
                 </li>
               );
             }
@@ -241,52 +333,10 @@ export function QuickLinksSection({
             // ── Navegación normal ──────────────────────────────
             return (
               <li key={link.href} className="relative group min-h-0">
-                <Link
-                  href={link.href}
-                  className={activeItemClasses(c)}
-                >
-                  <span className={cn(
-                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px]",
-                    "transition-transform duration-300 group-hover:scale-110",
-                    c.bg,
-                  )}>
-                    <Icon size={13} className={c.icon} />
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-[12.5px] font-medium text-slate-700 leading-tight truncate transition-colors duration-300 group-hover:text-violet-700">
-                      {link.label}
-                    </span>
-                    {link.description && (
-                      <span className="block text-[11px] text-slate-400 leading-tight truncate mt-0.5">
-                        {link.description}
-                      </span>
-                    )}
-                  </span>
-                  <ChevronRight
-                    size={12}
-                    className={cn("shrink-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-0", c.arrow)}
-                  />
+                <Link href={link.href} className={activeItemClasses(c)}>
+                  <ItemContent link={link} c={c} />
                 </Link>
-
-                {/* Estrella */}
-                <button
-                  onClick={() => handleStarClick(link)}
-                  title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
-                  className={cn(
-                    "absolute top-1.5 right-1.5 z-10",
-                    "flex h-5 w-5 items-center justify-center rounded-full",
-                    "transition-all duration-300",
-                    "group-hover:-translate-y-[3px] group-hover:scale-[1.02]",
-                    isFav
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400",
-                  )}
-                >
-                  <Star
-                    size={11}
-                    className={cn("transition-all", isFav ? "fill-amber-400 text-amber-400" : "fill-none")}
-                  />
-                </button>
+                {StarButton}
               </li>
             );
           })}

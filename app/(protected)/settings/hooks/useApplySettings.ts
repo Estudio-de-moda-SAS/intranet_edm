@@ -1,3 +1,7 @@
+// app/configuracion/hooks/useApplySettings.ts
+// Aplica los settings de Apariencia y Accesibilidad al DOM en tiempo real.
+// Se ejecuta en cada cambio — sin necesidad de recargar la página.
+// También notifica al SettingsInitializer global para que se sincronice.
 'use client';
 
 import { useEffect } from 'react';
@@ -14,20 +18,18 @@ function applyAppearance(s: AppearanceSettings) {
   root.classList.toggle('dark', isDark);
   root.setAttribute('data-theme', s.theme);
 
-  // Acento — solo escribe en DOM si es distinto al default
-  // Así brand-title y otros elementos no quedan afectados en estado normal
+  // Acento
   if (s.accentHue !== DEFAULT_HUE) {
     const h = s.accentHue;
-    root.style.setProperty('--accent-h',          String(h));
-    root.style.setProperty('--accent-500',         `hsl(${h}, 70%, 55%)`);
-    root.style.setProperty('--accent-600',         `hsl(${h}, 68%, 48%)`);
-    root.style.setProperty('--accent-700',         `hsl(${h}, 65%, 40%)`);
-    root.style.setProperty('--accent-50',          `hsl(${h}, 80%, 97%)`);
-    root.style.setProperty('--accent-100',         `hsl(${h}, 75%, 93%)`);
-    root.style.setProperty('--accent-200',         `hsl(${h}, 70%, 86%)`);
-    root.style.setProperty('--accent-foreground',  '#ffffff');
+    root.style.setProperty('--accent-h',         String(h));
+    root.style.setProperty('--accent-500',        `hsl(${h}, 70%, 55%)`);
+    root.style.setProperty('--accent-600',        `hsl(${h}, 68%, 48%)`);
+    root.style.setProperty('--accent-700',        `hsl(${h}, 65%, 40%)`);
+    root.style.setProperty('--accent-50',         `hsl(${h}, 80%, 97%)`);
+    root.style.setProperty('--accent-100',        `hsl(${h}, 75%, 93%)`);
+    root.style.setProperty('--accent-200',        `hsl(${h}, 70%, 86%)`);
+    root.style.setProperty('--accent-foreground', '#ffffff');
   } else {
-    // Restaura — elimina inline styles para que el CSS de :root tome control
     root.style.removeProperty('--accent-h');
     root.style.removeProperty('--accent-500');
     root.style.removeProperty('--accent-600');
@@ -45,7 +47,7 @@ function applyAppearance(s: AppearanceSettings) {
     root.removeAttribute('data-density');
   }
 
-  // Animaciones — clase CSS para transiciones Tailwind + evento para Framer Motion en Providers
+  // Animaciones
   root.classList.toggle('reduce-motion', !s.animations);
   window.dispatchEvent(
     new CustomEvent('edm:animations', { detail: { enabled: s.animations } })
@@ -59,11 +61,11 @@ function applyAccessibility(s: AccessibilitySettings) {
   root.classList.toggle('reduce-motion',    s.reduceMotion);
   root.classList.toggle('focus-indicators', s.focusIndicators);
 
-  // Tamaño de fuente — escala todo via rem
   const fontSizeMap = { sm: '14px', md: '16px', lg: '18px', xl: '20px' } as const;
-  if (s.fontSize !== 'md') {
-    root.style.fontSize = fontSizeMap[s.fontSize];
-    root.setAttribute('data-fontsize', s.fontSize);
+  const fs = s.fontSize as keyof typeof fontSizeMap;
+  if (fs !== 'md') {
+    root.style.fontSize = fontSizeMap[fs] ?? '16px';
+    root.setAttribute('data-fontsize', fs);
   } else {
     root.style.removeProperty('font-size');
     root.removeAttribute('data-fontsize');
@@ -93,6 +95,7 @@ export function useApplySettings(
     accessibility.fontSize,
   ]);
 
+  // System theme listener
   useEffect(() => {
     if (appearance.theme !== 'system') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');

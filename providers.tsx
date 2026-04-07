@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState, useEffect } from "react";
 import { MotionConfig } from "framer-motion";
+import { SettingsInitializer } from "@/app/components/SettingsInitializer";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -40,19 +41,16 @@ export default function Providers({ children, session }: ProvidersProps) {
       })
   );
 
-  // Lee el setting de animaciones — se sincroniza en tiempo real
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
 
   useEffect(() => {
     setAnimationsEnabled(getAnimationsEnabled());
 
-    // Escucha cambios desde la página de configuración (mismo tab)
     const handleCustom = (e: Event) => {
       const enabled = (e as CustomEvent<{ enabled: boolean }>).detail.enabled;
       setAnimationsEnabled(enabled);
     };
 
-    // Escucha cambios desde otras pestañas (via localStorage)
     const handleStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) setAnimationsEnabled(getAnimationsEnabled());
     };
@@ -67,8 +65,9 @@ export default function Providers({ children, session }: ProvidersProps) {
 
   const content = (
     <QueryClientProvider client={queryClient}>
-      {/* MotionConfig envuelve toda la app — reducedMotion="always" desactiva Framer Motion globalmente */}
       <MotionConfig reducedMotion={animationsEnabled ? "never" : "always"}>
+        {/* ✅ Aplica settings (dark mode, densidad, font, etc.) en CADA página */}
+        <SettingsInitializer />
         {children}
       </MotionConfig>
       <ReactQueryDevtools initialIsOpen={false} />
