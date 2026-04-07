@@ -1,11 +1,3 @@
-// hooks/useSettings.ts
-// Capa de persistencia desacoplada — swap localStorage → API/Prisma sin tocar los tabs
-//
-// Para conectar a API real:
-//   1. Reemplaza loadFromStorage() con: await fetch('/api/settings')
-//   2. Reemplaza saveToStorage()   con: await fetch('/api/settings', { method: 'PUT', body: ... })
-//   3. Envuelve en useEffect + SWR/React Query para revalidación
-
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -39,16 +31,16 @@ function getDefaults(): AllSettings {
   };
 }
 
-// ─── Storage helpers (swap these for API calls) ───────────────────
+// ─── Lee localStorage sincrónicamente — igual que el anti-FOUC script ─────────
+// Esto evita que useApplySettings corra con defaults (theme:'light') antes
+// de que el useEffect cargue el valor real, removiendo la clase 'dark' del html.
 
 function loadFromStorage(): AllSettings {
-  // TODO: reemplazar con → const res = await fetch('/api/configuracion'); return res.json();
   if (typeof window === 'undefined') return getDefaults();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return getDefaults();
     const parsed = JSON.parse(raw) as Partial<AllSettings>;
-    // Merge con defaults para tolerar keys nuevas sin romper clientes viejos
     const defaults = getDefaults();
     return {
       notifications: { ...defaults.notifications, ...parsed.notifications },
@@ -62,36 +54,30 @@ function loadFromStorage(): AllSettings {
 }
 
 async function saveToStorage(data: AllSettings): Promise<void> {
-  // TODO: reemplazar con →
-  //   await fetch('/api/configuracion', {
-  //     method: 'PUT',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify(data),
-  //   });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // Notifica a SettingsInitializer y otras pestañas
+  window.dispatchEvent(new CustomEvent('edm:settings-changed'));
 }
 
-// ─── Hook público ─────────────────────────────────────────────────
+// ─── Hook público ─────────────────────────────────────────────────────────────
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export function useSettings() {
-  const [settings, setSettings] = useState<AllSettings>(getDefaults);
+  // ✅ Inicializa directamente desde localStorage (síncrono en cliente).
+  // Antes usaba getDefaults() como estado inicial, luego un useEffect
+  // sobreescribía con el valor real — pero entre medio useApplySettings
+  // corría con theme:'light' y removía la clase 'dark' del <html>.
+  const [settings, setSettings] = useState<AllSettings>(loadFromStorage);
   const [dirty,      setDirty]  = useState(false);
   const [saveStatus, setStatus] = useState<SaveStatus>('idle');
   const debounceRef              = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Cargar desde storage al montar
-  useEffect(() => {
-    setSettings(loadFromStorage());
-  }, []);
 
   const markDirty = useCallback(() => {
     setDirty(true);
     setStatus('idle');
   }, []);
 
-  // Updaters tipados por sección
   const updateNotifications = useCallback(
     <K extends keyof NotificationSettings>(key: K, value: NotificationSettings[K]) => {
       setSettings((prev) => ({ ...prev, notifications: { ...prev.notifications, [key]: value } }));
@@ -127,7 +113,6 @@ export function useSettings() {
     [markDirty],
   );
 
-  // Guardar manual (botón SaveBar)
   const save = useCallback(async () => {
     if (!dirty) return;
     setStatus('saving');
@@ -135,7 +120,6 @@ export function useSettings() {
       await saveToStorage(settings);
       setDirty(false);
       setStatus('saved');
-      // Reset a idle después de 2.5s
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => setStatus('idle'), 2500);
     } catch {
@@ -143,7 +127,6 @@ export function useSettings() {
     }
   }, [dirty, settings]);
 
-  // Descartar cambios
   const discard = useCallback(() => {
     setSettings(loadFromStorage());
     setDirty(false);
