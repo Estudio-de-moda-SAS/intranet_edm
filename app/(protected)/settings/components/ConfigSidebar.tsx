@@ -23,12 +23,9 @@ interface Props {
 
 export function ConfigSidebar({ activeTab, onTabChange }: Props) {
   return (
-    // El aside NO es sticky — el nav interno sí lo es con el offset correcto
     <aside className="w-full lg:w-56 shrink-0">
       <nav
         className="space-y-1"
-        // top = altura del header de la intranet (navbar) + padding de la página
-        // Ajusta este valor si tu header mide diferente
         style={{ top: 'calc(var(--header-h, 64px) + 1.5rem)' }}
         aria-label="Secciones de configuración"
       >
@@ -42,18 +39,35 @@ export function ConfigSidebar({ activeTab, onTabChange }: Props) {
               className={`
                 w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-all
                 ${active
-                  ? 'bg-violet-600 text-white shadow-md shadow-violet-200'
-                  : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900'}
+                  ? 'bg-violet-600 text-white shadow-md shadow-violet-200 dark:shadow-violet-900/30'
+                  : 'text-slate-600 hover:bg-slate-100 hover:shadow-sm hover:text-slate-900 dark:text-[#adbac7] dark:hover:bg-[#21262d] dark:hover:text-[#e6edf3]'
+                }
               `}
             >
-              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors ${active ? 'bg-white/20' : 'bg-slate-100'}`}>
-                <Icon className={`h-3.5 w-3.5 ${active ? 'text-white' : 'text-slate-500'}`} />
+              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                active
+                  ? 'bg-white/20'
+                  : 'bg-slate-100 dark:bg-[#21262d]'
+              }`}>
+                <Icon className={`h-3.5 w-3.5 ${
+                  active
+                    ? 'text-white'
+                    : 'text-slate-500 dark:text-[#768390]'
+                }`} />
               </div>
               <div className="min-w-0">
-                <p className={`text-[13px] font-semibold truncate ${active ? 'text-white' : 'text-slate-700'}`}>
+                <p className={`text-[13px] font-semibold truncate ${
+                  active
+                    ? 'text-white'
+                    : 'text-slate-700 dark:text-[#cdd9e5]'
+                }`}>
                   {label}
                 </p>
-                <p className={`text-[10px] truncate ${active ? 'text-violet-200' : 'text-slate-400'}`}>
+                <p className={`text-[10px] truncate ${
+                  active
+                    ? 'text-violet-200'
+                    : 'text-slate-400 dark:text-[#545d68]'
+                }`}>
                   {description}
                 </p>
               </div>
