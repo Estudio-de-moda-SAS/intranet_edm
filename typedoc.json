@@ -1,0 +1,36 @@
+{
+  "entryPoints": [
+    "lib/roles.ts",
+    "lib/microsoft-graph.ts",
+    "lib/graph/home.service.ts",
+    "lib/graph/shared.service.ts",
+    "hooks/useSettings.ts",
+    "hooks/useApplySettings.ts",
+    "hooks/useAnimationsEnabled.ts",
+    "types/configuracion.ts",
+    "app/(protected)/(intranet)/requests/data/tickets.ts"
+  ],
+  "entryPointStrategy": "expand",
+  "out": "docs",
+  "name": "Intranet EDM — Documentación Técnica",
+  "readme": "README.md",
+  "includeVersion": true,
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Autenticación y Acceso",
+    "Microsoft Graph",
+    "Hooks",
+    "Tipos y Modelos",
+    "Solicitudes y Tickets",
+    "Departamentos",
+    "*"
+  ],
+  "navigationLinks": {
+    "Intranet EDM": "http://localhost:3000",
+    "Cómo contribuir": "../CONTRIBUTING.md"
+  },
+  "plugin": [],
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true
+}

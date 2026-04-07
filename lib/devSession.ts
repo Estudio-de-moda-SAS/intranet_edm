@@ -138,7 +138,6 @@ export const DEV_USERS: Record<string, AppUser> = {
     name:        'Felipe Castaño',
     role:        'Coordinador de Logística',
     department:  'Logística',
-    accessLevel: 'logistics',
   },
   it: {
     ...DEV_USER,

@@ -1,12 +1,41 @@
-// lib/roles.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Sistema de roles y permisos para la intranet.
-// Diseñado para escalar hacia Entra ID / Azure AD Groups.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Define la jerarquía de niveles de acceso del sistema RBAC de la intranet EDM.
+ *
+ * Los niveles son ascendentes: un nivel superior incluye todos los permisos
+ * de los niveles inferiores.
+ *
+ * - `employee` — colaborador base
+ * - `manager` — jefatura o coordinación de área
+ * - `finance` — acceso a módulos financieros sensibles
+ * - `product` — acceso al módulo de producto y portafolio de marcas
+ * - `admin` — acceso completo al portal y configuración
+ */
 
-// ── 1. Niveles de acceso ──────────────────────────────────────────────────────
-
+/**
+ * Permisos granulares del sistema en formato `módulo:acción`.
+ *
+ * Cada permiso está asociado a un nivel mínimo requerido en {@link PERMISSION_MAP}.
+ *
+ * @example
+ * ```ts
+ * 'retail:view_kpis'
+ * 'finance:export'
+ * 'admin:view'
+ * ```
+ */
 export type AccessLevel =
+/**
+ * Permisos granulares del sistema en formato `módulo:acción`.
+ *
+ * Cada permiso está asociado a un nivel mínimo requerido en {@link PERMISSION_MAP}.
+ *
+ * @example
+ * ```ts
+ * 'retail:view_kpis'
+ * 'finance:export'
+ * 'admin:view'
+ * ```
+ */
   | 'admin'          // Superadministradores de la plataforma — todo
   | 'finance'        // Equipo de Finanzas
   | 'legal'          // Equipo Jurídico
@@ -18,10 +47,14 @@ export type AccessLevel =
   | 'manager'        // Gerencia / Dirección — acceso de lectura cross-departamento
   | 'employee';      // Resto de colaboradores
 
-// Orden jerárquico — solo aplica para permisos con minLevel.
-// Los niveles departamentales (finance, legal, it...) están por encima
-// de manager porque tienen acceso especializado en su área.
-// admin siempre gana — está al final.
+/**
+ * Orden jerárquico ascendente de los niveles de acceso del sistema.
+ * La posición en el array determina el rango — mayor índice, mayor acceso.
+ *
+ * @remarks
+ * Agregar un nuevo nivel aquí es suficiente para que {@link levelRank},
+ * {@link atLeast} y {@link can} lo evalúen correctamente.
+ */
 const LEVEL_HIERARCHY: AccessLevel[] = [
   'employee',
   'manager',
@@ -39,12 +72,34 @@ function levelRank(level: AccessLevel): number {
   return LEVEL_HIERARCHY.indexOf(level);
 }
 
+/**
+ * Verifica si un nivel de acceso cumple o supera un nivel requerido.
+ *
+ * @param level - Nivel de acceso del usuario autenticado
+ * @param required - Nivel mínimo requerido para la acción
+ * @returns `true` si el nivel del usuario es igual o superior al requerido
+ *
+ * @example
+ * ```ts
+ * atLeast('finance', 'manager')  // true
+ * atLeast('employee', 'hr')      // false
+ * ```
+ */
 export function atLeast(level: AccessLevel, required: AccessLevel): boolean {
   return levelRank(level) >= levelRank(required);
 }
 
-// ── 2. Mapa departamento → nivel base ────────────────────────────────────────
-
+/**
+ * Mapeo de nombres de departamento de EDM a su nivel de acceso base.
+ *
+ * Se usa en {@link resolveAccessLevel} para asignar el nivel correcto
+ * cuando el usuario no pertenece a ningún grupo de Azure AD explícito.
+ *
+ * @remarks
+ * Incluye variantes de nombre para cubrir inconsistencias en los perfiles
+ * de Entra ID (ej. "RRHH", "Recursos Humanos" y "Talento Humano" mapean
+ * al mismo nivel `hr`).
+ */
 const DEPARTMENT_LEVEL_MAP: Record<string, AccessLevel> = {
   'Finanzas':                  'finance',
   'Jurídica':                  'legal',
@@ -69,6 +124,13 @@ const DEPARTMENT_LEVEL_MAP: Record<string, AccessLevel> = {
   'Dirección':                 'manager',
 };
 
+/**
+ * Palabras clave que identifican roles de administrador de plataforma.
+ *
+ * Si el `jobTitle` del usuario en Entra ID contiene alguna de estas cadenas
+ * (comparación case-insensitive), se le asigna el nivel `admin` directamente,
+ * sin importar su departamento o grupos de Azure AD.
+ */
 const ADMIN_ROLE_KEYWORDS = [
   'superadmin',
   'administrador de plataforma',
@@ -76,7 +138,23 @@ const ADMIN_ROLE_KEYWORDS = [
   'platform admin',
 ];
 
+/**
+ * Resuelve el {@link AccessLevel} de un usuario a partir de sus grupos de Azure AD.
+ *
+ * Consulta los grupos del usuario en Microsoft Entra ID y los mapea al nivel
+ * correspondiente. Si el usuario no pertenece a ningún grupo conocido, retorna
+ * `'employee'` como fallback seguro.
+ *
+ * @param groups - Lista de IDs o nombres de grupos obtenidos desde Microsoft Graph
+ * @returns El nivel de acceso correspondiente al grupo de mayor jerarquía encontrado
+ *
+ * @remarks
+ * Este mapeo se ejecuta en el callback `jwt` de `auth.ts` durante el login,
+ * por lo que el `accessLevel` queda almacenado en el token y no requiere
+ * consultas adicionales a Graph en cada request.
+ */
 export function resolveAccessLevel(
+  // ...implementación existente
   department?: string | null,
   role?: string | null,
 ): AccessLevel {
@@ -93,21 +171,26 @@ export function resolveAccessLevel(
   return 'employee';
 }
 
-// ── 3. Permisos granulares ────────────────────────────────────────────────────
-//
-// Criterio para elegir entre minLevel vs allowedLevels:
-//
-//   minLevel      → el permiso es "de lectura general" y cualquier nivel
-//                   igual o superior puede tenerlo (ej: ver KPIs de su área).
-//                   Útil cuando manager/admin siempre deben ver algo.
-//
-//   allowedLevels → el permiso es sensible y SOLO los niveles listados
-//                   explícitamente pueden tenerlo. Usar cuando no queremos
-//                   que otros departamentos accedan aunque sean "superiores"
-//                   en la jerarquía (ej: facturas de finanzas no las debe
-//                   ver el equipo de IT aunque esté más arriba en el ranking).
-
+/**
+ * Permisos granulares del sistema en formato `módulo:acción`.
+ *
+ * Cada permiso está asociado a un nivel mínimo requerido en {@link PERMISSION_MAP}.
+ *
+ * @example
+ * ```ts
+ * 'retail:view_kpis'
+ * 'finance:export'
+ * 'admin:view'
+ * ```
+ */
 export type Permission =
+/**
+ * Mapa que asocia cada permiso con el nivel mínimo de acceso requerido.
+ *
+ * @remarks
+ * Agregar un nuevo permiso aquí es suficiente para que {@link can} lo evalúe
+ * automáticamente. No requiere cambios en los componentes consumidores.
+ */
   // Finanzas
   | 'finance:view_kpis'
   | 'finance:view_modules'
@@ -203,12 +286,50 @@ export type Permission =
   | 'admin:manage_roles'
   | 'admin:view_audit_log';
 
+  /**
+ * Representa al usuario autenticado dentro del portal con todos sus atributos
+ * de identidad y acceso resueltos.
+ *
+ * Se construye durante el callback `jwt` de `auth.ts` combinando los datos
+ * de la sesión de NextAuth con el perfil de Microsoft Graph.
+ */
+export interface AppUser {
+  /** Identificador único del usuario en Azure AD. */
+  id: string;
+  /** Nombre completo del colaborador. */
+  name: string;
+  /** Correo corporativo del colaborador. */
+  email: string;
+  /** URL de la foto de perfil obtenida desde Microsoft Graph. */
+  image?: string | null;
+  /** Cargo del colaborador según su perfil en Entra ID. */
+  role: string;
+  /** Nombre del departamento según su perfil en Entra ID. */
+  department: string;
+  /** Nivel de acceso resuelto a partir del departamento y grupos de Azure AD. */
+  accessLevel: AccessLevel;
+  /** Sede o ciudad donde trabaja el colaborador. */
+  location?: string;
+  /** Identificador del empleado en el sistema de RRHH de EDM. */
+  employeeId?: string;
+  /** Fecha de ingreso a la empresa en formato legible. */
+  joined?: string;
+  /** Teléfono de contacto del colaborador. */
+  phone?: string;
+}
+
+/**
+ * Define la forma de una regla de permiso en {@link PERMISSION_MAP}.
+ *
+ * - `minLevel` — el usuario debe tener al menos ese nivel en la jerarquía
+ * - `allowedLevels` — el usuario debe pertenecer a uno de los niveles listados exactamente
+ */
 type PermissionRule =
   | { minLevel: AccessLevel }
   | { allowedLevels: AccessLevel[] };
 
 const PERMISSION_MAP: Record<Permission, PermissionRule> = {
-
+  // ...valores existentes
   // ── Finanzas ──────────────────────────────────────────────────
   'finance:view_kpis':        { allowedLevels: ['finance', 'manager', 'admin'] },
   'finance:view_dashboard':   { allowedLevels: ['finance', 'manager', 'admin'] },
@@ -329,7 +450,26 @@ const PERMISSION_MAP: Record<Permission, PermissionRule> = {
   'admin:view_audit_log':     { allowedLevels: ['admin'] },
 };
 
+/**
+ * Verifica si un usuario tiene permiso para ejecutar una acción específica.
+ *
+ * Compara el nivel del usuario contra el nivel mínimo requerido por el permiso
+ * en {@link PERMISSION_MAP}. Los elementos sin acceso deben ocultarse del DOM
+ * completamente — no mostrarse bloqueados.
+ *
+ * @param userLevel - Nivel de acceso del usuario autenticado
+ * @param permission - Permiso requerido en formato `módulo:acción`
+ * @returns `true` si el nivel del usuario es suficiente, `false` en caso contrario
+ *
+ * @example
+ * ```ts
+ * can('manager', 'retail:view_kpis')  // true
+ * can('employee', 'finance:export')   // false
+ * can('admin', 'admin:view')          // true
+ * ```
+ */
 export function can(level: AccessLevel, permission: Permission): boolean {
+  // ...implementación existente
   const rule = PERMISSION_MAP[permission];
   if ('allowedLevels' in rule) return rule.allowedLevels.includes(level);
   return atLeast(level, rule.minLevel);

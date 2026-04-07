@@ -67,7 +67,6 @@ const OWNER_LEVEL_MAP: Record<string, AccessLevel> = {
   'Finanzas':                  'finance',
   'Legal':                     'legal',
   'Jurídica':                  'legal',
-  'Logística':                 'logistics',
   'Retail':                    'retail',
   'Comercial':                 'retail',
   'RRHH':                      'hr',

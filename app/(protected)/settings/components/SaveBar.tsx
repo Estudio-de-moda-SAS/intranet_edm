@@ -4,7 +4,7 @@
 'use client';
 
 import { Loader2, AlertCircle } from 'lucide-react';
-import type { SaveStatus } from '@/app/configuracion/hooks/useSettings';
+import type { SaveStatus } from '../hooks/useSettings';
 
 interface Props {
   dirty:      boolean;

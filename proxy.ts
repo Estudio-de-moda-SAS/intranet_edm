@@ -26,13 +26,6 @@ const PREFIX_PERMISSIONS: { prefix: string; permission: Permission }[] = [
   { prefix: "/legal/requests",        permission: "legal:view_requests"    },
   { prefix: "/legal",                 permission: "legal:view_kpis"        },
 
-  // ── Logística ─────────────────────────────────────────────────
-  { prefix: "/logistica/almacenes",   permission: "logistics:view_warehouses" },
-  { prefix: "/logistica/inventario",  permission: "logistics:view_warehouses" },
-  { prefix: "/logistica/reportes",    permission: "logistics:view_analytics"  },
-  { prefix: "/logistica/config",      permission: "logistics:view_warehouses" },
-  { prefix: "/logistica",             permission: "logistics:view_statbar"    },
-
   // ── Retail ────────────────────────────────────────────────────
   { prefix: "/comercial",             permission: "retail:view_commercial"  },
   { prefix: "/ecommerce",             permission: "retail:view_ecommerce"   },

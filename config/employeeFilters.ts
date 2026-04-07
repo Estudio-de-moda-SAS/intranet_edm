@@ -5,7 +5,8 @@
 //
 // Solo se exponen los departamentos marcados show: true.
 
-import { DEPARTMENTS } from "@/lib/config";
+import { DEPARTMENTS } from "@/config/config";
+export type FilterOption = { value: string; label: string };
 
 /** Mapa Graph-display-name → DEPARTMENTS id */
 export const GRAPH_DEPT_TO_ID: Record<string, string> = {

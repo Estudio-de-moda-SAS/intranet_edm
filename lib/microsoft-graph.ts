@@ -88,7 +88,6 @@ function buildGroupMap(): Map<string, AccessLevel> {
     [process.env.AZURE_GROUP_ADMIN,          "admin"],
     [process.env.AZURE_GROUP_FINANCE,        "finance"],
     [process.env.AZURE_GROUP_LEGAL,          "legal"],
-    [process.env.AZURE_GROUP_LOGISTICS,      "logistics"],
     [process.env.AZURE_GROUP_RETAIL,         "retail"],
     [process.env.AZURE_GROUP_HR,             "hr"],
     [process.env.AZURE_GROUP_IT,             "it"],
@@ -111,7 +110,6 @@ const GROUP_NAME_PATTERNS: [RegExp, AccessLevel][] = [
   // Departamentos
   [/Finanzas/i,                                    "finance"],
   [/Jur[ií]dica|Legal/i,                           "legal"],
-  [/Log[ií]stica/i,                                "logistics"],
   [/Retail|Comercial|Tiendas/i,                    "retail"],
   [/RRHH|Recursos.Humanos|Talento/i,               "hr"],
   [/Producto-EDM-Intranet|Producto|Colecciones/i,  "product"],  // ← nuevo
@@ -139,7 +137,7 @@ export function resolveAccessLevelFromGroups(
   const groupMap = buildGroupMap();
 
   const HIERARCHY: AccessLevel[] = [
-    "admin", "finance", "legal", "logistics",
+    "admin", "finance", "legal",
     "it", "product", "retail", "hr", "admin_services",  // ← product agregado
     "manager", "employee",
   ];

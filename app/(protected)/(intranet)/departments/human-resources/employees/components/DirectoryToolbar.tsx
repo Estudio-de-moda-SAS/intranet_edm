@@ -2,6 +2,7 @@
 
 import { Search, X, LayoutGrid, List, SlidersHorizontal } from "lucide-react";
 import { DEPT_FILTER_OPTIONS, STATUS_FILTER_OPTIONS } from "@/config/employeeFilters";
+import type { FilterOption } from "@/config/employeeFilters";
 import type { EmployeeFilters } from "@/types/employee";
 import type { ViewMode }        from "@/hooks/useEmployeeFilters";
 
@@ -37,7 +38,9 @@ export function DirectoryToolbar({ filters, viewMode, hasActiveFilters, onQueryC
       <div className="relative">
         <select value={filters.departmentId} onChange={(e) => onDeptChange(e.target.value)} className={SELECT_CLS}>
           <option value="">Todos los departamentos</option>
-          {DEPT_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {DEPT_FILTER_OPTIONS.map((o: FilterOption) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
         </select>
         <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
@@ -48,7 +51,9 @@ export function DirectoryToolbar({ filters, viewMode, hasActiveFilters, onQueryC
       <div className="relative">
         <select value={filters.status} onChange={(e) => onStatusChange(e.target.value)} className={SELECT_CLS}>
           <option value="">Todos los estados</option>
-          {STATUS_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {STATUS_FILTER_OPTIONS.map((o: FilterOption) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
         </select>
         <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
