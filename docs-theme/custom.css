@@ -1,0 +1,125 @@
+:root {
+  --color-accent: #7C3AED;
+  --color-accent-dark: #5B21B6;
+}
+
+/* Header */
+.tsd-page-toolbar {
+  background: #5B21B6 !important;
+  border-bottom: none !important;
+}
+
+.tsd-page-toolbar a,
+.tsd-page-toolbar .title {
+  color: #ffffff !important;
+}
+
+.tsd-page-toolbar .tsd-toolbar-contents {
+  background: transparent !important;
+}
+
+/* Links de navegación */
+#tsd-toolbar-links a {
+  color: #ffffff !important;
+  opacity: 0.85;
+  font-size: 14px;
+}
+
+#tsd-toolbar-links a:hover {
+  opacity: 1;
+}
+
+/* Sidebar */
+.site-menu {
+  border-right: 1px solid #EDE9FE;
+}
+
+.tsd-navigation a {
+  color: #334155;
+}
+
+.tsd-navigation a:hover,
+.tsd-navigation a.current {
+  color: #7C3AED !important;
+}
+
+/* Títulos */
+.tsd-page-title h1 {
+  color: #1E293B;
+  font-size: 2rem;
+  font-weight: 700;
+  border-bottom: 3px solid #7C3AED;
+  padding-bottom: 12px;
+}
+
+h2, h3, h4 {
+  color: #1E293B;
+}
+
+/* Links */
+a {
+  color: #7C3AED !important;
+}
+
+a:hover {
+  color: #5B21B6 !important;
+}
+
+/* Badges de tipo (M, I, T, F) */
+.tsd-kind-icon::before {
+  background: #EDE9FE !important;
+  color: #7C3AED !important;
+  border-radius: 4px;
+}
+
+/* Cards de módulos */
+.tsd-index-list a {
+  border: 1px solid #EDE9FE;
+  border-radius: 8px;
+  padding: 4px 10px;
+  transition: all 0.15s;
+  display: inline-block;
+  margin: 2px 0;
+}
+
+.tsd-index-list a:hover {
+  background: #EDE9FE;
+  border-color: #7C3AED;
+  text-decoration: none !important;
+}
+
+/* Sección On This Page */
+.tsd-page-navigation .tsd-accordion-summary {
+  color: #7C3AED;
+  font-weight: 600;
+}
+
+/* Footer */
+.tsd-generator {
+  border-top: 1px solid #EDE9FE;
+  color: #94A3B8;
+  font-size: 12px;
+}
+
+/* Modo oscuro */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-accent: #7C3AED;
+  }
+
+  .tsd-page-toolbar {
+    background: #3B0764 !important;
+  }
+
+  .site-menu {
+    border-right: 1px solid #2D1B69;
+  }
+
+  .tsd-index-list a {
+    border-color: #2D1B69;
+  }
+
+  .tsd-index-list a:hover {
+    background: #2D1B69;
+  }
+}

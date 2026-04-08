@@ -33,6 +33,8 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
     "typedoc": "^0.28.18",
+    "typedoc-plugin-mdn-links": "^5.1.1",
+    "typedoc-theme-hierarchy": "^6.0.0",
     "typescript": "^5"
   }
 }

@@ -1,5 +1,5 @@
 import { FolderOpen, ChevronRight as ChevronRightIcon } from "lucide-react";
-import type { LegalDocument } from "@/lib/graph/legal.service";
+import type { LegalDocument } from "@/lib/graph/departments/legal.service";
 import Link from "next/link";
 import LegalDocumentsClient from "./LegalDocumentsClient";
 import { getLegalDocuments } from "@/lib/documents/providers/legalDocuments.provider";

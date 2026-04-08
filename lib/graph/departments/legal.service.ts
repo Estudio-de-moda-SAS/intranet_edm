@@ -53,8 +53,11 @@ export type LegalDocument = {
   category: DocumentCategory;
   updatedAt: string;
   size: string;
-  downloadUrl: string;
-  restricted: boolean;          // Solo visible para ciertas áreas
+  downloadUrl?: string;  // opcional
+  restricted?: boolean;  // también puede ser opcional ya que DOC-004 y DOC-005 no lo tienen
+  author?: string;
+  version?: string;
+  previewUrl?: string;
 };
 
 export type RegulatoryAlert = {

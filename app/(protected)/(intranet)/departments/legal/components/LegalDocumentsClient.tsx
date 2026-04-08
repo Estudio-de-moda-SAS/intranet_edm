@@ -6,7 +6,7 @@ import {
   FileSignature, ScrollText, FileText,
   ShieldCheck, ClipboardList, Eye, Lock,
 } from "lucide-react";
-import type { LegalDocument, LegalDocumentCategory } from "@/lib/graph/legal.service";
+import type { LegalDocument, DocumentCategory } from "@/lib/graph/departments/legal.service";
 import PdfViewerModal, { type PdfMetadata } from "@/app/components/pdf/PdfViewerModal";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -39,7 +39,7 @@ interface CategoryMeta { label: string; color: string; bg: string; border: strin
 
 interface LegalDocumentsClientProps {
   documents:    LegalDocument[];
-  CATEGORY_MAP: Record<LegalDocumentCategory, CategoryMeta>;
+  CATEGORY_MAP: Record<DocumentCategory, CategoryMeta>;
 }
 
 export default function LegalDocumentsClient({ documents, CATEGORY_MAP }: LegalDocumentsClientProps) {

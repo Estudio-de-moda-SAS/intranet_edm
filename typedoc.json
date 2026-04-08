@@ -1,21 +1,30 @@
 {
+  "tsconfig": "./tsconfig.typedoc.json",
   "entryPoints": [
-    "lib/roles.ts",
-    "lib/microsoft-graph.ts",
-    "lib/graph/home.service.ts",
-    "lib/graph/shared.service.ts",
-    "hooks/useSettings.ts",
-    "hooks/useApplySettings.ts",
-    "hooks/useAnimationsEnabled.ts",
-    "types/configuracion.ts",
-    "app/(protected)/(intranet)/requests/data/tickets.ts"
+    "lib/**/*.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx"
   ],
-  "entryPointStrategy": "expand",
+  "entryPointStrategy": "resolve",
+  "exclude": [
+    "**/.next/**",
+    "**/node_modules/**",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/page.tsx",
+    "**/layout.tsx",
+    "**/loading.tsx",
+    "**/error.tsx",
+    "**/not-found.tsx",
+    "**/route.ts",
+    "**/route.tsx"
+  ],
   "out": "docs",
   "name": "Intranet EDM — Documentación Técnica",
-  "readme": "README.md",
+  "readme": "./docs-theme/README.md",
   "includeVersion": true,
   "categorizeByGroup": true,
+  "customCss": "./docs-theme/custom.css",
   "categoryOrder": [
     "Autenticación y Acceso",
     "Microsoft Graph",
@@ -30,7 +39,7 @@
     "Cómo contribuir": "../CONTRIBUTING.md"
   },
   "plugin": [],
-  "excludePrivate": true,
-  "excludeInternal": true,
-  "excludeExternals": true
+  "excludePrivate": false,
+  "excludeInternal": false,
+  "excludeExternals": false
 }
