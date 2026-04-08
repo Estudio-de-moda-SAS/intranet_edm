@@ -3,7 +3,7 @@
 
 import { Bell, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { SectionCard, SectionHeader, RowSetting, Toggle } from '@/app/components/ui/IntranetUI';
-import type { NotificationSettings } from '@/types/settings';
+import type { NotificationSettings } from '@/config/settings';
 
 // Todos los valores de NotificationSettings son boolean, así que el onChange
 // puede tiparse directamente sin genérico — evita el error con exactOptionalPropertyTypes

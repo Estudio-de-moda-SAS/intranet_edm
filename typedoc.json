@@ -3,7 +3,13 @@
   "entryPoints": [
     "lib/**/*.ts",
     "app/**/*.ts",
-    "app/**/*.tsx"
+    "app/**/*.tsx",
+    "types/**/*.ts",
+    "config/**/*.ts",
+    "stores/**/*.ts",
+    "auth.ts",
+    "proxy.ts",
+    "providers.tsx"
   ],
   "entryPointStrategy": "resolve",
   "exclude": [
@@ -11,13 +17,13 @@
     "**/node_modules/**",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "**/page.tsx",
     "**/layout.tsx",
     "**/loading.tsx",
     "**/error.tsx",
     "**/not-found.tsx",
     "**/route.ts",
-    "**/route.tsx"
+    "**/route.tsx",
+    "**/forms/**"
   ],
   "out": "docs",
   "name": "Intranet EDM — Documentación Técnica",

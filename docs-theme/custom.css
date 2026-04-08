@@ -1,125 +1,379 @@
-:root {
-  --color-accent: #7C3AED;
-  --color-accent-dark: #5B21B6;
+/* ═══════════════════════════════════════════════════
+   INTRANET EDM — TypeDoc Theme
+   Inspirado en la intranet corporativa de EDM
+   ═══════════════════════════════════════════════════ */
+
+   @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap');
+:root,
+html[data-theme="light"],
+html[data-theme="os"] {
+  --color-background:           #F8FAFC;
+  --color-background-secondary: #FFFFFF;
+  --color-background-active:    #F5F3FF;
+  --color-background-warning:   #FFFBEB;
+  --color-background-danger:    #FEF2F2;
+  --color-background-success:   #F0FDF4;
+
+  --color-text:                 #1E293B;
+  --color-text-aside:           #64748B;
+
+  --color-link:                 #7C3AED;
+  --color-focus-outline:        #7C3AED;
+
+  --color-ts-module:            #7C3AED;
+  --color-ts-namespace:         #7C3AED;
+  --color-ts-enum:              #B45309;
+  --color-ts-enum-member:       #B45309;
+  --color-ts-variable:          #0369A1;
+  --color-ts-function:          #15803D;
+  --color-ts-class:             #7C3AED;
+  --color-ts-interface:         #0369A1;
+  --color-ts-constructor:       #7C3AED;
+  --color-ts-property:          #1E293B;
+  --color-ts-method:            #15803D;
+  --color-ts-call-signature:    #15803D;
+  --color-ts-index-signature:   #0369A1;
+  --color-ts-constructor-signature: #7C3AED;
+  --color-ts-parameter:         #1E293B;
+  --color-ts-type-parameter:    #B45309;
+  --color-ts-accessor:          #15803D;
+  --color-ts-get-signature:     #15803D;
+  --color-ts-set-signature:     #15803D;
+  --color-ts-type-alias:        #B45309;
+  --color-ts-reference:         #7C3AED;
+
+  --color-toolbar:              #FFFFFF;
+  --color-toolbar-text:         #1E293B;
+
+  color-scheme: light only !important;
 }
 
-/* Header */
+html[data-theme="dark"] {
+  --color-background:           #F8FAFC !important;
+  --color-background-secondary: #FFFFFF !important;
+  --color-text:                 #1E293B !important;
+  --color-text-aside:           #64748B !important;
+  --color-link:                 #7C3AED !important;
+  color-scheme: light only !important;
+}
+
+body {
+  background: #F8FAFC !important;
+  color: #1E293B !important;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+
+/* ── Ocultar selector de tema ───────────────────── */
+.tsd-theme-toggle,
+label[for="tsd-theme"],
+#tsd-theme {
+  display: none !important;
+}
+
+/* ── Header ─────────────────────────────────────── */
 .tsd-page-toolbar {
-  background: #5B21B6 !important;
-  border-bottom: none !important;
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+  height: 56px !important;
 }
 
 .tsd-page-toolbar a,
 .tsd-page-toolbar .title {
-  color: #ffffff !important;
+  color: #1E293B !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
 }
 
-.tsd-page-toolbar .tsd-toolbar-contents {
+.tsd-toolbar-contents {
   background: transparent !important;
 }
 
-/* Links de navegación */
 #tsd-toolbar-links a {
-  color: #ffffff !important;
-  opacity: 0.85;
-  font-size: 14px;
+  color: #64748B !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 5px 12px !important;
+  border-radius: 8px !important;
+  opacity: 1 !important;
+  transition: all 0.15s !important;
+  border: 1px solid transparent !important;
 }
 
 #tsd-toolbar-links a:hover {
-  opacity: 1;
+  background: #F5F3FF !important;
+  color: #7C3AED !important;
+  border-color: #EDE9FE !important;
 }
 
-/* Sidebar */
-.site-menu {
-  border-right: 1px solid #EDE9FE;
+/* ── Sidebar ─────────────────────────────────────── */
+.site-menu,
+.col-sidebar {
+  background: #FFFFFF !important;
+  border-right: 1px solid #E2E8F0 !important;
 }
 
 .tsd-navigation a {
-  color: #334155;
+  font-size: 13px !important;
+  color: #475569 !important;
+  border-left: 2px solid transparent !important;
+  border-radius: 0 6px 6px 0 !important;
+  transition: all 0.12s !important;
+  padding: 5px 12px !important;
 }
 
-.tsd-navigation a:hover,
-.tsd-navigation a.current {
+.tsd-navigation a:hover {
   color: #7C3AED !important;
-}
-
-/* Títulos */
-.tsd-page-title h1 {
-  color: #1E293B;
-  font-size: 2rem;
-  font-weight: 700;
-  border-bottom: 3px solid #7C3AED;
-  padding-bottom: 12px;
-}
-
-h2, h3, h4 {
-  color: #1E293B;
-}
-
-/* Links */
-a {
-  color: #7C3AED !important;
-}
-
-a:hover {
-  color: #5B21B6 !important;
-}
-
-/* Badges de tipo (M, I, T, F) */
-.tsd-kind-icon::before {
-  background: #EDE9FE !important;
-  color: #7C3AED !important;
-  border-radius: 4px;
-}
-
-/* Cards de módulos */
-.tsd-index-list a {
-  border: 1px solid #EDE9FE;
-  border-radius: 8px;
-  padding: 4px 10px;
-  transition: all 0.15s;
-  display: inline-block;
-  margin: 2px 0;
-}
-
-.tsd-index-list a:hover {
-  background: #EDE9FE;
-  border-color: #7C3AED;
+  background: #FAF5FF !important;
+  border-left-color: #DDD6FE !important;
   text-decoration: none !important;
 }
 
-/* Sección On This Page */
+.tsd-navigation a.current {
+  color: #7C3AED !important;
+  border-left-color: #7C3AED !important;
+  background: #F5F3FF !important;
+  font-weight: 600 !important;
+}
+
+.tsd-navigation summary {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: #94A3B8 !important;
+  padding: 14px 12px 4px !important;
+}
+
+/* ── Contenido ───────────────────────────────────── */
+.col-content {
+  background: #F8FAFC !important;
+  padding: 32px 40px !important;
+}
+
+/* ── Header de página ────────────────────────────── */
+.tsd-page-title {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 14px !important;
+  padding: 28px 32px !important;
+  margin-bottom: 24px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.tsd-page-title::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: radial-gradient(circle, #7C3AED15 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.tsd-page-title h1 {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  letter-spacing: -0.02em !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 6px !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.tsd-breadcrumb {
+  position: relative !important;
+  z-index: 1 !important;
+  font-size: 12px !important;
+  color: #94A3B8 !important;
+}
+
+/* ── Links ───────────────────────────────────────── */
+a {
+  color: #7C3AED !important;
+  text-decoration: none !important;
+  transition: color 0.12s !important;
+}
+
+a:hover {
+  color: #6D28D9 !important;
+  text-decoration: underline !important;
+}
+
+/* ── Títulos ─────────────────────────────────────── */
+h2, h3, h4 {
+  color: #0F172A !important;
+  letter-spacing: -0.01em !important;
+  font-weight: 600 !important;
+}
+
+.tsd-index-heading,
+.tsd-accordion-summary h2,
+.tsd-accordion-summary h3 {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: #94A3B8 !important;
+}
+
+/* ── Panels ──────────────────────────────────────── */
+.tsd-panel {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  padding: 20px 24px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+}
+
+/* ── Lista de módulos ────────────────────────────── */
+.tsd-index-list a {
+  display: inline-flex !important;
+  align-items: center !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 8px !important;
+  padding: 5px 12px !important;
+  margin: 3px !important;
+  font-size: 13px !important;
+  background: #FFFFFF !important;
+  color: #334155 !important;
+  transition: all 0.15s !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+}
+
+.tsd-index-list a:hover {
+  border-color: #DDD6FE !important;
+  background: #FAF5FF !important;
+  color: #7C3AED !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(124,58,237,0.08) !important;
+  text-decoration: none !important;
+}
+
+/* ── Código inline ───────────────────────────────── */
+code {
+  font-size: 12.5px !important;
+  background: #F5F3FF !important;
+  color: #6D28D9 !important;
+  padding: 2px 7px !important;
+  border-radius: 5px !important;
+  border: 1px solid #EDE9FE !important;
+  font-family: 'SF Mono', Monaco, monospace !important;
+}
+
+/* ── Bloques de código ───────────────────────────── */
+pre {
+  background: #F1F5F9 !important;
+  border-radius: 12px !important;
+  padding: 20px 24px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: none !important;
+}
+
+pre code {
+  background: transparent !important;
+  color: #334155 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+/* ── Firmas de función ───────────────────────────── */
+.tsd-signature {
+  background: #F8FAFC !important;
+  border: 1px solid #E2E8F0 !important;
+  border-left: 3px solid #7C3AED !important;
+  border-radius: 0 10px 10px 0 !important;
+  padding: 14px 20px !important;
+  font-family: 'SF Mono', Monaco, monospace !important;
+  font-size: 13px !important;
+}
+
+/* ── Comentarios / descripción ───────────────────── */
+.tsd-comment p {
+  font-size: 14px !important;
+  color: #475569 !important;
+  line-height: 1.75 !important;
+}
+
+.tsd-comment table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  font-size: 13px !important;
+}
+
+.tsd-comment table th {
+  background: #F8FAFC !important;
+  color: #64748B !important;
+  font-weight: 600 !important;
+  padding: 8px 12px !important;
+  border: 1px solid #E2E8F0 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.tsd-comment table td {
+  padding: 8px 12px !important;
+  border: 1px solid #F1F5F9 !important;
+  color: #334155 !important;
+}
+
+.tsd-comment table tr:hover td {
+  background: #F8FAFC !important;
+}
+
+/* ── Navegación derecha (On This Page) ───────────── */
+.tsd-page-navigation {
+  font-size: 13px !important;
+}
+
 .tsd-page-navigation .tsd-accordion-summary {
-  color: #7C3AED;
-  font-weight: 600;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: #94A3B8 !important;
 }
 
-/* Footer */
+.tsd-page-navigation a {
+  color: #64748B !important;
+  font-size: 12px !important;
+  transition: color 0.12s !important;
+}
+
+.tsd-page-navigation a:hover {
+  color: #7C3AED !important;
+  text-decoration: none !important;
+}
+
+/* ── Footer ──────────────────────────────────────── */
 .tsd-generator {
-  border-top: 1px solid #EDE9FE;
-  color: #94A3B8;
-  font-size: 12px;
+  border-top: 1px solid #E2E8F0 !important;
+  padding: 16px 0 !important;
+  font-size: 12px !important;
+  color: #94A3B8 !important;
+  text-align: center !important;
+  background: #F8FAFC !important;
 }
 
-/* Modo oscuro */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-accent: #7C3AED;
-  }
+/* ── Settings panel ──────────────────────────────── */
+.tsd-accordion-summary[data-key="settings"] {
+  color: #94A3B8 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
 
-  .tsd-page-toolbar {
-    background: #3B0764 !important;
-  }
-
-  .site-menu {
-    border-right: 1px solid #2D1B69;
-  }
-
-  .tsd-index-list a {
-    border-color: #2D1B69;
-  }
-
-  .tsd-index-list a:hover {
-    background: #2D1B69;
-  }
+/* ── Checkboxes de visibilidad ───────────────────── */
+.tsd-filter-input input:checked + svg {
+  background: #7C3AED !important;
+  border-color: #7C3AED !important;
 }

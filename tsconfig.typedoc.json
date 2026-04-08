@@ -4,17 +4,24 @@
     "moduleResolution": "node",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "exactOptionalPropertyTypes": false
+    "exactOptionalPropertyTypes": false,
+    "noImplicitReturns": false,
+    "strict": false,
+    "skipLibCheck": true
   },
   "include": [
+    "types/next-auth.d.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
     "lib/**/*.ts",
     "lib/**/*.tsx",
     "types/**/*.ts",
     "types/**/*.d.ts",
-    "next-auth.d.ts",
-    "auth.ts"
+    "config/**/*.ts",
+    "stores/**/*.ts",
+    "auth.ts",
+    "proxy.ts",
+    "providers.tsx"
   ],
   "exclude": [
     "node_modules",

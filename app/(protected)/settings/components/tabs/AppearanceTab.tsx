@@ -1,40 +1,150 @@
-'use client';
+/**
+ * @module app/settings/tabs/AppearanceTab
+ * Pestaña de configuración de apariencia de la intranet EDM.
+ *
+ * @remarks
+ * Permite al colaborador personalizar el aspecto visual de la intranet
+ * desde la página de configuración personal. Todos los cambios se
+ * aplican al DOM en tiempo real mediante `useApplySettings` en
+ * `ConfigShell` sin necesidad de guardar primero.
+ *
+ * **Secciones:**
+ * 1. **Tema** — selector de modo claro, oscuro o sistema con preview
+ *    visual de cada opción.
+ * 2. **Color de acento** — paleta de 6 colores corporativos con
+ *    preview en vivo del color seleccionado.
+ * 3. **Densidad y comportamiento** — selector de densidad de interfaz
+ *    y toggle de animaciones.
+ */
 
-import { Palette, Settings, Layers, Sun, Moon, Monitor, Check, Zap, ZapOff } from 'lucide-react';
-import { SectionCard, SectionHeader, RowSetting, Toggle } from '@/app/components/ui/IntranetUI';
-import type { AppearanceSettings } from '@/types/settings';
+"use client";
 
+import {
+  Palette, Settings, Layers,
+  Sun, Moon, Monitor,
+  Check, Zap, ZapOff,
+} from "lucide-react";
+import {
+  SectionCard, SectionHeader, RowSetting, Toggle,
+} from "@/app/components/ui/IntranetUI";
+import type { AppearanceSettings } from "@/config/settings";
+
+// ── Tipos ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Props del componente {@link AppearanceTab}.
+ */
 interface Props {
+  /** Preferencias de apariencia actuales del colaborador. */
   settings: AppearanceSettings;
-  onChange: (key: keyof AppearanceSettings, value: AppearanceSettings[keyof AppearanceSettings]) => void;
+
+  /**
+   * Callback invocado cuando el colaborador cambia cualquier preferencia.
+   *
+   * @param key   - Campo de `AppearanceSettings` que cambió.
+   * @param value - Nuevo valor del campo.
+   */
+  onChange: (
+    key:   keyof AppearanceSettings,
+    value: AppearanceSettings[keyof AppearanceSettings],
+  ) => void;
 }
 
+// ── Constantes ────────────────────────────────────────────────────────────────
+
+/**
+ * Opciones del selector de tema de la interfaz.
+ *
+ * @remarks
+ * Cada opción incluye el valor del campo `theme`, la etiqueta visible,
+ * el ícono de Lucide React y las clases CSS para el mini preview
+ * del tema en el botón del selector.
+ */
 const THEMES = [
-  { value: 'light'  as const, label: 'Claro',   Icon: Sun,     preview: 'bg-white border-slate-200'         },
-  { value: 'dark'   as const, label: 'Oscuro',  Icon: Moon,    preview: 'bg-slate-900 border-slate-700'     },
-  { value: 'system' as const, label: 'Sistema', Icon: Monitor, preview: 'bg-gradient-to-br from-white to-slate-900 border-slate-400' },
+  {
+    value:   "light"  as const,
+    label:   "Claro",
+    Icon:    Sun,
+    preview: "bg-white border-slate-200",
+  },
+  {
+    value:   "dark"   as const,
+    label:   "Oscuro",
+    Icon:    Moon,
+    preview: "bg-slate-900 border-slate-700",
+  },
+  {
+    value:   "system" as const,
+    label:   "Sistema",
+    Icon:    Monitor,
+    preview: "bg-gradient-to-br from-white to-slate-900 border-slate-400",
+  },
 ] as const;
 
+/**
+ * Opciones del selector de densidad de la interfaz.
+ *
+ * @remarks
+ * `hint` se muestra como tooltip al hacer hover sobre el botón,
+ * describiendo el efecto visual de cada opción.
+ */
 const DENSITIES = [
-  { value: 'compact'  as const, label: 'Compacto', hint: 'Más contenido visible' },
-  { value: 'default'  as const, label: 'Normal',   hint: 'Equilibrado'           },
-  { value: 'spacious' as const, label: 'Amplio',   hint: 'Más espacio'           },
+  { value: "compact"  as const, label: "Compacto", hint: "Más contenido visible" },
+  { value: "default"  as const, label: "Normal",   hint: "Equilibrado"           },
+  { value: "spacious" as const, label: "Amplio",   hint: "Más espacio"           },
 ] as const;
 
+/**
+ * Paleta de colores de acento disponibles para personalización.
+ *
+ * @remarks
+ * Cada opción define el matiz HSH del color y su nombre en español.
+ * El color real se genera dinámicamente con
+ * `hsl(hue, 70%, 55%)` — el mismo algoritmo usado en
+ * `applyAppearance` de `useApplySettings`.
+ *
+ * El valor `258` (violeta) es el color corporativo por defecto de EDM.
+ */
 const ACCENTS: { hue: number; label: string }[] = [
-  { hue: 258, label: 'Violeta'    },
-  { hue: 220, label: 'Azul'      },
-  { hue: 160, label: 'Esmeralda' },
-  { hue: 25,  label: 'Naranja'   },
-  { hue: 330, label: 'Rosa'      },
-  { hue: 0,   label: 'Rojo'      },
+  { hue: 258, label: "Violeta"    },
+  { hue: 220, label: "Azul"      },
+  { hue: 160, label: "Esmeralda" },
+  { hue: 25,  label: "Naranja"   },
+  { hue: 330, label: "Rosa"      },
+  { hue: 0,   label: "Rojo"      },
 ];
 
+// ── Componente ────────────────────────────────────────────────────────────────
+
+/**
+ * Pestaña de apariencia de la página de configuración personal.
+ *
+ * @remarks
+ * Componente controlado — no gestiona estado propio. Todos los cambios
+ * se propagan al padre mediante `onChange` y se aplican al DOM
+ * en tiempo real por `useApplySettings` en `ConfigShell`.
+ *
+ * El preview de color de acento usa las variables CSS `--accent-*`
+ * directamente para mostrar siempre el color actualmente aplicado,
+ * incluyendo cambios no guardados. El botón de preview tiene
+ * `tabIndex={-1}` y `aria-hidden` para excluirlo del flujo de
+ * navegación por teclado.
+ *
+ * @param props - Ver {@link Props}.
+ *
+ * @example
+ * ```tsx
+ * <AppearanceTab
+ *   settings={settings.appearance}
+ *   onChange={(key, value) => updateAppearance(key, value)}
+ * />
+ * ```
+ */
 export function AppearanceTab({ settings: s, onChange }: Props) {
   return (
     <div className="space-y-6">
 
-      {/* ── Tema ────────────────────────────────────────────────── */}
+      {/* ── Tema ──────────────────────────────────────────────────── */}
       <SectionCard>
         <SectionHeader
           icon={Palette}
@@ -48,31 +158,28 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
               return (
                 <button
                   key={value}
-                  onClick={() => onChange('theme', value)}
+                  onClick={() => onChange("theme", value)}
                   aria-pressed={active}
                   className={`group flex flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 transition-all ${
                     active
-                      /* Activo: borde con acento, fondo neutro que funciona en ambos modos */
-                      ? 'border-[var(--accent-500)] bg-[var(--bg-subtle)] shadow-sm'
-                      /* Inactivo: hover discreto */
-                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-[#30363d] dark:hover:border-[#444c56] dark:hover:bg-[#1c2128]'
+                      ? "border-[var(--accent-500)] bg-[var(--bg-subtle)] shadow-sm"
+                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-[#30363d] dark:hover:border-[#444c56] dark:hover:bg-[#1c2128]"
                   }`}
                 >
-                  {/* Mini preview del tema */}
                   <div className={`h-8 w-12 rounded-md border-2 ${preview} flex items-center justify-center`}>
-                    <Icon className={`h-3.5 w-3.5 ${value === 'dark' ? 'text-slate-300' : 'text-slate-500'}`} />
+                    <Icon className={`h-3.5 w-3.5 ${value === "dark" ? "text-slate-300" : "text-slate-500"}`} />
                   </div>
                   <span
                     className="text-[12px] font-medium"
-                    style={{ color: active ? 'var(--accent-600)' : undefined }}
-                    {...(!active && { className: 'text-[12px] font-medium text-slate-500 dark:text-[#768390]' })}
+                    style={{ color: active ? "var(--accent-600)" : undefined }}
+                    {...(!active && { className: "text-[12px] font-medium text-slate-500 dark:text-[#768390]" })}
                   >
                     {label}
                   </span>
                   {active && (
                     <span
                       className="h-1.5 w-1.5 rounded-full"
-                      style={{ background: 'var(--accent-500)' }}
+                      style={{ background: "var(--accent-500)" }}
                     />
                   )}
                 </button>
@@ -82,7 +189,7 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
         </div>
       </SectionCard>
 
-      {/* ── Color de acento ─────────────────────────────────────── */}
+      {/* ── Color de acento ───────────────────────────────────────── */}
       <SectionCard>
         <SectionHeader
           icon={Layers}
@@ -97,11 +204,11 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
                 <button
                   key={hue}
                   title={label}
-                  onClick={() => onChange('accentHue', hue)}
+                  onClick={() => onChange("accentHue", hue)}
                   aria-label={label}
                   aria-pressed={active}
                   className={`relative h-9 w-9 rounded-full transition-transform hover:scale-110 ${
-                    active ? 'scale-110' : ''
+                    active ? "scale-110" : ""
                   }`}
                   style={{
                     background: `linear-gradient(135deg, hsl(${hue},70%,55%), hsl(${hue + 20},65%,45%))`,
@@ -110,36 +217,38 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
                       : undefined,
                   }}
                 >
-                  {active && <Check className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow" />}
+                  {active && (
+                    <Check className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow" />
+                  )}
                 </button>
               );
             })}
           </div>
 
-          {/* Live preview */}
+          {/* Preview en vivo del color de acento activo */}
           <div
             className="mt-4 flex items-center gap-3 rounded-xl px-4 py-3"
             style={{
-              border:          '1px solid var(--border-subtle)',
-              backgroundColor: 'var(--bg-subtle)',
+              border:          "1px solid var(--border-subtle)",
+              backgroundColor: "var(--bg-subtle)",
             }}
           >
             <div
               className="h-7 w-7 rounded-lg shadow-sm"
-              style={{ background: 'var(--accent-500)' }}
+              style={{ background: "var(--accent-500)" }}
               aria-hidden="true"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-[11px] font-semibold" style={{ color: "var(--text-secondary)" }}>
                 Vista previa en vivo
               </p>
-              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
                 El color se aplica inmediatamente al guardar.
               </p>
             </div>
             <button
               className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white transition-colors"
-              style={{ background: 'var(--accent-500)' }}
+              style={{ background: "var(--accent-500)" }}
               onClick={(e) => e.preventDefault()}
               aria-hidden="true"
               tabIndex={-1}
@@ -150,17 +259,17 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
         </div>
       </SectionCard>
 
-      {/* ── Densidad y comportamiento ───────────────────────────── */}
+      {/* ── Densidad y comportamiento ─────────────────────────────── */}
       <SectionCard>
         <SectionHeader icon={Settings} title="Densidad y comportamiento" />
 
         <div
           className="px-6 py-4"
-          style={{ borderBottom: '1px solid var(--border-subtle)' }}
+          style={{ borderBottom: "1px solid var(--border-subtle)" }}
         >
           <p
             className="mb-3 text-[10px] font-semibold uppercase tracking-wider"
-            style={{ color: 'var(--text-faint)' }}
+            style={{ color: "var(--text-faint)" }}
           >
             Densidad de la interfaz
           </p>
@@ -170,13 +279,13 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
               return (
                 <button
                   key={value}
-                  onClick={() => onChange('density', value)}
+                  onClick={() => onChange("density", value)}
                   title={hint}
                   aria-pressed={active}
                   className={`rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-all ${
                     active
-                      ? 'border-[var(--accent-200)] bg-[var(--accent-50)] text-[var(--accent-700)]'
-                      : 'border-slate-200 text-slate-500 hover:border-slate-300 dark:border-[#30363d] dark:text-[#768390] dark:hover:border-[#444c56]'
+                      ? "border-[var(--accent-200)] bg-[var(--accent-50)] text-[var(--accent-700)]"
+                      : "border-slate-200 text-slate-500 hover:border-slate-300 dark:border-[#30363d] dark:text-[#768390] dark:hover:border-[#444c56]"
                   }`}
                 >
                   {label}
@@ -194,11 +303,13 @@ export function AppearanceTab({ settings: s, onChange }: Props) {
           <div className="flex items-center gap-2">
             {s.animations
               ? <Zap    className="h-4 w-4 text-[var(--accent-500)]" />
-              : <ZapOff className="h-4 w-4 text-slate-400 dark:text-[#545d68]" />}
-            <Toggle value={s.animations} onChange={(v) => onChange('animations', v)} />
+              : <ZapOff className="h-4 w-4 text-slate-400 dark:text-[#545d68]" />
+            }
+            <Toggle value={s.animations} onChange={(v) => onChange("animations", v)} />
           </div>
         </RowSetting>
       </SectionCard>
+
     </div>
   );
 }

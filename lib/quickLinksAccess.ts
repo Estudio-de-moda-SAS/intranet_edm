@@ -55,7 +55,7 @@ export type QuickLinkConfig = QuickLinkItem & {
    *
    * Solo se evalúa si el usuario ya supera la comprobación de
    * `requiredPermission`. Si el usuario no lo posee, el link se renderiza
-   * en estado `disabled: true` junto con {@link disabledMsg}.
+   * en estado `disabled: true` junto con `disabledMsg` (ver {@link QuickLinkConfig}).
    * Si se omite, el link queda habilitado por defecto.
    */
   enabledPermission?: Permission;
@@ -82,7 +82,7 @@ export type QuickLinkConfig = QuickLinkItem & {
  *    requerido, el link se descarta completamente.
  * 2. **Habilitación** (`enabledPermission`): si el usuario no tiene el permiso
  *    de habilitación, el link se incluye con `disabled: true` y el mensaje
- *    de {@link QuickLinkConfig.disabledMsg}.
+ *    de `disabledMsg` (ver {@link QuickLinkConfig}).
  * 3. **Activo**: en cualquier otro caso, el link se incluye con
  *    `disabled: false`.
  *
