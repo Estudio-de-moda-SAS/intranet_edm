@@ -1,7 +1,24 @@
+/**
+ * @module FavoritesCard
+ * Componente cliente para gestionar y visualizar los accesos favoritos del usuario.
+ *
+ * @remarks
+ * Este archivo renderiza una tarjeta de favoritos personalizada, permitiendo:
+ * - visualizar accesos guardados,
+ * - entrar en modo edición,
+ * - eliminar favoritos,
+ * - agregar nuevos mediante un modal,
+ * - mostrar estados vacíos y espacios disponibles.
+ *
+ * El componente depende del contexto {@link useFavorites} para obtener y
+ * modificar la colección de favoritos, y de {@link useAppSession} para
+ * determinar el nivel de acceso del usuario al agregar nuevas opciones.
+ */
+
 "use client";
 
-import { useState }        from "react";
-import Link                from "next/link";
+import { useState } from "react";
+import Link from "next/link";
 import {
   Star, Plus, GripVertical, X,
   FileText, LayoutDashboard, Users, Calendar,
@@ -10,11 +27,18 @@ import {
   CreditCard, HeadphonesIcon, PieChart, Settings,
   ShieldCheck, Zap,
 } from "lucide-react";
-import { cn }              from "@/lib/utils";
-import { useFavorites }    from "@/features/favorites/FavoritesContext";
+import { cn } from "@/lib/utils";
+import { useFavorites } from "@/features/favorites/FavoritesContext";
 import { AddFavoriteModal } from "@/app/components/home/AddFavoriteModal";
-import { useAppSession }   from "@/lib/useAppSession";
+import { useAppSession } from "@/lib/useAppSession";
 
+/**
+ * Mapa de íconos disponibles para los favoritos.
+ *
+ * @remarks
+ * Permite resolver dinámicamente el componente visual a partir de la clave
+ * almacenada en cada favorito.
+ */
 const ICON_MAP = {
   FileText, LayoutDashboard, Users, Calendar,
   BarChart2, BookOpen, Wrench, MessageSquare,
@@ -23,16 +47,87 @@ const ICON_MAP = {
   ShieldCheck, Zap,
 } as const;
 
+/**
+ * Tipo derivado de las claves válidas del mapa de íconos.
+ */
 type IconKey = keyof typeof ICON_MAP;
-function resolveIcon(key: string) { return ICON_MAP[key as IconKey] ?? FileText; }
 
+/**
+ * Resuelve el ícono correspondiente a una clave.
+ *
+ * @param key Clave de ícono almacenada en el favorito.
+ * @returns Componente de ícono asociado o {@link FileText} como fallback.
+ *
+ * @remarks
+ * Si la clave no existe en `ICON_MAP`, se usa un ícono por defecto.
+ */
+function resolveIcon(key: string) {
+  return ICON_MAP[key as IconKey] ?? FileText;
+}
+
+/**
+ * Cantidad máxima de favoritos permitidos.
+ */
 const MAX_FAVORITES = 16;
 
+/**
+ * Componente principal de la tarjeta de favoritos.
+ *
+ * @returns Tarjeta interactiva con listado de favoritos y modal de agregado.
+ *
+ * @remarks
+ * Flujo general:
+ *
+ * 1. Obtiene los favoritos actuales desde {@link useFavorites}.
+ * 2. Obtiene el nivel de acceso desde {@link useAppSession}.
+ * 3. Gestiona dos estados locales:
+ *    - `editing`: activa el modo edición.
+ *    - `modalOpen`: controla la apertura del modal.
+ * 4. Renderiza:
+ *    - el listado de favoritos,
+ *    - acciones de edición y eliminación,
+ *    - botón para agregar nuevos favoritos,
+ *    - estado vacío cuando no existen elementos.
+ * 5. Usa {@link AddFavoriteModal} para incorporar nuevos accesos.
+ */
 export function FavoritesCard() {
+  /**
+   * Estado global de favoritos y acciones asociadas.
+   *
+   * @remarks
+   * Incluye:
+   * - `favorites`: colección actual,
+   * - `favoriteHrefs`: rutas ya registradas,
+   * - `removeFavorite`: eliminación,
+   * - `addFavorite`: agregado.
+   */
   const { favorites, favoriteHrefs, removeFavorite, addFavorite } = useFavorites();
+
+  /**
+   * Nivel de acceso del usuario actual.
+   *
+   * @remarks
+   * Se utiliza para filtrar o validar opciones disponibles al agregar
+   * nuevos favoritos.
+   */
   const { level } = useAppSession();
-  const [editing,   setEditing]   = useState(false);
+
+  /**
+   * Estado local que activa o desactiva el modo edición.
+   */
+  const [editing, setEditing] = useState(false);
+
+  /**
+   * Estado local que controla la apertura del modal de agregado.
+   */
   const [modalOpen, setModalOpen] = useState(false);
+
+  /**
+   * Cantidad de espacios vacíos que se muestran en modo edición.
+   *
+   * @remarks
+   * Solo se calcula visualmente cuando el usuario está editando.
+   */
   const emptySlots = editing ? Math.max(0, MAX_FAVORITES - favorites.length) : 0;
 
   return (
@@ -51,9 +146,13 @@ export function FavoritesCard() {
             </span>
             <div>
               <p className="text-[13px] font-semibold leading-none
-                            text-slate-800 dark:text-[#e6edf3]">Favoritos</p>
+                            text-slate-800 dark:text-[#e6edf3]">
+                Favoritos
+              </p>
               <p className="text-[11px] mt-0.5 leading-none
-                            text-slate-400 dark:text-[#545d68]">Tus accesos personalizados</p>
+                            text-slate-400 dark:text-[#545d68]">
+                Tus accesos personalizados
+              </p>
             </div>
           </div>
 
@@ -73,7 +172,11 @@ export function FavoritesCard() {
         {/* Grid */}
         <ul className="grid grid-cols-2 gap-1.5 p-2.5 flex-1 auto-rows-fr">
           {favorites.map(item => {
+            /**
+             * Ícono visual resuelto para el favorito actual.
+             */
             const Icon = resolveIcon(item.iconKey);
+
             return (
               <li key={item.id} className="relative group min-h-0">
                 {editing && (
@@ -100,25 +203,32 @@ export function FavoritesCard() {
                       : "hover:bg-amber-50 hover:border-amber-200 hover:shadow-sm dark:hover:bg-amber-500/[0.06] dark:hover:border-amber-500/25",
                   )}
                 >
-                  {editing && <GripVertical className="h-3 w-3 shrink-0 text-slate-300 dark:text-[#545d68]" />}
+                  {editing && (
+                    <GripVertical className="h-3 w-3 shrink-0 text-slate-300 dark:text-[#545d68]" />
+                  )}
 
-                  <span className={cn(
-                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] transition-transform duration-200",
-                    item.color,
-                    !editing && "group-hover:scale-110",
-                  )}>
+                  <span
+                    className={cn(
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] transition-transform duration-200",
+                      item.color,
+                      !editing && "group-hover:scale-110",
+                    )}
+                  >
                     <Icon className="h-3.5 w-3.5 text-white" />
                   </span>
 
                   <span className="flex-1 min-w-0">
-                    <span className={cn(
-                      "block text-[12px] font-medium leading-tight truncate transition-colors duration-200",
-                      editing
-                        ? "text-slate-500 dark:text-[#545d68]"
-                        : "text-slate-700 group-hover:text-amber-800 dark:text-[#adbac7] dark:group-hover:text-amber-300",
-                    )}>
+                    <span
+                      className={cn(
+                        "block text-[12px] font-medium leading-tight truncate transition-colors duration-200",
+                        editing
+                          ? "text-slate-500 dark:text-[#545d68]"
+                          : "text-slate-700 group-hover:text-amber-800 dark:text-[#adbac7] dark:group-hover:text-amber-300",
+                      )}
+                    >
                       {item.label}
                     </span>
+
                     {item.description && (
                       <span className="block text-[10.5px] leading-tight mt-0.5 truncate
                                        text-slate-400 dark:text-[#545d68]">
@@ -146,6 +256,7 @@ export function FavoritesCard() {
                   Agregar
                 </button>
               </li>
+
               {Array.from({ length: emptySlots - 1 }).map((_, i) => (
                 <li key={`skeleton-${i}`} className="min-h-0">
                   <div className="flex h-full w-full min-h-[44px] items-center gap-2.5 rounded-[10px] border border-dashed px-3 py-2 opacity-60
@@ -168,7 +279,9 @@ export function FavoritesCard() {
           {favorites.length === 0 && !editing && (
             <li className="col-span-2 flex flex-col items-center gap-2 py-8 text-center">
               <Star className="h-6 w-6 text-slate-200 dark:text-[#30363d]" />
-              <p className="text-xs text-slate-400 dark:text-[#545d68]">Aún no tienes favoritos</p>
+              <p className="text-xs text-slate-400 dark:text-[#545d68]">
+                Aún no tienes favoritos
+              </p>
               <button
                 onClick={() => { setEditing(true); setModalOpen(true); }}
                 className="mt-1 text-[11px] font-medium text-violet-500 hover:underline dark:text-violet-400"

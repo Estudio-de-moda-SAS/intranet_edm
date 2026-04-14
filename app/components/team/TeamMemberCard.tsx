@@ -1,14 +1,52 @@
+/**
+ * @module TeamMemberCard
+ * Componente cliente para mostrar la información resumida de un integrante del equipo.
+ *
+ * @remarks
+ * Este archivo renderiza una tarjeta individual con animación de entrada,
+ * avatar, cargo, departamento, biografía y accesos de contacto.
+ */
+
 "use client";
 
 import { motion } from "framer-motion";
 import { Mail, Linkedin, Building2 } from "lucide-react";
 import { TeamMember } from "./types";
 
+/**
+ * Props del componente {@link TeamMemberCard}.
+ */
 interface Props {
+  /**
+   * Información del integrante a renderizar.
+   */
   member: TeamMember;
+
+  /**
+   * Índice opcional usado para escalonar la animación.
+   *
+   * @defaultValue 0
+   */
   index?: number;
 }
 
+/**
+ * Renderiza una tarjeta individual de miembro del equipo.
+ *
+ * @param props Propiedades del componente.
+ * @param props.member Datos del integrante.
+ * @param props.index Índice usado para el delay de animación.
+ * @returns Tarjeta visual con información resumida y acciones de contacto.
+ *
+ * @remarks
+ * Flujo general:
+ * 1. Aplica una animación de entrada con `framer-motion`.
+ * 2. Muestra avatar, nombre, rol y departamento.
+ * 3. Renderiza biografía opcional si existe.
+ * 4. Muestra acciones de contacto según disponibilidad:
+ *    - correo,
+ *    - perfil de LinkedIn.
+ */
 export default function TeamMemberCard({ member, index = 0 }: Props) {
   return (
     <motion.article
@@ -18,11 +56,10 @@ export default function TeamMemberCard({ member, index = 0 }: Props) {
       transition={{ duration: 0.45, delay: index * 0.07, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="group relative flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-violet-200 overflow-hidden"
     >
-
-      {/* Hover background wash */}
+      {/* Fondo hover */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-violet-50/0 to-violet-50/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-      {/* Top accent bar — visible on hover */}
+      {/* Barra superior */}
       <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-violet-500 via-fuchsia-400 to-purple-500 scale-x-0 transition-transform duration-300 origin-left group-hover:scale-x-100" />
 
       {/* Avatar */}
@@ -34,11 +71,12 @@ export default function TeamMemberCard({ member, index = 0 }: Props) {
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         </div>
-        {/* Online dot — decorativo */}
+
+        {/* Indicador decorativo */}
         <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400 shadow-sm" />
       </div>
 
-      {/* Info */}
+      {/* Información */}
       <div className="relative flex flex-col items-center gap-1 w-full">
         <h3 className="text-[15px] font-semibold text-slate-800 leading-tight group-hover:text-violet-700 transition-colors duration-200">
           {member.name}
@@ -48,13 +86,11 @@ export default function TeamMemberCard({ member, index = 0 }: Props) {
           {member.role}
         </p>
 
-        {/* Department badge */}
         <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 group-hover:bg-violet-50 group-hover:text-violet-600 transition-colors duration-200">
           <Building2 className="h-2.5 w-2.5" />
           {member.department}
         </span>
 
-        {/* Bio */}
         {member.bio && (
           <p className="mt-2.5 text-[11px] text-slate-400 leading-relaxed line-clamp-2 px-1">
             {member.bio}
@@ -62,10 +98,10 @@ export default function TeamMemberCard({ member, index = 0 }: Props) {
         )}
       </div>
 
-      {/* Divider */}
+      {/* Separador */}
       <div className="relative my-4 h-px w-full bg-slate-100 group-hover:bg-violet-100 transition-colors duration-200" />
 
-      {/* Actions */}
+      {/* Acciones */}
       <div className="relative flex items-center justify-center gap-2 w-full">
         {member.email && (
           <a
@@ -76,6 +112,7 @@ export default function TeamMemberCard({ member, index = 0 }: Props) {
             Contactar
           </a>
         )}
+
         {member.linkedin && (
           <a
             href={member.linkedin}
@@ -88,7 +125,6 @@ export default function TeamMemberCard({ member, index = 0 }: Props) {
           </a>
         )}
       </div>
-
     </motion.article>
   );
 }

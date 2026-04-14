@@ -1,3 +1,21 @@
+/**
+ * @module NotificationsTab
+ * Pestaña de configuración de notificaciones dentro del módulo de ajustes.
+ *
+ * @remarks
+ * Este componente permite al usuario administrar cómo y cuándo desea
+ * recibir notificaciones dentro del ecosistema de la intranet.
+ *
+ * La configuración se divide en dos bloques principales:
+ *
+ * - canales de notificación
+ * - eventos que generan notificaciones
+ *
+ * Todos los valores de {@link NotificationSettings} son booleanos,
+ * por lo que el callback `onChange` recibe directamente una clave y
+ * un valor booleano.
+ */
+
 // app/configuracion/components/tabs/NotificationsTab.tsx
 'use client';
 
@@ -5,15 +23,41 @@ import { Bell, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { SectionCard, SectionHeader, RowSetting, Toggle } from '@/app/components/ui/IntranetUI';
 import type { NotificationSettings } from '@/config/settings';
 
+/**
+ * Claves válidas de configuración de notificaciones.
+ *
+ * @remarks
+ * Se deriva directamente de {@link NotificationSettings} para asegurar
+ * consistencia tipada entre el estado y las acciones de actualización.
+ */
 // Todos los valores de NotificationSettings son boolean, así que el onChange
 // puede tiparse directamente sin genérico — evita el error con exactOptionalPropertyTypes
 type NotifKey = keyof NotificationSettings;
 
+/**
+ * Props del componente {@link NotificationsTab}.
+ *
+ * @property settings Estado actual de configuración de notificaciones.
+ * @property onChange Callback para actualizar una clave booleana específica.
+ */
 interface Props {
   settings: NotificationSettings;
   onChange: (key: NotifKey, value: boolean) => void;
 }
 
+/**
+ * Configuración de los eventos que pueden generar notificaciones.
+ *
+ * @remarks
+ * Cada fila representa:
+ *
+ * - una clave booleana de configuración
+ * - una etiqueta visible
+ * - una descripción explicativa
+ *
+ * Esta estructura desacopla la configuración del renderizado,
+ * facilitando mantenimiento y escalabilidad.
+ */
 const EVENT_ROWS: { key: NotifKey; label: string; description: string }[] = [
   { key: 'taskAssigned',  label: 'Tarea asignada a mí',         description: 'Cuando alguien te asigna una tarea.'        },
   { key: 'taskDue',       label: 'Vencimiento próximo',          description: 'Recordatorio 24 h antes de que venza.'      },
@@ -23,6 +67,37 @@ const EVENT_ROWS: { key: NotifKey; label: string; description: string }[] = [
   { key: 'weeklyReport',  label: 'Reporte semanal de actividad', description: 'Resumen de tu actividad de la semana.'       },
 ];
 
+/**
+ * Pestaña de notificaciones del módulo de configuración.
+ *
+ * @param props Propiedades del componente.
+ * @returns Interfaz de configuración de canales y eventos de notificación.
+ *
+ * @remarks
+ * Este componente organiza la experiencia en dos tarjetas:
+ *
+ * 1. **Canales de notificación**
+ *    - email inmediato
+ *    - resumen diario
+ *    - navegador
+ *    - móvil
+ *    - sonido de escritorio
+ *
+ * 2. **Eventos que generan notificación**
+ *    - tareas
+ *    - menciones
+ *    - comunicados
+ *    - alertas del sistema
+ *    - resumen semanal
+ *
+ * Toda la persistencia o manejo de estado global se delega al
+ * componente padre mediante `onChange`.
+ *
+ * @example
+ * ```tsx
+ * <NotificationsTab settings={settings} onChange={handleChange} />
+ * ```
+ */
 export function NotificationsTab({ settings: s, onChange }: Props) {
   return (
     <div className="space-y-6">

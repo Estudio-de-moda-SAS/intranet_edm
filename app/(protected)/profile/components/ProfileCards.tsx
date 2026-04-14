@@ -1,3 +1,27 @@
+/**
+ * @module ProfileCards
+ * Tarjetas editables del lado izquierdo de la página de perfil.
+ *
+ * @remarks
+ * Este módulo agrupa las secciones principales de edición del perfil
+ * del usuario dentro de la intranet.
+ *
+ * Incluye:
+ *
+ * - información personal
+ * - preferencias regionales
+ * - acceso al cambio de contraseña
+ *
+ * Las tarjetas editables comparten una misma lógica de interacción:
+ *
+ * - activación de modo edición por campo
+ * - almacenamiento temporal del valor editado
+ * - guardado delegado al callback `onUpdate`
+ *
+ * Es un **Client Component** porque utiliza estado local para controlar
+ * la edición de campos y acciones del usuario.
+ */
+
 // components/perfil/ProfileCards.tsx
 // Tarjetas editables del lado izquierdo de la página de perfil
 'use client';
@@ -9,19 +33,79 @@ import type { ProfileData } from '@/types/profile';
 
 // ─── Personal Info ────────────────────────────────────────────────
 
+/**
+ * Props de la tarjeta {@link PersonalInfoCard}.
+ *
+ * @property profile Datos actuales del perfil.
+ * @property onUpdate Callback para actualizar un campo del perfil.
+ */
 interface PersonalInfoCardProps {
   profile:    ProfileData;
   onUpdate:   (field: keyof ProfileData, value: string) => void;
 }
 
+/**
+ * Tarjeta de información personal del usuario.
+ *
+ * @param props Propiedades del componente.
+ * @returns Tarjeta editable con datos visibles en el directorio corporativo.
+ *
+ * @remarks
+ * Esta tarjeta permite editar campos básicos del perfil, como:
+ *
+ * - nombre completo
+ * - correo corporativo
+ * - teléfono o extensión
+ * - ubicación
+ *
+ * La persistencia real de los cambios se delega al callback `onUpdate`.
+ *
+ * @example
+ * ```tsx
+ * <PersonalInfoCard profile={profile} onUpdate={updateField} />
+ * ```
+ */
 export function PersonalInfoCard({ profile, onUpdate }: PersonalInfoCardProps) {
+  /**
+   * Campo actualmente en edición.
+   */
   const [editing, setEditing] = useState<string | null>(null);
+
+  /**
+   * Valor temporal del campo en edición.
+   */
   const [tempVal, setTempVal] = useState('');
 
+  /**
+   * Activa el modo edición para un campo específico.
+   *
+   * @param field Nombre del campo a editar.
+   */
   const startEdit  = (field: string) => { setEditing(field); setTempVal(profile[field as keyof ProfileData] as string); };
+
+  /**
+   * Cancela la edición activa.
+   */
   const cancelEdit = () => setEditing(null);
+
+  /**
+   * Guarda el valor temporal del campo editado.
+   *
+   * @param field Campo del perfil a actualizar.
+   */
   const saveEdit   = (field: keyof ProfileData) => { onUpdate(field, tempVal); setEditing(null); };
 
+  /**
+   * Configuración de campos editables de información personal.
+   *
+   * @remarks
+   * Cada entrada define:
+   *
+   * - clave del campo en el perfil
+   * - etiqueta visible
+   * - icono representativo
+   * - tipo de input
+   */
   const FIELDS = [
     { field: 'name'     as const, label: 'Nombre completo',       icon: User,  type: 'text' },
     { field: 'email'    as const, label: 'Correo corporativo',     icon: Mail,  type: 'email' },
@@ -57,19 +141,65 @@ export function PersonalInfoCard({ profile, onUpdate }: PersonalInfoCardProps) {
 
 // ─── Regional Prefs ───────────────────────────────────────────────
 
+/**
+ * Props de la tarjeta {@link RegionalPrefsCard}.
+ *
+ * @property profile Datos actuales del perfil.
+ * @property onUpdate Callback para actualizar un campo del perfil.
+ */
 interface RegionalPrefsCardProps {
   profile:  ProfileData;
   onUpdate: (field: keyof ProfileData, value: string) => void;
 }
 
+/**
+ * Tarjeta de preferencias regionales.
+ *
+ * @param props Propiedades del componente.
+ * @returns Tarjeta editable con zona horaria e idioma.
+ *
+ * @remarks
+ * Esta sección permite al usuario administrar preferencias de interfaz
+ * y configuración regional.
+ *
+ * @example
+ * ```tsx
+ * <RegionalPrefsCard profile={profile} onUpdate={updateField} />
+ * ```
+ */
 export function RegionalPrefsCard({ profile, onUpdate }: RegionalPrefsCardProps) {
+  /**
+   * Campo actualmente en edición.
+   */
   const [editing, setEditing] = useState<string | null>(null);
+
+  /**
+   * Valor temporal del campo en edición.
+   */
   const [tempVal, setTempVal] = useState('');
 
+  /**
+   * Activa la edición para un campo regional.
+   *
+   * @param field Nombre del campo a editar.
+   */
   const startEdit  = (field: string) => { setEditing(field); setTempVal(profile[field as keyof ProfileData] as string); };
+
+  /**
+   * Cancela la edición activa.
+   */
   const cancelEdit = () => setEditing(null);
+
+  /**
+   * Guarda el nuevo valor del campo regional.
+   *
+   * @param field Campo del perfil a actualizar.
+   */
   const saveEdit   = (field: keyof ProfileData) => { onUpdate(field, tempVal); setEditing(null); };
 
+  /**
+   * Configuración de campos editables regionales.
+   */
   const FIELDS = [
     { field: 'timezone' as const, label: 'Zona horaria', icon: Clock },
     { field: 'language' as const, label: 'Idioma',       icon: Globe },
@@ -102,7 +232,25 @@ export function RegionalPrefsCard({ profile, onUpdate }: RegionalPrefsCardProps)
 
 // ─── Password Card ────────────────────────────────────────────────
 
+/**
+ * Tarjeta de cambio de contraseña.
+ *
+ * @returns Tarjeta informativa con acceso al portal de Microsoft.
+ *
+ * @remarks
+ * Este componente no cambia la contraseña directamente desde la intranet.
+ * En su lugar, redirige al portal oficial de Microsoft para mantener
+ * la gestión de credenciales bajo el proveedor corporativo de identidad.
+ *
+ * @example
+ * ```tsx
+ * <PasswordCard />
+ * ```
+ */
 export function PasswordCard() {
+  /**
+   * Redirige al portal oficial de restablecimiento/cambio de contraseña.
+   */
   const handleRedirect = () => {
     window.open('https://passwordreset.microsoftonline.com/', '_blank', 'noopener,noreferrer');
   };
@@ -165,6 +313,17 @@ export function PasswordCard() {
     </SectionCard>
   );
 }
+
+/**
+ * Icono auxiliar de candado usado en {@link PasswordCard}.
+ *
+ * @param props Props SVG estándar.
+ * @returns SVG de candado.
+ *
+ * @remarks
+ * Se define inline para evitar una importación adicional exclusiva
+ * para este componente.
+ */
 // Lock icon inline (evita importar sólo para este componente)
 function Lock(props: React.SVGProps<SVGSVGElement>) {
   return (

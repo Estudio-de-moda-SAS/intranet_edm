@@ -1,18 +1,78 @@
+/**
+ * @module ChatBotRoute
+ * Ruta API para orquestar conversaciones con el asistente corporativo.
+ *
+ * @remarks
+ * Este archivo implementa un endpoint `POST` que recibe mensajes de chat
+ * y los enruta hacia uno de los proveedores configurados:
+ *
+ * - Azure OpenAI
+ * - GitHub Copilot Studio (Direct Line)
+ *
+ * La selección del proveedor se controla mediante la variable de entorno:
+ *
+ * - `AI_PROVIDER=azure`
+ * - `AI_PROVIDER=copilot`
+ *
+ * El endpoint devuelve una respuesta en streaming para permitir
+ * una experiencia de chat progresiva en el cliente.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 // Set AI_PROVIDER in your .env.local:
 //   AI_PROVIDER=azure    → Azure OpenAI
 //   AI_PROVIDER=copilot  → GitHub Copilot Studio (Direct Line)
+
+/**
+ * Proveedor de IA activo para la ruta.
+ *
+ * @remarks
+ * Si no se define `AI_PROVIDER`, se utiliza `azure` por defecto.
+ */
 const PROVIDER = process.env.AI_PROVIDER ?? "azure";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+/**
+ * Representa un mensaje dentro del historial de conversación.
+ *
+ * @property role Rol del mensaje dentro del chat.
+ * @property content Contenido textual del mensaje.
+ */
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
 
 // ─── Azure OpenAI ─────────────────────────────────────────────────────────────
+
+/**
+ * Envía mensajes al proveedor Azure OpenAI y devuelve una respuesta en streaming.
+ *
+ * @param messages Historial de mensajes de la conversación.
+ * @returns Stream de texto con la respuesta generada por el modelo.
+ *
+ * @remarks
+ * Esta función:
+ *
+ * - construye la solicitud al deployment configurado en Azure OpenAI
+ * - inyecta un mensaje `system` inicial
+ * - consume la respuesta SSE (`stream: true`)
+ * - extrae los `delta.content` emitidos por el modelo
+ * - transforma el flujo en un `ReadableStream` plano de texto
+ *
+ * Variables requeridas:
+ *
+ * - `AZURE_OPENAI_ENDPOINT`
+ * - `AZURE_OPENAI_API_KEY`
+ * - `AZURE_OPENAI_DEPLOYMENT`
+ * - `AZURE_OPENAI_API_VERSION` (opcional)
+ * - `BOT_SYSTEM_PROMPT` (opcional)
+ *
+ * @throws Error si la respuesta HTTP del proveedor no es exitosa.
+ */
 async function callAzureOpenAI(messages: ChatMessage[]): Promise<ReadableStream> {
   const endpoint   = process.env.AZURE_OPENAI_ENDPOINT!;
   const apiKey     = process.env.AZURE_OPENAI_API_KEY!;
@@ -78,6 +138,30 @@ async function callAzureOpenAI(messages: ChatMessage[]): Promise<ReadableStream>
 }
 
 // ─── Copilot Studio (Direct Line) ─────────────────────────────────────────────
+
+/**
+ * Envía mensajes a GitHub Copilot Studio mediante Direct Line
+ * y devuelve la respuesta del bot como stream.
+ *
+ * @param messages Historial de mensajes de la conversación.
+ * @returns Stream de texto con la respuesta del bot.
+ *
+ * @remarks
+ * Flujo general:
+ *
+ * 1. Crea una conversación nueva en Direct Line
+ * 2. Extrae el último mensaje del usuario
+ * 3. Envía dicho mensaje como actividad
+ * 4. Consulta periódicamente las actividades del bot
+ * 5. Cuando encuentra una respuesta, la emite en el stream
+ *
+ * Variables requeridas:
+ *
+ * - `COPILOT_DIRECT_LINE_SECRET`
+ * - `COPILOT_BOT_ENDPOINT`
+ *
+ * Esta implementación usa polling simple con un máximo de 15 intentos.
+ */
 async function callCopilotStudio(messages: ChatMessage[]): Promise<ReadableStream> {
   const secret      = process.env.COPILOT_DIRECT_LINE_SECRET!;
   const botEndpoint = process.env.COPILOT_BOT_ENDPOINT!;
@@ -88,7 +172,11 @@ async function callCopilotStudio(messages: ChatMessage[]): Promise<ReadableStrea
   });
   const { conversationId, token } = await convRes.json();
 
+  /**
+   * Último mensaje emitido por el usuario dentro del historial recibido.
+   */
   const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+
   await fetch(`${botEndpoint}/conversations/${conversationId}/activities`, {
     method: "POST",
     headers: {
@@ -137,6 +225,31 @@ async function callCopilotStudio(messages: ChatMessage[]): Promise<ReadableStrea
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────
+
+/**
+ * Handler `POST` del endpoint de chat.
+ *
+ * @param req Request HTTP entrante con el historial de mensajes.
+ * @returns Respuesta HTTP en streaming con la salida del proveedor seleccionado.
+ *
+ * @remarks
+ * Este endpoint:
+ *
+ * - valida que existan mensajes
+ * - selecciona el proveedor según `PROVIDER`
+ * - delega la ejecución al adaptador correspondiente
+ * - devuelve la respuesta como `text/plain` en streaming
+ *
+ * Encabezados de respuesta:
+ *
+ * - `Content-Type: text/plain; charset=utf-8`
+ * - `X-Provider: <provider>`
+ *
+ * Errores:
+ *
+ * - `400` si no se reciben mensajes
+ * - `500` si ocurre un error interno o del proveedor
+ */
 export async function POST(req: NextRequest) {
   try {
     const { messages }: { messages: ChatMessage[] } = await req.json();

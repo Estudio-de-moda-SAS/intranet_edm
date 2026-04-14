@@ -1,3 +1,12 @@
+/**
+ * @module NewsSection
+ * Sección principal de noticias y contenido informativo en el home.
+ *
+ * @remarks
+ * Este componente combina un carrusel de noticias con tarjetas informativas
+ * y accesos rápidos, organizados en un layout responsive tipo dashboard.
+ */
+
 "use client";
 
 import { Newspaper, ArrowRight } from "lucide-react";
@@ -8,6 +17,9 @@ import { PoliciesCardAside }  from "@/app/components/home/PoliciesCard";
 import { QuickLinksSection }  from "@/app/components/ui/QuickLinksSection";
 import { homeQuickLinks }     from "@/app/components/home/config/homeQuickLinks";
 
+/**
+ * Representa una noticia o comunicado.
+ */
 interface Announcement {
   id: string;
   title: string;
@@ -16,10 +28,30 @@ interface Announcement {
   imageUrl?: string;
 }
 
+/**
+ * Props del componente {@link NewsSection}.
+ */
 interface Props {
+  /**
+   * Lista de anuncios a mostrar en la sección.
+   */
   announcements: Announcement[];
 }
 
+/**
+ * Renderiza la sección de noticias del home.
+ *
+ * @param props Propiedades del componente.
+ * @param props.announcements Lista de noticias disponibles.
+ * @returns Sección con carrusel, tarjetas informativas y accesos rápidos.
+ *
+ * @remarks
+ * - Si no hay anuncios, no renderiza nada.
+ * - Incluye navegación hacia la vista completa de noticias.
+ * - Distribuye el contenido en dos columnas en desktop:
+ *   - Izquierda: carrusel de noticias.
+ *   - Derecha: tarjetas informativas y quick links.
+ */
 export function NewsSection({ announcements }: Props) {
   if (!announcements?.length) return null;
 
@@ -50,12 +82,12 @@ export function NewsSection({ announcements }: Props) {
       {/* Grid principal */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:h-[580px]">
 
-        {/* Columna izquierda: Carousel */}
+        {/* Carrusel */}
         <div className="h-[340px] lg:h-full">
           <NewsCarousel announcements={announcements} />
         </div>
 
-        {/* Columna derecha */}
+        {/* Panel derecho */}
         <div className="grid grid-cols-2 grid-rows-2 gap-2 lg:h-full">
           <KnowUsCard />
           <PoliciesCardAside />

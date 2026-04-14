@@ -1,7 +1,40 @@
+/**
+ * @module RootLayout
+ * Layout raíz global de la aplicación.
+ *
+ * @remarks
+ * Este archivo define la estructura base compartida por toda la intranet,
+ * incluyendo:
+ *
+ * - metadata global
+ * - viewport
+ * - estilos globales
+ * - providers de aplicación
+ * - script preventivo de Anti-FOUC
+ *
+ * Su responsabilidad principal es preparar el documento HTML antes
+ * del primer render de la aplicación.
+ */
+
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "../providers";
 
+/* -------------------------------------------------------------------------- */
+/* Metadata global                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Metadata global de la aplicación.
+ *
+ * @remarks
+ * Define:
+ *
+ * - título base
+ * - plantilla de títulos por página
+ * - descripción institucional
+ * - directivas de indexación para buscadores
+ */
 export const metadata: Metadata = {
   title: {
     default:  "Intranet · Estudio de Moda S.A.S.",
@@ -11,12 +44,53 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/* -------------------------------------------------------------------------- */
+/* Viewport                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Configuración global del viewport.
+ *
+ * @remarks
+ * Permite controlar:
+ *
+ * - color del navegador en mobile
+ * - ancho base del viewport
+ * - escala inicial
+ */
 export const viewport: Viewport = {
   themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
 };
 
+/* -------------------------------------------------------------------------- */
+/* Anti-FOUC script                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Script ejecutado antes del primer render para evitar flashes de estilos.
+ *
+ * @remarks
+ * Este script lee la configuración persistida en `localStorage`
+ * y aplica inmediatamente preferencias visuales al elemento `<html>`,
+ * evitando un cambio brusco entre el primer paint y la hidratación.
+ *
+ * Ajustes aplicados:
+ *
+ * - modo oscuro (`dark`)
+ * - tamaño de fuente (`fontSize`)
+ * - densidad visual (`data-density`)
+ *
+ * Fuente de datos:
+ *
+ * - `localStorage['edm_intranet_settings']`
+ *
+ * Este patrón ayuda a prevenir el efecto conocido como:
+ *
+ * - FOUC (*Flash Of Unstyled Content*)
+ * - o específicamente cambio visual de light → dark antes de hidratar
+ */
 // Script que corre ANTES del render para evitar flash de light → dark.
 // Lee localStorage sincrónicamente y aplica clases al <html> inmediatamente.
 const ANTI_FOUC_SCRIPT = `
@@ -38,6 +112,43 @@ const ANTI_FOUC_SCRIPT = `
 })();
 `;
 
+/* -------------------------------------------------------------------------- */
+/* Componente principal                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Layout raíz de la aplicación.
+ *
+ * @param props Propiedades del layout.
+ * @param props.children Contenido de las rutas hijas.
+ * @returns Estructura HTML base de la aplicación.
+ *
+ * @remarks
+ * Este layout:
+ *
+ * - define el idioma del documento (`lang="es"`)
+ * - aplica `suppressHydrationWarning` para evitar discrepancias visuales
+ * - inyecta el script Anti-FOUC en `<head>`
+ * - preconecta las fuentes de Google
+ * - envuelve la aplicación en {@link Providers}
+ *
+ * Estructura:
+ *
+ * - `<html>`
+ *   - `<head>`
+ *     - script Anti-FOUC
+ *     - preconnect + stylesheet de fuentes
+ *   - `<body>`
+ *     - providers globales
+ *     - contenido de rutas
+ *
+ * @example
+ * ```tsx
+ * <RootLayout>
+ *   <Page />
+ * </RootLayout>
+ * ```
+ */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning className="h-full">

@@ -1,13 +1,64 @@
+/**
+ * @module FilterSelect
+ * Componente cliente para renderizar un selector de filtro (select).
+ *
+ * @remarks
+ * Se utiliza dentro de barras de filtrado para permitir seleccionar
+ * valores de manera simple y consistente con el diseño del sistema.
+ */
+
 "use client";
 
-type Option = { value: string; label: string };
+/**
+ * Representa una opción dentro del select.
+ */
+type Option = {
+  /**
+   * Valor interno de la opción.
+   */
+  value: string;
 
-type FilterSelectProps = {
-  value:    string;
-  onChange: (value: string) => void;
-  options:  Option[];
+  /**
+   * Texto visible para el usuario.
+   */
+  label: string;
 };
 
+/**
+ * Props del componente {@link FilterSelect}.
+ */
+interface FilterSelectProps {
+  /**
+   * Valor actualmente seleccionado.
+   */
+  value: string;
+
+  /**
+   * Callback que se ejecuta al cambiar la selección.
+   */
+  onChange: (value: string) => void;
+
+  /**
+   * Lista de opciones disponibles.
+   */
+  options: Option[];
+}
+
+/**
+ * Renderiza un select estilizado para filtros.
+ *
+ * @param props Propiedades del componente.
+ * @param props.value Valor actual.
+ * @param props.onChange Función de cambio.
+ * @param props.options Opciones del select.
+ * @returns Elemento `<select>` estilizado.
+ *
+ * @remarks
+ * Flujo:
+ * 1. Renderiza un `<select>` controlado.
+ * 2. Mapea las opciones recibidas.
+ * 3. Notifica cambios mediante `onChange`.
+ */
 export default function FilterSelect({ value, onChange, options }: FilterSelectProps) {
   return (
     <select
@@ -27,4 +78,3 @@ export default function FilterSelect({ value, onChange, options }: FilterSelectP
     </select>
   );
 }
-

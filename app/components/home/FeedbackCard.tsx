@@ -1,34 +1,125 @@
+/**
+ * @module FeedbackCard
+ * Componente cliente para invitar al usuario a enviar feedback desde una tarjeta interactiva.
+ *
+ * @remarks
+ * Este archivo combina:
+ * - una card visual destacada,
+ * - un efecto hover con fondo dinámico,
+ * - y un modal para capturar feedback con calificación y mensaje.
+ *
+ * Está pensado como una variante más promocional o destacada que un panel plano.
+ */
+
 "use client";
 
 import { useState } from "react";
 import { MessageSquarePlus, Send, Star } from "lucide-react";
 import { Modal } from "@/app/components/ui/Modal";
 
+/**
+ * Escala de calificación permitida.
+ */
 type Rating = 1 | 2 | 3 | 4 | 5;
 
+/**
+ * Props del componente {@link FeedbackCard}.
+ */
 interface FeedbackCardProps {
+  /**
+   * Imagen de fondo opcional usada en el efecto hover.
+   */
   backgroundImage?: string;
+
+  /**
+   * Opacidad del overlay oscuro aplicado sobre el fondo.
+   *
+   * @defaultValue 60
+   */
   overlayOpacity?: number;
+
+  /**
+   * Gradiente alternativo usado cuando no existe imagen de fondo.
+   */
   fallbackGradient?: string;
 }
 
+/**
+ * Renderiza una tarjeta interactiva de feedback con modal integrado.
+ *
+ * @param props Propiedades del componente.
+ * @param props.backgroundImage Imagen opcional del hover.
+ * @param props.overlayOpacity Opacidad del overlay oscuro.
+ * @param props.fallbackGradient Gradiente usado si no hay imagen.
+ * @returns Tarjeta visual con formulario modal de feedback.
+ *
+ * @remarks
+ * Flujo general:
+ * 1. El usuario hace clic sobre la tarjeta.
+ * 2. Se abre un {@link Modal} de feedback.
+ * 3. El usuario selecciona una calificación y redacta un mensaje.
+ * 4. Al enviar, se muestra una confirmación temporal.
+ * 5. Luego se reinicia el estado interno del formulario.
+ */
 export function FeedbackCard({
   backgroundImage,
   overlayOpacity = 60,
   fallbackGradient = "linear-gradient(135deg, #374151 0%, #111827 100%)",
 }: FeedbackCardProps) {
-  const [open, setOpen]       = useState(false);
-  const [rating, setRating]   = useState<Rating | null>(null);
-  const [hover, setHover]     = useState<Rating | null>(null);
-  const [message, setMessage] = useState("");
-  const [sent, setSent]       = useState(false);
+  /**
+   * Estado de apertura del modal.
+   */
+  const [open, setOpen] = useState(false);
 
+  /**
+   * Calificación seleccionada por el usuario.
+   */
+  const [rating, setRating] = useState<Rating | null>(null);
+
+  /**
+   * Calificación actualmente sobrevolada en la UI.
+   */
+  const [hover, setHover] = useState<Rating | null>(null);
+
+  /**
+   * Mensaje de feedback escrito por el usuario.
+   */
+  const [message, setMessage] = useState("");
+
+  /**
+   * Estado de confirmación de envío.
+   */
+  const [sent, setSent] = useState(false);
+
+  /**
+   * Procesa el envío del feedback.
+   *
+   * @remarks
+   * Esta implementación actual simula el envío:
+   * - valida que haya calificación y mensaje,
+   * - muestra un estado de éxito,
+   * - luego reinicia el formulario.
+   */
   function handleSubmit() {
     if (!rating || !message.trim()) return;
+
     setSent(true);
-    setTimeout(() => { setOpen(false); setSent(false); setRating(null); setHover(null); setMessage(""); }, 2200);
+
+    setTimeout(() => {
+      setOpen(false);
+      setSent(false);
+      setRating(null);
+      setHover(null);
+      setMessage("");
+    }, 2200);
   }
 
+  /**
+   * Calificación visible actualmente.
+   *
+   * @remarks
+   * Si existe hover, se prioriza como previsualización visual.
+   */
   const activeRating = hover ?? rating;
 
   return (
@@ -82,9 +173,13 @@ export function FeedbackCard({
               Feedback
             </h2>
           </div>
+
           <div className="flex gap-0.5">
             {([1, 2, 3, 4, 5] as Rating[]).map((n) => (
-              <Star key={n} className="h-3 w-3 fill-amber-300 text-amber-300 transition-colors duration-300 group-hover:fill-amber-400 group-hover:text-amber-400" />
+              <Star
+                key={n}
+                className="h-3 w-3 fill-amber-300 text-amber-300 transition-colors duration-300 group-hover:fill-amber-400 group-hover:text-amber-400"
+              />
             ))}
           </div>
         </div>
@@ -96,11 +191,15 @@ export function FeedbackCard({
                         dark:text-[#545d68]">
             Tu opinión importa
           </p>
+
           <p className="mt-1 text-sm font-semibold leading-snug transition-colors duration-300
                         text-slate-700 group-hover:text-white
                         dark:text-[#cdd9e5]">
-            Comparte tu experiencia,<br />sugerencias o inquietudes
+            Comparte tu experiencia,
+            <br />
+            sugerencias o inquietudes
           </p>
+
           <span className="mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all duration-300
                            bg-violet-50 text-violet-600 group-hover:bg-white/20 group-hover:text-white
                            dark:bg-violet-500/[0.12] dark:text-violet-400">
@@ -118,15 +217,17 @@ export function FeedbackCard({
         subtitle="Anónimo · Confidencial"
         size="sm"
         accentColor="bg-violet-600"
-        footer={!sent ? (
-          <button
-            onClick={handleSubmit}
-            disabled={!rating || !message.trim()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Send className="h-3.5 w-3.5" /> Enviar feedback
-          </button>
-        ) : undefined}
+        footer={
+          !sent ? (
+            <button
+              onClick={handleSubmit}
+              disabled={!rating || !message.trim()}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Send className="h-3.5 w-3.5" /> Enviar feedback
+            </button>
+          ) : undefined
+        }
       >
         {sent ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
@@ -134,25 +235,51 @@ export function FeedbackCard({
                              bg-violet-50 dark:bg-violet-500/[0.12]">
               <Send className="h-6 w-6 text-violet-600 dark:text-violet-400" />
             </span>
-            <p className="text-base font-bold text-slate-800 dark:text-[#e6edf3]">¡Gracias por tu feedback!</p>
-            <p className="text-sm text-slate-500 dark:text-[#768390]">Tu mensaje fue enviado correctamente.</p>
+            <p className="text-base font-bold text-slate-800 dark:text-[#e6edf3]">
+              ¡Gracias por tu feedback!
+            </p>
+            <p className="text-sm text-slate-500 dark:text-[#768390]">
+              Tu mensaje fue enviado correctamente.
+            </p>
           </div>
         ) : (
           <>
             <div className="mb-4">
-              <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-[#adbac7]">¿Cómo calificarías tu experiencia?</p>
+              <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-[#adbac7]">
+                ¿Cómo calificarías tu experiencia?
+              </p>
+
               <div className="flex gap-1">
                 {([1, 2, 3, 4, 5] as Rating[]).map((n) => (
-                  <button key={n} onClick={() => setRating(n)} onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(null)} className="transition-transform hover:scale-110 active:scale-95">
-                    <Star className={`h-7 w-7 transition-colors ${activeRating && n <= activeRating ? "fill-amber-400 text-amber-400" : "text-slate-200 dark:text-[#30363d]"}`} />
+                  <button
+                    key={n}
+                    onClick={() => setRating(n)}
+                    onMouseEnter={() => setHover(n)}
+                    onMouseLeave={() => setHover(null)}
+                    className="transition-transform hover:scale-110 active:scale-95"
+                  >
+                    <Star
+                      className={`h-7 w-7 transition-colors ${
+                        activeRating && n <= activeRating
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-slate-200 dark:text-[#30363d]"
+                      }`}
+                    />
                   </button>
                 ))}
               </div>
             </div>
+
             <div>
-              <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-[#adbac7]">Mensaje</p>
+              <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-[#adbac7]">
+                Mensaje
+              </p>
+
               <textarea
-                rows={4} maxLength={500} value={message} onChange={(e) => setMessage(e.target.value)}
+                rows={4}
+                maxLength={500}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
                 placeholder="Cuéntanos tu experiencia, sugerencias o inquietudes..."
                 className="w-full resize-none rounded-xl border px-3 py-2.5 text-sm transition-all
                            border-slate-200 bg-slate-50 text-slate-700 placeholder:text-slate-400
@@ -160,7 +287,9 @@ export function FeedbackCard({
                            dark:border-[#30363d] dark:bg-[#1c2128] dark:text-[#cdd9e5] dark:placeholder:text-[#545d68]
                            dark:focus:border-violet-500/50 dark:focus:ring-violet-500/15"
               />
-              <p className="mt-1 text-right text-[10px] text-slate-400 dark:text-[#545d68]">{message.length} / 500</p>
+              <p className="mt-1 text-right text-[10px] text-slate-400 dark:text-[#545d68]">
+                {message.length} / 500
+              </p>
             </div>
           </>
         )}

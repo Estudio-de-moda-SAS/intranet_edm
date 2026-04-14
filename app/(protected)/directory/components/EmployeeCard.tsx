@@ -1,3 +1,24 @@
+/**
+ * @module EmployeeCard
+ * Tarjeta individual de empleado dentro del directorio corporativo.
+ *
+ * @remarks
+ * Este componente renderiza la información resumida de un colaborador
+ * en dos variantes de visualización:
+ *
+ * - vista en lista
+ * - vista en cuadrícula
+ *
+ * También incluye interacciones de cliente como:
+ *
+ * - hover states visuales
+ * - copia de correo al portapapeles
+ * - apertura del detalle del empleado
+ *
+ * Es un **Client Component** porque utiliza estado local e interacción
+ * directa con eventos del navegador.
+ */
+
 "use client";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -9,12 +30,26 @@ import { useState } from "react";
 import { Employee } from "../types";
 import { DEPARTMENT_COLORS } from "../mockEmployees";
 
+/**
+ * Props del componente {@link EmployeeCard}.
+ *
+ * @property employee Empleado a renderizar.
+ * @property onSelect Callback ejecutado al seleccionar la tarjeta.
+ * @property viewMode Modo de visualización (`grid` o `list`).
+ */
 interface Props {
   employee: Employee;
   onSelect: (employee: Employee) => void;
   viewMode: "grid" | "list";
 }
 
+/**
+ * Configuración visual de estados de empleados.
+ *
+ * @remarks
+ * Define etiqueta, color principal y color de fondo
+ * para cada estado laboral visible en la UI.
+ */
 const STATUS_CONFIG = {
   active:   { label: "Activo",     color: "#10b981", bg: "#d1fae5" },
   remote:   { label: "Remoto",     color: "#3b82f6", bg: "#dbeafe" },
@@ -22,6 +57,17 @@ const STATUS_CONFIG = {
   away:     { label: "Ausente",    color: "#6b7280", bg: "#f3f4f6" },
 };
 
+/**
+ * Obtiene las iniciales de un nombre completo.
+ *
+ * @param name Nombre del empleado.
+ * @returns Iniciales generadas a partir de las dos primeras palabras.
+ *
+ * @example
+ * ```ts
+ * getInitials("Juan David Pérez") // "JD"
+ * ```
+ */
 function getInitials(name: string): string {
   return name
     .split(" ")
@@ -31,6 +77,19 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+/**
+ * Avatar fallback para empleados sin foto.
+ *
+ * @param props Propiedades del componente.
+ * @param props.name Nombre del empleado.
+ * @param props.department Departamento al que pertenece.
+ * @param props.size Tamaño visual del avatar.
+ * @returns Avatar circular con degradado e iniciales.
+ *
+ * @remarks
+ * El color base se deriva del departamento mediante
+ * {@link DEPARTMENT_COLORS}.
+ */
 function AvatarPlaceholder({ name, department, size = 56 }: { name: string; department: string; size?: number }) {
   const color = DEPARTMENT_COLORS[department] ?? "#1e3a5f";
   const initials = getInitials(name);
@@ -57,11 +116,56 @@ function AvatarPlaceholder({ name, department, size = 56 }: { name: string; depa
   );
 }
 
+/**
+ * Tarjeta individual de empleado.
+ *
+ * @param props Propiedades del componente.
+ * @returns Representación visual del empleado en vista lista o grid.
+ *
+ * @remarks
+ * Responsabilidades principales:
+ *
+ * - mostrar identidad visual del empleado
+ * - presentar información de contacto resumida
+ * - permitir selección del perfil
+ * - ofrecer acciones rápidas como copiar email
+ *
+ * El componente adapta su layout según `viewMode`:
+ *
+ * - `list`: fila horizontal con información compacta
+ * - `grid`: card vertical con acciones al pie
+ *
+ * @example
+ * ```tsx
+ * <EmployeeCard
+ *   employee={employee}
+ *   onSelect={handleSelect}
+ *   viewMode="grid"
+ * />
+ * ```
+ */
 export function EmployeeCard({ employee, onSelect, viewMode }: Props) {
+  /**
+   * Estado temporal que indica si el correo ya fue copiado.
+   */
   const [copied, setCopied] = useState(false);
+
+  /**
+   * Configuración visual asociada al estado actual del empleado.
+   */
   const status = STATUS_CONFIG[employee.status];
+
+  /**
+   * Color principal del departamento del empleado.
+   */
   const deptColor = DEPARTMENT_COLORS[employee.department] ?? "#1e3a5f";
 
+  /**
+   * Copia el correo del empleado al portapapeles.
+   *
+   * @remarks
+   * También activa un estado temporal de feedback visual.
+   */
   function copyEmail() {
     navigator.clipboard.writeText(employee.mail);
     setCopied(true);
@@ -309,6 +413,22 @@ export function EmployeeCard({ employee, onSelect, viewMode }: Props) {
 // Sub-components
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Fila visual de contacto dentro de la tarjeta del empleado.
+ *
+ * @param props Propiedades del componente.
+ * @param props.icon Icono representativo del dato.
+ * @param props.value Valor textual a mostrar.
+ * @returns Fila compacta con icono y texto.
+ *
+ * @remarks
+ * Se utiliza para mostrar datos como:
+ *
+ * - correo electrónico
+ * - teléfono
+ * - oficina
+ * - ubicación
+ */
 function ContactRow({ icon, value }: { icon: React.ReactNode; value: string }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: "0.4rem" }}>
@@ -331,6 +451,13 @@ function ContactRow({ icon, value }: { icon: React.ReactNode; value: string }) {
 
 // ── Inline SVG icons ─────────────────────────────────────────────────────────
 
+/**
+ * Icono inline de correo electrónico.
+ *
+ * @param props Propiedades del ícono.
+ * @param props.size Tamaño del SVG.
+ * @returns SVG de correo.
+ */
 function IconMail({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
@@ -340,6 +467,13 @@ function IconMail({ size = 14 }: { size?: number }) {
   );
 }
 
+/**
+ * Icono inline de teléfono móvil.
+ *
+ * @param props Propiedades del ícono.
+ * @param props.size Tamaño del SVG.
+ * @returns SVG de teléfono.
+ */
 function IconPhone({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
@@ -354,6 +488,13 @@ function IconPhone({ size = 14 }: { size?: number }) {
   );
 }
 
+/**
+ * Icono inline de teléfono/oficina.
+ *
+ * @param props Propiedades del ícono.
+ * @param props.size Tamaño del SVG.
+ * @returns SVG de teléfono corporativo.
+ */
 function IconOfficePhone({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
@@ -363,6 +504,13 @@ function IconOfficePhone({ size = 14 }: { size?: number }) {
   );
 }
 
+/**
+ * Icono inline de ubicación.
+ *
+ * @param props Propiedades del ícono.
+ * @param props.size Tamaño del SVG.
+ * @returns SVG de pin de ubicación.
+ */
 function IconLocation({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">

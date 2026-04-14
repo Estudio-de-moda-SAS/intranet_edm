@@ -1,9 +1,39 @@
+/**
+ * @module CompanyHeroBanner
+ * Hero principal de la sección "Conoce la Empresa".
+ *
+ * @remarks
+ * Este componente representa la cabecera visual e informativa de la página
+ * corporativa, mostrando la identidad de la empresa a través de:
+ *
+ * - título principal (branding institucional)
+ * - subtítulo descriptivo
+ * - listado de marcas del portafolio
+ * - métricas clave (stats corporativos)
+ *
+ * Incluye animaciones progresivas usando `framer-motion` para mejorar
+ * la percepción visual y jerarquía del contenido.
+ *
+ * Es un **Client Component** porque:
+ * - utiliza animaciones (`motion`)
+ * - requiere render dinámico en el cliente
+ */
+
 "use client";
-// ✅ CLIENT COMPONENT — framer-motion
 
 import { motion } from "framer-motion";
 import { companyStats } from "../config/edmStats";
 
+/* -------------------------------------------------------------------------- */
+/* Constantes                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Lista de marcas destacadas del portafolio.
+ *
+ * @remarks
+ * Se renderiza como "pills" dentro del hero para reforzar branding.
+ */
 const BRANDS = [
   "Diesel",
   "Kipling",
@@ -12,6 +42,41 @@ const BRANDS = [
   "Pilatos",
 ];
 
+/* -------------------------------------------------------------------------- */
+/* Componente principal                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Banner principal de la página corporativa.
+ *
+ * @returns Hero animado con branding, descripción, marcas y métricas.
+ *
+ * @remarks
+ * Este componente está estructurado en 4 bloques principales:
+ *
+ * 1. **Encabezado institucional**
+ *    - breadcrumb contextual
+ *
+ * 2. **Mensaje principal**
+ *    - título destacado con tipografía serif
+ *    - descripción corporativa
+ *
+ * 3. **Marcas**
+ *    - listado visual tipo "pill"
+ *
+ * 4. **Stats corporativos**
+ *    - métricas clave renderizadas en grid dinámico
+ *
+ * Animaciones:
+ * - Fade-in global del hero
+ * - Entrada progresiva (stagger) de textos
+ * - Aparición secuencial de marcas y métricas
+ *
+ * @example
+ * ```tsx
+ * <CompanyHeroBanner />
+ * ```
+ */
 export function CompanyHeroBanner() {
   return (
     <motion.header
@@ -20,7 +85,9 @@ export function CompanyHeroBanner() {
       transition={{ duration: 0.5 }}
       className="relative overflow-hidden bg-gradient-to-br from-violet-900 via-violet-800 to-purple-700 text-white"
     >
-      {/* Textura diagonal sutil */}
+      {/* ============================================================ */}
+      {/* Textura de fondo                                             */}
+      {/* ============================================================ */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -30,9 +97,12 @@ export function CompanyHeroBanner() {
         }}
       />
 
-      {/* Copy */}
+      {/* ============================================================ */}
+      {/* Contenido principal                                          */}
+      {/* ============================================================ */}
       <div className="relative px-8 pt-12 pb-0 lg:px-14 lg:pt-14">
 
+        {/* Breadcrumb */}
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -42,6 +112,7 @@ export function CompanyHeroBanner() {
           Intranet EDM · Nuestra Organización
         </motion.p>
 
+        {/* Título principal */}
         <motion.h1
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -56,6 +127,7 @@ export function CompanyHeroBanner() {
           la moda en Colombia
         </motion.h1>
 
+        {/* Descripción */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -66,7 +138,9 @@ export function CompanyHeroBanner() {
           al consumidor a verse y sentirse especial.
         </motion.p>
 
-        {/* Brand pills */}
+        {/* ---------------------------------------------------------- */}
+        {/* Marcas                                                     */}
+        {/* ---------------------------------------------------------- */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -83,7 +157,9 @@ export function CompanyHeroBanner() {
           ))}
         </motion.div>
 
-        {/* Stats strip — flush al fondo del hero */}
+        {/* ---------------------------------------------------------- */}
+        {/* Estadísticas                                               */}
+        {/* ---------------------------------------------------------- */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -97,7 +173,9 @@ export function CompanyHeroBanner() {
               className="px-6 py-5"
               style={{
                 borderRight:
-                  i < companyStats.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
+                  i < companyStats.length - 1
+                    ? "1px solid rgba(255,255,255,0.1)"
+                    : "none",
               }}
             >
               <p

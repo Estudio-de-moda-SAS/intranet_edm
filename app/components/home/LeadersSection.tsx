@@ -1,3 +1,12 @@
+/**
+ * @module LeadersSection
+ * Componentes para mostrar la sección de líderes de la organización.
+ *
+ * @remarks
+ * Este archivo renderiza una grilla de perfiles con avatar, cargo,
+ * descripción y acceso opcional a perfil externo.
+ */
+
 "use client";
 
 import Image from "next/image";
@@ -5,22 +14,82 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
+/**
+ * Representa la información de un líder.
+ */
 type Leader = {
+  /**
+   * Identificador único.
+   */
   id: string;
+
+  /**
+   * Nombre completo.
+   */
   name: string;
+
+  /**
+   * Cargo o rol del líder.
+   */
   role: string;
+
+  /**
+   * URL opcional de imagen de perfil.
+   */
   image?: string | null;
+
+  /**
+   * Descripción breve del perfil.
+   */
   description?: string;
+
+  /**
+   * Enlace opcional al perfil de LinkedIn.
+   */
   linkedin?: string;
 };
 
-type LeadersSectionProps = { leaders: Leader[] };
+/**
+ * Props del componente {@link LeadersSection}.
+ */
+interface LeadersSectionProps {
+  /**
+   * Lista de líderes a mostrar.
+   */
+  leaders: Leader[];
+}
 
+/**
+ * Genera iniciales a partir del nombre.
+ *
+ * @param name Nombre completo.
+ * @returns Iniciales en mayúscula.
+ */
 function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 }
 
-function LeaderAvatar({ leader }: { leader: Leader }) {
+/**
+ * Props del componente {@link LeaderAvatar}.
+ */
+interface LeaderAvatarProps {
+  /**
+   * Información del líder.
+   */
+  leader: Leader;
+}
+
+/**
+ * Renderiza el avatar del líder.
+ *
+ * @param props Propiedades del componente.
+ * @param props.leader Datos del líder.
+ * @returns Imagen de perfil o avatar fallback con iniciales.
+ *
+ * @remarks
+ * Si la imagen falla o no existe, muestra un avatar generado con iniciales.
+ */
+function LeaderAvatar({ leader }: LeaderAvatarProps) {
   const [imgError, setImgError] = useState(false);
   const hasImage = leader.image && leader.image.trim() !== "" && !imgError;
 
@@ -49,6 +118,18 @@ function LeaderAvatar({ leader }: { leader: Leader }) {
   );
 }
 
+/**
+ * Renderiza la sección de líderes.
+ *
+ * @param props Propiedades del componente.
+ * @param props.leaders Lista de líderes.
+ * @returns Sección con encabezado, tarjetas de líderes y enlace al directorio.
+ *
+ * @remarks
+ * - Muestra animación de entrada por tarjeta.
+ * - Cada tarjeta incluye avatar, nombre, rol y descripción.
+ * - Si existe `linkedin`, muestra un enlace externo.
+ */
 export function LeadersSection({ leaders }: LeadersSectionProps) {
   return (
     <section className="space-y-10 py-6">
@@ -115,7 +196,7 @@ export function LeadersSection({ leaders }: LeadersSectionProps) {
                 )}
               </div>
 
-              {/* Animated bottom bar */}
+              {/* Accent bar */}
               <div className="absolute bottom-0 left-0 h-[3px] w-0 rounded-b-xl transition-all duration-300 group-hover:w-full
                               bg-gradient-to-r from-violet-500 to-purple-500" />
             </motion.div>
@@ -134,11 +215,19 @@ export function LeadersSection({ leaders }: LeadersSectionProps) {
                              dark:border-[#30363d] dark:group-hover:border-violet-500/50">
               Ver directorio completo
             </span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 transition-all duration-200
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-4 h-4 transition-all duration-200
                         text-slate-400 group-hover:text-violet-500 group-hover:translate-x-0.5
                         dark:text-[#545d68] dark:group-hover:text-violet-400"
-                 viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                clipRule="evenodd"
+              />
             </svg>
           </Link>
         </div>
