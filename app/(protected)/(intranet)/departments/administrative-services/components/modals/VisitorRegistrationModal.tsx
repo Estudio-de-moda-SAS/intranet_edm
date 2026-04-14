@@ -1,3 +1,32 @@
+/**
+ * @module VisitorRegistrationModal
+ * Modal para el pre-registro de visitantes en el módulo de Servicios
+ * Administrativos.
+ *
+ * Permite registrar anticipadamente el ingreso de una persona externa a la
+ * organización, incluyendo:
+ * - datos del visitante,
+ * - información del anfitrión,
+ * - fecha y hora estimadas,
+ * - motivo de la visita,
+ * - observaciones adicionales.
+ *
+ * @remarks
+ * Este componente centraliza el flujo de pre-registro de visitantes y delega
+ * la persistencia del trámite a {@link registerVisitor}.
+ *
+ * Flujo general:
+ * 1. Captura datos del visitante.
+ * 2. Captura datos del anfitrión.
+ * 3. Captura la programación de la visita.
+ * 4. Valida la información mediante {@link validate}.
+ * 5. Envía la solicitud al servicio.
+ * 6. Muestra confirmación con {@link SuccessBanner}.
+ *
+ * Está preparado para integrarse con Microsoft Graph o una API propia desde
+ * la capa de servicios del módulo administrativo.
+ */
+
 // app/(protected)/(intranet)/departments/administrative/components/modals/VisitorRegistrationModal.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 // Modal para pre-registrar un visitante.
@@ -23,6 +52,12 @@ import {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades de {@link VisitorRegistrationModal}.
+ *
+ * @property open Indica si el modal se encuentra abierto.
+ * @property onClose Función ejecutada al cerrar el modal.
+ */
 interface Props {
   open:    boolean;
   onClose: () => void;
@@ -30,21 +65,38 @@ interface Props {
 
 // ── Options ───────────────────────────────────────────────────────────────────
 
+/**
+ * Opciones disponibles para el tipo de visita.
+ *
+ * @remarks
+ * Estas opciones permiten clasificar la naturaleza del visitante y facilitan
+ * la trazabilidad operativa del ingreso.
+ */
 const VISIT_TYPE_OPTIONS = [
-  { value: "supplier",   label: "Proveedor"         },
-  { value: "client",     label: "Cliente"            },
-  { value: "candidate",  label: "Candidato / RRHH"  },
-  { value: "contractor", label: "Contratista"        },
-  { value: "personal",   label: "Visita personal"   },
-  { value: "other",      label: "Otro"               },
+  { value: "supplier",   label: "Proveedor"        },
+  { value: "client",     label: "Cliente"          },
+  { value: "candidate",  label: "Candidato / RRHH" },
+  { value: "contractor", label: "Contratista"      },
+  { value: "personal",   label: "Visita personal"  },
+  { value: "other",      label: "Otro"             },
 ];
 
+/**
+ * Opciones disponibles para el tipo de documento del visitante.
+ */
 const DOCUMENT_OPTIONS = [
   { value: "cedula",     label: "Cédula de ciudadanía" },
-  { value: "passport",   label: "Pasaporte"             },
+  { value: "passport",   label: "Pasaporte"            },
   { value: "foreign_id", label: "Cédula de extranjería" },
 ];
 
+/**
+ * Estado inicial del formulario de visitante.
+ *
+ * @remarks
+ * Se utiliza como base para inicializar y reiniciar el formulario al cerrar
+ * el modal.
+ */
 const INITIAL: VisitorPayload = {
   visitorName:    "",
   visitorCompany: "",
@@ -63,12 +115,36 @@ const INITIAL: VisitorPayload = {
   notes:          "",
 };
 
+/**
+ * Estructura de errores asociada al formulario de visitante.
+ *
+ * @remarks
+ * Cada clave corresponde a un campo del {@link VisitorPayload} y su valor
+ * representa el mensaje de error asociado.
+ */
 type Errors = Partial<Record<keyof VisitorPayload, string>>;
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
+/**
+ * Valida los datos del formulario de visitante.
+ *
+ * @param p Payload actual del formulario.
+ * @returns Objeto con errores por campo.
+ *
+ * @remarks
+ * Verifica que existan como mínimo:
+ * - nombre del visitante,
+ * - número de documento,
+ * - nombre del anfitrión,
+ * - departamento del anfitrión,
+ * - fecha,
+ * - hora,
+ * - motivo de la visita.
+ */
 function validate(p: VisitorPayload): Errors {
   const e: Errors = {};
+
   if (!p.visitorName.trim())    e.visitorName    = "Campo requerido";
   if (!p.documentNumber.trim()) e.documentNumber = "Campo requerido";
   if (!p.hostName.trim())       e.hostName       = "Campo requerido";
@@ -76,23 +152,70 @@ function validate(p: VisitorPayload): Errors {
   if (!p.visitDate)             e.visitDate      = "Fecha requerida";
   if (!p.visitTime)             e.visitTime      = "Hora requerida";
   if (!p.purpose.trim())        e.purpose        = "Campo requerido";
+
   return e;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+/**
+ * Modal principal para el pre-registro de visitantes.
+ *
+ * @param props Propiedades del componente.
+ * @returns Modal con formulario de registro o pantalla de confirmación exitosa.
+ *
+ * @remarks
+ * Este componente administra:
+ * - el estado del formulario,
+ * - la validación local,
+ * - el envío de la solicitud,
+ * - la visualización del resultado exitoso,
+ * - y el reinicio del estado al cierre.
+ */
 export default function VisitorRegistrationModal({ open, onClose }: Props) {
+  /**
+   * Payload actual del formulario de visitante.
+   */
   const [payload, setPayload] = useState<VisitorPayload>(INITIAL);
+
+  /**
+   * Errores actuales de validación.
+   */
   const [errors,  setErrors]  = useState<Errors>({});
+
+  /**
+   * Indica si el formulario se encuentra en proceso de envío.
+   */
   const [loading, setLoading] = useState(false);
+
+  /**
+   * Resultado devuelto por el servicio al registrar la visita.
+   */
   const [result,  setResult]  = useState<VisitorResult | null>(null);
+
+  /**
+   * Indica si el flujo terminó correctamente.
+   */
   const [done,    setDone]    = useState(false);
 
+  /**
+   * Actualiza una propiedad específica del payload.
+   *
+   * @param key Campo a modificar.
+   * @param value Nuevo valor del campo.
+   */
   const set = <K extends keyof VisitorPayload>(
     key: K,
     value: VisitorPayload[K],
   ) => setPayload((p) => ({ ...p, [key]: value }));
 
+  /**
+   * Cierra el modal y reinicia su estado interno.
+   *
+   * @remarks
+   * El reinicio se difiere ligeramente para evitar parpadeos visuales mientras
+   * se ejecuta la animación de cierre.
+   */
   const handleClose = () => {
     onClose();
     setTimeout(() => {
@@ -103,9 +226,26 @@ export default function VisitorRegistrationModal({ open, onClose }: Props) {
     }, 300);
   };
 
+  /**
+   * Ejecuta la validación y envío del pre-registro de visitante.
+   *
+   * @returns Promesa que procesa el registro del visitante.
+   *
+   * @remarks
+   * Flujo:
+   * 1. Valida el formulario con {@link validate}.
+   * 2. Si hay errores, actualiza el estado de errores y detiene el envío.
+   * 3. Si es válido, llama a {@link registerVisitor}.
+   * 4. Guarda el resultado y cambia a estado de éxito.
+   * 5. Si ocurre un fallo, muestra un error general en el formulario.
+   */
   const handleSubmit = async () => {
     const e = validate(payload);
-    if (Object.keys(e).length) { setErrors(e); return; }
+    if (Object.keys(e).length) {
+      setErrors(e);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await registerVisitor(payload);
@@ -122,7 +262,6 @@ export default function VisitorRegistrationModal({ open, onClose }: Props) {
     <Modal
       open={open}
       onClose={handleClose}
-      // Fix: spread condicional para no pasar undefined (exactOptionalPropertyTypes)
       {...(!done && { title: "Pre-registro de visitante" })}
       {...(!done && { subtitle: "Registra el acceso de una persona externa con anticipación" })}
       size="lg"
@@ -182,7 +321,6 @@ export default function VisitorRegistrationModal({ open, onClose }: Props) {
           {/* ── Sección: Datos del visitante ──────────────────────── */}
           <Section title="Datos del visitante">
             <div className="grid grid-cols-2 gap-3">
-              {/* Fix: spread condicional en error para todos los FieldWrapper */}
               <FieldWrapper
                 label="Nombre completo"
                 required
@@ -380,13 +518,28 @@ export default function VisitorRegistrationModal({ open, onClose }: Props) {
 
 // ── Section helper ────────────────────────────────────────────────────────────
 
-function Section({
-  title,
-  children,
-}: {
-  title:    string;
+/**
+ * Props del helper visual {@link Section}.
+ *
+ * @property title Título de la sección.
+ * @property children Contenido renderizado dentro de la sección.
+ */
+interface SectionProps {
+  title: string;
   children: React.ReactNode;
-}) {
+}
+
+/**
+ * Contenedor visual reutilizable para secciones internas del modal.
+ *
+ * @param props Propiedades del componente.
+ * @returns Sección con encabezado y divisor visual.
+ *
+ * @remarks
+ * Se utiliza para agrupar el formulario en bloques semánticos, mejorando
+ * la legibilidad visual y la organización del contenido.
+ */
+function Section({ title, children }: SectionProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">

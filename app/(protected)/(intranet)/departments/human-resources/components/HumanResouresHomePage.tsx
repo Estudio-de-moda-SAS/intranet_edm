@@ -1,3 +1,32 @@
+/**
+ * @module HumanResourcesHomePage
+ * Página principal del módulo de Recursos Humanos.
+ *
+ * @remarks
+ * Este componente servidor compone el dashboard principal del área de RRHH,
+ * renderizando secciones de forma condicional según el nivel de acceso del usuario.
+ *
+ * Secciones disponibles:
+ * - Hero principal del departamento
+ * - KPI strip
+ * - Grid de aplicaciones
+ * - Quick links
+ * - Aniversarios
+ * - Formación
+ * - Headcount
+ * - Solicitudes
+ * - Reclutamiento
+ * - Analítica de personas
+ * - Equipo del departamento
+ *
+ * La lógica de visibilidad se controla mediante permisos evaluados con {@link can}.
+ *
+ * @see {@link HRKPIStrip}
+ * @see {@link HRAppsGrid}
+ * @see {@link HRQuickLinks}
+ * @see {@link DepartmentTeamSection}
+ */
+
 // ✅ SERVER COMPONENT — sin "use client"
 //
 // Guards aplicados por sección:
@@ -12,101 +41,221 @@
 //   Reclutamiento          → hr + admin     (hr:view_recruitment)
 //   Analítica de Personas  → hr + admin     (hr:view_analytics)
 
-import { TrendingUp }            from "lucide-react";
-import HRDashboard                from "./HRDashboard";
-import HRRequestsCard             from "./HRRequestCard";
-import HRRecruitmentCard          from "./HRRecruitmentCard";
-import HRAnniversariesCard        from "./HRAnniversariesCard";
-import HRTrainingCard             from "./HRTrainingCard";
-import HRHeadcountSection         from "./HRHeadCountSection";
-import { hrApps }                 from "../config/hrApps";
-import { DepartmentTeamSection }  from "@/app/components/team/DepartmentTeamSection";
-import { hrTeam }                 from "../config/hrTeam";
-import type { HRData }            from "@/lib/graph/departments/hr.service";
+import { TrendingUp } from "lucide-react";
+import HRDashboard from "./HRDashboard";
+import HRRequestsCard from "./HRRequestCard";
+import HRRecruitmentCard from "./HRRecruitmentCard";
+import HRAnniversariesCard from "./HRAnniversariesCard";
+import HRTrainingCard from "./HRTrainingCard";
+import HRHeadcountSection from "./HRHeadCountSection";
+import { hrApps } from "../config/hrApps";
+import { DepartmentTeamSection } from "@/app/components/team/DepartmentTeamSection";
+import { hrTeam } from "../config/hrTeam";
+import type { HRData } from "@/lib/graph/departments/hr.service";
 
-import { DepartmentHeroBanner }   from "@/app/components/ui/animated/DepartmentHeroBanner";
-import { AnimatedCard }           from "@/app/components/ui/animated/AnimatedCard";
-import { AnimatedSection }        from "@/app/components/ui/animated/AnimatedSection";
-import { AnimatedViewCard }       from "@/app/components/ui/animated/AnimatedViewCard";
-import { HRKPIStrip }             from "./HRKPIStrip";
-import { HRAppsGrid }             from "./HRAppsGrid";
-import { HRQuickLinks }           from "./HRQuickLinks";
+import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHeroBanner";
+import { AnimatedCard } from "@/app/components/ui/animated/AnimatedCard";
+import { AnimatedSection } from "@/app/components/ui/animated/AnimatedSection";
+import { AnimatedViewCard } from "@/app/components/ui/animated/AnimatedViewCard";
+import { HRKPIStrip } from "./HRKPIStrip";
+import { HRAppsGrid } from "./HRAppsGrid";
+import { HRQuickLinks } from "./HRQuickLinks";
 
-import { can, type AccessLevel }  from "@/lib/roles";
-import { hrQuickLinks }           from "../config/hrQuickLinks";
-import { processQuickLinks }      from "@/lib/quickLinksAccess";
+import { can, type AccessLevel } from "@/lib/roles";
+import { hrQuickLinks } from "../config/hrQuickLinks";
+import { processQuickLinks } from "@/lib/quickLinksAccess";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Props del componente {@link HRPageContent}.
+ *
+ * @property data Datos generales del módulo de RRHH.
+ * @property accessLevel Nivel de acceso del usuario autenticado.
+ */
 type Props = {
-  data:        HRData;
+  data: HRData;
   accessLevel: AccessLevel;
 };
 
 // ── Team accent ───────────────────────────────────────────────────────────────
 
+/**
+ * Configuración visual del acento temático para la sección de equipo.
+ *
+ * @remarks
+ * Este objeto define colores, gradientes, bordes y estilos utilizados por
+ * {@link DepartmentTeamSection} para mantener la identidad visual del área de RRHH.
+ */
 const TEAM_ACCENT = {
-  sectionBg:       "bg-white",
-  sectionBorder:   "border-rose-100",
-  iconBg:          "bg-rose-50",
-  iconColor:       "text-rose-500",
-  iconBorder:      "border-rose-100",
-  barGradient:     "from-rose-500 to-pink-500",
-  pillBg:          "bg-rose-50",
-  pillBorder:      "border-rose-100",
-  pillText:        "text-rose-500",
-  hoverBorder:     "hover:border-rose-200",
-  dividerHover:    "group-hover:bg-rose-100",
-  avatarFrom:      "from-rose-500",
-  avatarTo:        "to-pink-600",
-  avatarRing:      "ring-rose-100",
+  sectionBg: "bg-white",
+  sectionBorder: "border-rose-100",
+  iconBg: "bg-rose-50",
+  iconColor: "text-rose-500",
+  iconBorder: "border-rose-100",
+  barGradient: "from-rose-500 to-pink-500",
+  pillBg: "bg-rose-50",
+  pillBorder: "border-rose-100",
+  pillText: "text-rose-500",
+  hoverBorder: "hover:border-rose-200",
+  dividerHover: "group-hover:bg-rose-100",
+  avatarFrom: "from-rose-500",
+  avatarTo: "to-pink-600",
+  avatarRing: "ring-rose-100",
   avatarRingHover: "group-hover:ring-rose-200",
-  lineColor:       "bg-rose-200",
-  titleColor:      "text-slate-900",
-  subtitleColor:   "text-slate-400",
-  topAccent:       "from-rose-500 via-pink-400 to-purple-500",
+  lineColor: "bg-rose-200",
+  titleColor: "text-slate-900",
+  subtitleColor: "text-slate-400",
+  topAccent: "from-rose-500 via-pink-400 to-purple-500",
 } as const;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+/**
+ * Contenido principal de la página de Recursos Humanos.
+ *
+ * @param props Propiedades del componente.
+ * @returns Dashboard de RRHH construido dinámicamente según permisos.
+ *
+ * @remarks
+ * Este componente:
+ * - Evalúa permisos por sección
+ * - Procesa quick links según el rol del usuario
+ * - Calcula la distribución del grid principal
+ * - Renderiza únicamente los bloques autorizados
+ *
+ * Distribución general:
+ * - Hero superior siempre visible
+ * - Grid principal opcional con columna principal y/o aside
+ * - Sección de analítica para perfiles HR/Admin
+ * - Sección de equipo siempre visible
+ *
+ * Aunque recibe `data`, en esta implementación actual no se consume directamente
+ * dentro del render. Puede reservarse para futuras integraciones con contenido dinámico.
+ *
+ * @example
+ * ```tsx
+ * <HRPageContent
+ *   data={data}
+ *   accessLevel={accessLevel}
+ * />
+ * ```
+ */
 export default function HRPageContent({ accessLevel }: Props) {
-
   // ── Permisos ───────────────────────────────────────────────────
-  const showKPIs        = can(accessLevel, 'hr:view_kpis');
-  const showApps        = can(accessLevel, 'hr:view_apps');
-  const showAnniv       = can(accessLevel, 'hr:view_anniversaries');
-  const showTraining    = can(accessLevel, 'hr:view_training');
-  const showHeadcount   = can(accessLevel, 'hr:view_headcount');
-  const showRequests    = can(accessLevel, 'hr:view_requests');
-  const showRecruitment = can(accessLevel, 'hr:view_recruitment');
-  const showAnalytics   = can(accessLevel, 'hr:view_analytics');
 
-  // Quick links procesados — pueden estar vacíos si el rol no tiene acceso
-  const processedLinks  = processQuickLinks(hrQuickLinks, accessLevel);
-  const showQuickLinks  = can(accessLevel, 'hr:view_quicklinks') && processedLinks.length > 0;
+  /**
+   * Visibilidad del strip de KPIs.
+   */
+  const showKPIs = can(accessLevel, "hr:view_kpis");
+
+  /**
+   * Visibilidad del grid de aplicaciones del módulo.
+   */
+  const showApps = can(accessLevel, "hr:view_apps");
+
+  /**
+   * Visibilidad de la tarjeta de aniversarios.
+   */
+  const showAnniv = can(accessLevel, "hr:view_anniversaries");
+
+  /**
+   * Visibilidad de la tarjeta de formación.
+   */
+  const showTraining = can(accessLevel, "hr:view_training");
+
+  /**
+   * Visibilidad de la sección de headcount.
+   */
+  const showHeadcount = can(accessLevel, "hr:view_headcount");
+
+  /**
+   * Visibilidad de la sección de solicitudes.
+   */
+  const showRequests = can(accessLevel, "hr:view_requests");
+
+  /**
+   * Visibilidad de la sección de reclutamiento.
+   */
+  const showRecruitment = can(accessLevel, "hr:view_recruitment");
+
+  /**
+   * Visibilidad del dashboard de analítica de personas.
+   */
+  const showAnalytics = can(accessLevel, "hr:view_analytics");
+
+  /**
+   * Quick links procesados según permisos del usuario.
+   *
+   * @remarks
+   * La lista puede quedar vacía si el rol no tiene acceso a ningún enlace.
+   */
+  const processedLinks = processQuickLinks(hrQuickLinks, accessLevel);
+
+  /**
+   * Determina si la sección de quick links debe renderizarse.
+   */
+  const showQuickLinks =
+    can(accessLevel, "hr:view_quicklinks") && processedLinks.length > 0;
 
   // ── Columnas del grid ──────────────────────────────────────────
-  // Columna principal (izquierda 8): apps + contenido hr+
-  const showMainCol = showApps || showHeadcount || showRequests || showRecruitment;
-  // Aside (derecha 4): quick links + aniversarios + formación
-  const showAside   = showQuickLinks || showAnniv || showTraining;
 
-  // Si solo hay main sin aside → main ocupa 12 cols
-  // Si solo hay aside sin main → aside ocupa 12 cols en fila horizontal
-  // Si ambos → 8/4 estándar
-  const mainColClass    = showAside   ? "lg:col-span-8"  : "lg:col-span-12";
-  const asideColClass   = showMainCol ? "lg:col-span-4"  : "lg:col-span-12";
+  /**
+   * Indica si la columna principal del grid debe mostrarse.
+   *
+   * @remarks
+   * Contiene apps y módulos de gestión interna para RRHH.
+   */
+  const showMainCol =
+    showApps || showHeadcount || showRequests || showRecruitment;
+
+  /**
+   * Indica si el aside del grid debe mostrarse.
+   *
+   * @remarks
+   * Contiene quick links, aniversarios y formación.
+   */
+  const showAside = showQuickLinks || showAnniv || showTraining;
+
+  /**
+   * Clase responsiva de ancho para la columna principal.
+   *
+   * @remarks
+   * - Si existe aside: ocupa 8 columnas
+   * - Si no existe aside: ocupa 12 columnas
+   */
+  const mainColClass = showAside ? "lg:col-span-8" : "lg:col-span-12";
+
+  /**
+   * Clase responsiva de ancho para el aside.
+   *
+   * @remarks
+   * - Si existe columna principal: ocupa 4 columnas
+   * - Si no existe columna principal: ocupa 12 columnas
+   */
+  const asideColClass = showMainCol ? "lg:col-span-4" : "lg:col-span-12";
+
+  /**
+   * Layout interno del aside según si existe o no columna principal.
+   *
+   * @remarks
+   * Cuando el aside se renderiza solo, se dispone horizontalmente en pantallas grandes.
+   */
   const asideInnerClass = !showMainCol
     ? "flex flex-col lg:flex-row gap-5"
     : "flex flex-col gap-5";
 
+  /**
+   * Indica si debe renderizarse el grid principal.
+   */
   const showGrid = showMainCol || showAside;
 
   return (
     <main
       className="min-h-screen w-full bg-[#f4f6f9]"
       style={{
-        fontFamily: "'DM Sans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
+        fontFamily:
+          "'DM Sans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
       }}
     >
       {/* ── HERO — todos ──────────────────────────────────────────── */}
@@ -120,33 +269,43 @@ export default function HRPageContent({ accessLevel }: Props) {
         gradientTo="to-purple-800/70"
         dotPatternId="hr-dots"
         pills={[
-          // Número de colaboradores solo para hr+ — dato interno sensible
-          ...(showHeadcount ? [
-            { type: "status" as const, text: "1,284 colaboradores activos" },
-          ] : []),
+          ...(showHeadcount
+            ? [{ type: "status" as const, text: "1,284 colaboradores activos" }]
+            : []),
           { type: "info" as const, text: "Última actualización: hace 3 min" },
         ]}
         ctaLinks={[
-          // Nuevo empleado — solo hr+
-          ...(showRecruitment ? [{ href: "/rrhh/empleados/nuevo", label: "Nuevo empleado", variant: "ghost" as const }] : []),
-          // Procesar nómina — solo hr+
-          ...(showRequests    ? [{ href: "/rrhh/nomina",          label: "Procesar nómina", variant: "solid" as const }] : []),
+          ...(showRecruitment
+            ? [
+                {
+                  href: "/rrhh/empleados/nuevo",
+                  label: "Nuevo empleado",
+                  variant: "ghost" as const,
+                },
+              ]
+            : []),
+          ...(showRequests
+            ? [
+                {
+                  href: "/rrhh/nomina",
+                  label: "Procesar nómina",
+                  variant: "solid" as const,
+                },
+              ]
+            : []),
         ]}
       />
 
       <div className="px-4 pb-10 lg:px-14">
-
         {/* ── KPI STRIP — manager+ ──────────────────────────────────── */}
         {showKPIs && <HRKPIStrip />}
 
         {/* ── GRID PRINCIPAL ────────────────────────────────────────── */}
         {showGrid && (
           <AnimatedSection className="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-12">
-
             {/* ── Columna principal (izquierda) ── */}
             {showMainCol && (
               <div className={`${mainColClass} flex flex-col gap-6`}>
-
                 {showApps && (
                   <HRAppsGrid
                     apps={hrApps}
@@ -171,7 +330,6 @@ export default function HRPageContent({ accessLevel }: Props) {
                     <HRRecruitmentCard />
                   </AnimatedCard>
                 )}
-
               </div>
             )}
 
@@ -199,7 +357,6 @@ export default function HRPageContent({ accessLevel }: Props) {
                 )}
               </AnimatedSection>
             )}
-
           </AnimatedSection>
         )}
 
@@ -212,16 +369,20 @@ export default function HRPageContent({ accessLevel }: Props) {
                   <TrendingUp className="h-3.5 w-3.5 text-rose-500" />
                 </span>
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-800">Analítica de Personas</h2>
+                  <h2 className="text-sm font-semibold text-slate-800">
+                    Analítica de Personas
+                  </h2>
                   <p className="text-[11px] text-slate-400">
                     Tendencias de personal, rotación y desempeño organizacional
                   </p>
                 </div>
               </div>
+
               <span className="hidden md:inline-flex items-center rounded-full bg-rose-50 border border-rose-100 px-3 py-1 text-[11px] font-semibold text-rose-500">
                 Actualizado hoy
               </span>
             </div>
+
             <HRDashboard />
           </AnimatedViewCard>
         )}
@@ -235,7 +396,6 @@ export default function HRPageContent({ accessLevel }: Props) {
             accent={TEAM_ACCENT}
           />
         </AnimatedViewCard>
-
       </div>
     </main>
   );

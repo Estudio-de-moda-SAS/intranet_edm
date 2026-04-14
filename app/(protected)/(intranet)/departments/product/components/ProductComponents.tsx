@@ -1,3 +1,36 @@
+/**
+ * @module ProductComponents
+ * Componentes secundarios de la homepage del módulo de Producto.
+ *
+ * @remarks
+ * Este archivo agrupa un conjunto de componentes auxiliares utilizados
+ * en la vista principal del área de Producto dentro de la intranet.
+ *
+ * A diferencia de otros archivos que encapsulan una única responsabilidad,
+ * este módulo reúne varios bloques funcionales de apoyo para la homepage,
+ * todos exportados como named exports.
+ *
+ * Actualmente incluye:
+ * - {@link ProductAnnouncementBanner}: banner rotativo de comunicados
+ * - {@link ProductCalendarCard}: calendario de hitos de temporada
+ * - {@link ProductActivityFeed}: feed de actividad reciente del equipo
+ * - {@link ProductExportToolbar}: acciones de exportación
+ * - {@link ProductBlockersCard}: alertas y bloqueos operativos
+ * - {@link ProductToolsCard}: accesos a herramientas del equipo
+ *
+ * Estos componentes están orientados a reforzar la capa operativa,
+ * informativa y de soporte de la página principal de Producto.
+ *
+ * La mayoría de los datos definidos en este archivo son estáticos
+ * y funcionan como mock para la interfaz. En una implementación real,
+ * podrían integrarse con:
+ * - APIs internas
+ * - sistemas PLM
+ * - tableros de operación
+ * - servicios de actividad y notificaciones
+ * - plataformas de calendario y reporting
+ */
+
 // app/product/components/ProductComponents.tsx
 // Componentes secundarios de la homepage de Producto — Estudio de Moda SAS.
 // Todos exportados como named exports.
@@ -22,8 +55,37 @@ import { Wrench }                            from "lucide-react";
 //   - Auto-rotate opcional
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Tipos de anuncio admitidos por el banner de comunicados.
+ *
+ * @remarks
+ * Cada tipo determina la semántica visual del anuncio,
+ * incluyendo color, ícono y estilo de resaltado.
+ */
 export type AnnouncementType = "info" | "warning" | "success" | "urgent";
 
+/**
+ * Representa un comunicado mostrado en el banner del módulo.
+ *
+ * @remarks
+ * Este tipo modela un anuncio individual que puede mostrarse
+ * dentro del carrusel de comunicados del área de Producto.
+ *
+ * Cada anuncio puede incluir:
+ * - tipo semántico
+ * - título principal
+ * - mensaje descriptivo
+ * - fecha de referencia
+ * - llamada a la acción opcional
+ *
+ * @property id Identificador único del anuncio.
+ * @property type Categoría visual del anuncio.
+ * @property title Título principal mostrado en el banner.
+ * @property message Descripción o detalle del comunicado.
+ * @property date Fecha opcional asociada al anuncio.
+ * @property actionLabel Texto visible de la acción opcional.
+ * @property actionHref Destino de la acción opcional.
+ */
 export interface Announcement {
   id:           string;
   type:         AnnouncementType;
@@ -34,12 +96,33 @@ export interface Announcement {
   actionHref?:  string;
 }
 
+/**
+ * Propiedades del componente {@link ProductAnnouncementBanner}.
+ *
+ * @property announcements Listado opcional de anuncios a renderizar.
+ * @property autoRotateMs Intervalo opcional de rotación automática en milisegundos.
+ * @property className Clases CSS adicionales para el contenedor raíz.
+ */
 type BannerProps = {
   announcements?: Announcement[];
   autoRotateMs?:  number;
   className?:     string;
 };
 
+/**
+ * Configuración visual por tipo de anuncio.
+ *
+ * @remarks
+ * Este objeto centraliza la semántica visual asociada a cada
+ * {@link AnnouncementType}, incluyendo:
+ * - fondo y borde
+ * - colores de texto
+ * - color del indicador
+ * - ícono representativo
+ *
+ * Se utiliza para mantener consistencia visual en todos los anuncios
+ * y evitar lógica condicional repetida durante el renderizado.
+ */
 const TYPE_CONFIG = {
   info: {
     bg: "bg-amber-50", border: "border-amber-200",
@@ -67,6 +150,18 @@ const TYPE_CONFIG = {
   },
 } as const;
 
+/**
+ * Anuncios por defecto del módulo de Producto.
+ *
+ * @remarks
+ * Este dataset actúa como contenido predeterminado del banner
+ * cuando no se suministra un arreglo de anuncios por props.
+ *
+ * Incluye ejemplos representativos de escenarios comunes del área:
+ * - cierres de fichas técnicas
+ * - rechazo de muestras
+ * - cierres exitosos de colección
+ */
 const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
   {
     id: "prod-ann-001", type: "urgent",
@@ -88,8 +183,24 @@ const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
   },
 ];
 
+/**
+ * Clave de almacenamiento usada para persistir anuncios descartados.
+ *
+ * @remarks
+ * El valor se guarda en `sessionStorage`, por lo que la persistencia
+ * se mantiene únicamente durante la sesión activa del navegador.
+ */
 const STORAGE_KEY = "product_dismissed_announcements";
 
+/**
+ * Obtiene el conjunto de anuncios descartados desde `sessionStorage`.
+ *
+ * @returns Un conjunto con los identificadores de anuncios descartados.
+ *
+ * @remarks
+ * Si el entorno no es navegador o ocurre un error al leer el storage,
+ * la función devuelve un conjunto vacío.
+ */
 function getDismissed(): Set<string> {
   if (typeof window === "undefined") return new Set();
   try {
@@ -98,11 +209,50 @@ function getDismissed(): Set<string> {
   } catch { return new Set(); }
 }
 
+/**
+ * Persiste en `sessionStorage` el conjunto de anuncios descartados.
+ *
+ * @param ids Conjunto de identificadores descartados.
+ *
+ * @remarks
+ * En caso de error de escritura, la función falla silenciosamente
+ * para no interrumpir la experiencia de usuario.
+ */
 function saveDismissed(ids: Set<string>) {
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...ids])); }
   catch { /* noop */ }
 }
 
+/**
+ * Banner de comunicados del módulo de Producto.
+ *
+ * @param props Propiedades del componente.
+ * @param props.announcements Listado de anuncios a mostrar.
+ * @param props.autoRotateMs Intervalo de rotación automática.
+ * @param props.className Clases adicionales del contenedor.
+ * @returns Un banner interactivo con anuncios navegables y descartables.
+ *
+ * @remarks
+ * Este componente implementa un sistema de comunicados rotativos
+ * con persistencia de dismiss por sesión.
+ *
+ * Funcionalidades principales:
+ * - renderiza uno o varios anuncios
+ * - permite navegación manual entre anuncios
+ * - rota automáticamente cuando hay más de un elemento
+ * - permite descartar anuncios individualmente
+ * - persiste descartes en `sessionStorage`
+ *
+ * El componente solo renderiza una vez que se confirma el montaje
+ * en cliente, evitando inconsistencias con APIs del navegador.
+ *
+ * Si todos los anuncios fueron descartados, no renderiza contenido.
+ *
+ * @example
+ * ```tsx
+ * <ProductAnnouncementBanner />
+ * ```
+ */
 export function ProductAnnouncementBanner({
   announcements = DEFAULT_ANNOUNCEMENTS,
   autoRotateMs  = 6000,
@@ -136,11 +286,11 @@ export function ProductAnnouncementBanner({
 
   if (!mounted || active.length === 0) return null;
 
-const item = active[Math.min(current, active.length - 1)];
-if (!item) return null;
+  const item = active[Math.min(current, active.length - 1)];
+  if (!item) return null;
 
-const cfg  = TYPE_CONFIG[item.type];
-const { Icon } = cfg;
+  const cfg  = TYPE_CONFIG[item.type];
+  const { Icon } = cfg;
 
   return (
     <div className={className} role="region" aria-label="Comunicados de Producto">
@@ -196,12 +346,30 @@ const { Icon } = cfg;
 // ProductCalendarCard
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Representa un evento relevante del calendario de temporada.
+ *
+ * @property date Fecha abreviada del evento.
+ * @property title Título o descripción del hito.
+ * @property type Tipo de evento dentro del calendario.
+ *
+ * @remarks
+ * Este tipo modela hitos clave del flujo de temporada,
+ * como cierres, fittings, entregas, revisiones o lanzamientos.
+ */
 type CalEvent = {
   date:  string;
   title: string;
   type:  "deadline" | "launch" | "review" | "fitting" | "delivery";
 };
 
+/**
+ * Dataset estático de eventos del calendario de temporada.
+ *
+ * @remarks
+ * Contiene hitos representativos del ciclo operativo de Producto
+ * para las temporadas activas.
+ */
 const CAL_EVENTS: CalEvent[] = [
   { date: "18 jun", title: "Cierre de fichas SS-25 — última fecha",  type: "deadline" },
   { date: "20 jun", title: "Fitting colección principal SS-25",       type: "fitting"  },
@@ -210,6 +378,9 @@ const CAL_EVENTS: CalEvent[] = [
   { date: "15 jul", title: "Lanzamiento SS-25 — tiendas nacionales",  type: "launch"   },
 ];
 
+/**
+ * Clases visuales asociadas a cada tipo de evento del calendario.
+ */
 const CAL_TYPE_COLORS: Record<CalEvent["type"], string> = {
   deadline: "bg-rose-100    text-rose-700",
   launch:   "bg-emerald-100 text-emerald-700",
@@ -218,6 +389,9 @@ const CAL_TYPE_COLORS: Record<CalEvent["type"], string> = {
   delivery: "bg-amber-100   text-amber-700",
 };
 
+/**
+ * Etiquetas visibles asociadas a cada tipo de evento del calendario.
+ */
 const CAL_TYPE_LABEL: Record<CalEvent["type"], string> = {
   deadline: "Cierre",
   launch:   "Lanzamiento",
@@ -226,6 +400,27 @@ const CAL_TYPE_LABEL: Record<CalEvent["type"], string> = {
   delivery: "Entrega",
 };
 
+/**
+ * Tarjeta de calendario de temporada del módulo de Producto.
+ *
+ * @returns Un listado visual de hitos relevantes de temporada.
+ *
+ * @remarks
+ * Este componente presenta eventos clave del calendario operativo
+ * del área de Producto, organizados como una lista compacta.
+ *
+ * Permite visualizar rápidamente:
+ * - fechas de cierre
+ * - fittings
+ * - entregas de muestras
+ * - revisiones internas
+ * - lanzamientos comerciales
+ *
+ * @example
+ * ```tsx
+ * <ProductCalendarCard />
+ * ```
+ */
 export function ProductCalendarCard() {
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
@@ -262,6 +457,15 @@ export function ProductCalendarCard() {
 // ProductActivityFeed
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Representa un evento dentro del feed de actividad del área.
+ *
+ * @property actor Responsable o emisor de la acción.
+ * @property action Acción ejecutada.
+ * @property target Entidad o recurso afectado por la acción.
+ * @property time Marca temporal relativa.
+ * @property type Tipo de evento para representación visual.
+ */
 type FeedItem = {
   actor:  string;
   action: string;
@@ -270,6 +474,9 @@ type FeedItem = {
   type:   "approval" | "upload" | "change" | "comment";
 };
 
+/**
+ * Configuración visual del indicador de cada tipo de actividad.
+ */
 const FEED_DOT: Record<FeedItem["type"], string> = {
   approval: "bg-emerald-400",
   upload:   "bg-sky-400",
@@ -277,6 +484,13 @@ const FEED_DOT: Record<FeedItem["type"], string> = {
   comment:  "bg-stone-300",
 };
 
+/**
+ * Dataset estático del feed de actividad reciente.
+ *
+ * @remarks
+ * Este arreglo representa acciones recientes realizadas
+ * por el equipo de Producto o por el sistema.
+ */
 const FEED_ITEMS: FeedItem[] = [
   { actor: "Valentina M.", action: "aprobó la muestra R2 de",       target: "BL-2501 · Blusa lino perforada",   time: "hace 15 min", type: "approval" },
   { actor: "Carlos R.",    action: "subió ficha técnica de",         target: "PA-2517 · Pantalón palazzo crêpe", time: "hace 1 h",    type: "upload"   },
@@ -287,8 +501,35 @@ const FEED_ITEMS: FeedItem[] = [
   { actor: "Valentina M.", action: "cerró revisión de",              target: "FW-24 · Otoño Invierno 2024",      time: "hace 2 días", type: "approval" },
 ];
 
+/**
+ * Propiedades del componente {@link ProductActivityFeed}.
+ *
+ * @property limit Cantidad máxima de eventos a mostrar.
+ */
 type ActivityProps = { limit?: number };
 
+/**
+ * Feed de actividad reciente del módulo de Producto.
+ *
+ * @param props Propiedades del componente.
+ * @param props.limit Número máximo de eventos visibles.
+ * @returns Un timeline compacto con acciones recientes del equipo.
+ *
+ * @remarks
+ * Este componente muestra una secuencia temporal resumida
+ * de acciones recientes realizadas dentro del flujo de Producto.
+ *
+ * Resulta útil para ofrecer visibilidad sobre:
+ * - aprobaciones
+ * - cargas de fichas
+ * - cambios de estado
+ * - comentarios y revisiones
+ *
+ * @example
+ * ```tsx
+ * <ProductActivityFeed limit={5} />
+ * ```
+ */
 export function ProductActivityFeed({ limit = 7 }: ActivityProps) {
   const items = FEED_ITEMS.slice(0, limit);
   return (
@@ -326,8 +567,38 @@ export function ProductActivityFeed({ limit = 7 }: ActivityProps) {
 // ProductExportToolbar
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link ProductExportToolbar}.
+ *
+ * @property periodLabel Etiqueta del periodo asociado a la exportación.
+ */
 type ExportProps = { periodLabel: string };
 
+/**
+ * Barra de acciones para exportación de reportes del módulo.
+ *
+ * @param props Propiedades del componente.
+ * @param props.periodLabel Periodo mostrado como contexto de exportación.
+ * @returns Controles de exportación en formatos disponibles.
+ *
+ * @remarks
+ * Este componente presenta acciones rápidas para exportar información
+ * del módulo en distintos formatos.
+ *
+ * En la implementación actual, la exportación es simulada mediante logs,
+ * por lo que funciona como placeholder de la experiencia final.
+ *
+ * En una versión productiva, podría conectarse con:
+ * - generación de reportes Excel
+ * - exportación a PDF
+ * - servicios backend de reporting
+ * - descargas asincrónicas
+ *
+ * @example
+ * ```tsx
+ * <ProductExportToolbar periodLabel="SS-25" />
+ * ```
+ */
 export function ProductExportToolbar({ periodLabel }: ExportProps) {
   const handleExport = (format: "excel" | "pdf") => {
     console.log(`Exportando ${format} — ${periodLabel}`);
@@ -356,6 +627,15 @@ export function ProductExportToolbar({ periodLabel }: ExportProps) {
 // ProductBlockersCard
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Representa una alerta o bloqueo operativo del área de Producto.
+ *
+ * @property id Identificador único de la alerta.
+ * @property title Descripción principal del problema detectado.
+ * @property area Área funcional o contexto afectado.
+ * @property severity Nivel de severidad de la alerta.
+ * @property href Ruta de navegación asociada al detalle o resolución.
+ */
 type Alert = {
   id:       string;
   title:    string;
@@ -364,6 +644,13 @@ type Alert = {
   href:     string;
 };
 
+/**
+ * Dataset estático de alertas operativas del área.
+ *
+ * @remarks
+ * Este arreglo contiene alertas representativas que podrían bloquear
+ * o ralentizar procesos del flujo de Producto.
+ */
 const ALERTS: Alert[] = [
   { id: "a1", title: "Ficha técnica FA-2503 incompleta — lanzamiento en 34 días",  area: "Faldas",      severity: "high",   href: "/product/techsheets/FA-2503"   },
   { id: "a2", title: "Muestra CU-2542 rechazada en R1 — requiere ajuste de corte", area: "Resort-25",   severity: "high",   href: "/product/samples/s4"           },
@@ -371,12 +658,36 @@ const ALERTS: Alert[] = [
   { id: "a4", title: "2 referencias sin categoría asignada en Resort-25",          area: "Colecciones", severity: "low",    href: "/product/collections/resort25" },
 ];
 
+/**
+ * Configuración visual por severidad de alerta.
+ */
 const ALERT_SEV = {
   high:   { label: "Alta",  cls: "bg-rose-50  text-rose-700  border-rose-200",  dot: "bg-rose-400"  },
   medium: { label: "Media", cls: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-400" },
   low:    { label: "Baja",  cls: "bg-stone-50 text-stone-500 border-stone-200", dot: "bg-stone-300" },
 };
 
+/**
+ * Tarjeta de alertas y bloqueos del área de Producto.
+ *
+ * @returns Un listado visual de incidencias pendientes de atención.
+ *
+ * @remarks
+ * Este componente reúne alertas operativas relevantes para el equipo,
+ * permitiendo identificar rápidamente problemas que impactan
+ * el avance del flujo de Producto.
+ *
+ * Se usa como bloque de visibilidad inmediata para:
+ * - fichas incompletas
+ * - muestras rechazadas
+ * - pendientes de proveedores
+ * - inconsistencias de clasificación o carga
+ *
+ * @example
+ * ```tsx
+ * <ProductBlockersCard />
+ * ```
+ */
 export function ProductBlockersCard() {
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
@@ -421,6 +732,14 @@ export function ProductBlockersCard() {
 // ProductToolsCard
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Representa una herramienta o recurso del stack de trabajo del equipo.
+ *
+ * @property name Nombre de la herramienta.
+ * @property desc Descripción breve del uso principal.
+ * @property href URL o destino del recurso.
+ * @property external Indica si se trata de un enlace externo.
+ */
 type Tool = {
   name:     string;
   desc:     string;
@@ -428,6 +747,13 @@ type Tool = {
   external: boolean;
 };
 
+/**
+ * Dataset estático de herramientas del área de Producto.
+ *
+ * @remarks
+ * Este arreglo agrupa accesos rápidos a plataformas
+ * utilizadas habitualmente por el equipo en su flujo diario.
+ */
 const TOOLS: Tool[] = [
   { name: "Centric PLM",       desc: "Gestión del ciclo de producto", href: "https://centric.acme.com",      external: true },
   { name: "Adobe Illustrator", desc: "Diseño de fichas y bocetos",    href: "https://adobe.com/illustrator", external: true },
@@ -437,6 +763,28 @@ const TOOLS: Tool[] = [
   { name: "Trello",            desc: "Seguimiento de muestras",       href: "https://trello.com/acme",       external: true },
 ];
 
+/**
+ * Tarjeta de herramientas del equipo de Producto.
+ *
+ * @returns Un grid compacto con accesos rápidos al stack del área.
+ *
+ * @remarks
+ * Este componente proporciona un acceso visual rápido a las principales
+ * herramientas utilizadas por el equipo de Producto.
+ *
+ * Está orientado a centralizar recursos frecuentes de trabajo como:
+ * - PLM
+ * - diseño
+ * - ERP
+ * - comunicación
+ * - repositorios documentales
+ * - seguimiento operativo
+ *
+ * @example
+ * ```tsx
+ * <ProductToolsCard />
+ * ```
+ */
 export function ProductToolsCard() {
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">

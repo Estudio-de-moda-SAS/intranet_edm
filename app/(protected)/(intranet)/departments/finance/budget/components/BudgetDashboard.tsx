@@ -1,5 +1,26 @@
 'use client';
 
+/**
+ * @module BudgetDashboard
+ * Dashboard interactivo para la visualización y análisis presupuestario por departamento.
+ *
+ * @remarks
+ * Este componente centraliza la experiencia principal de consulta
+ * del presupuesto departamental dentro del módulo financiero.
+ *
+ * Incluye funcionalidades como:
+ *
+ * - selección de trimestre
+ * - ordenamiento dinámico de departamentos
+ * - tarjetas resumen por área
+ * - panel lateral con detalle presupuestario
+ * - análisis de ejecución, disponibilidad y proyección anual
+ *
+ * Su objetivo es permitir una lectura rápida del estado
+ * presupuestario y, al mismo tiempo, ofrecer profundidad analítica
+ * cuando se inspecciona un departamento específico.
+ */
+
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,10 +31,22 @@ import {
 import type { DepartmentBudget, BudgetQuarter } from '@/lib/graph/departments/finance.service';
 import { getBudgetForQuarter, getBudgetStatus } from '@/lib/graph/departments/finance.service';
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Configuración                                                               */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Trimestres disponibles dentro del dashboard.
+ */
 const QUARTERS: BudgetQuarter[] = ['Q1', 'Q2', 'Q3', 'Q4'];
 
+/**
+ * Etiquetas legibles para cada trimestre.
+ *
+ * @remarks
+ * Se utilizan tanto en tarjetas como en el panel lateral
+ * para ofrecer contexto temporal más claro.
+ */
 const QUARTER_LABELS: Record<BudgetQuarter, string> = {
   Q1: 'Q1 · Ene–Mar',
   Q2: 'Q2 · Abr–Jun',
@@ -21,50 +54,185 @@ const QUARTER_LABELS: Record<BudgetQuarter, string> = {
   Q4: 'Q4 · Oct–Dic',
 };
 
+/**
+ * Configuración visual por estado presupuestario.
+ *
+ * @remarks
+ * Este mapa traduce el estado analítico del presupuesto
+ * a una representación visual consistente en:
+ *
+ * - etiqueta
+ * - color de barra
+ * - color de texto
+ * - fondo
+ * - borde
+ */
 const STATUS_CFG = {
-  healthy:     { label: 'Saludable',    bar: 'bg-emerald-400', text: 'text-emerald-700', bg: 'bg-emerald-50',  border: 'border-emerald-200' },
-  warning:     { label: 'En alerta',    bar: 'bg-amber-400',   text: 'text-amber-700',   bg: 'bg-amber-50',    border: 'border-amber-200'   },
-  critical:    { label: 'Crítico',      bar: 'bg-red-400',     text: 'text-red-700',     bg: 'bg-red-50',      border: 'border-red-200'     },
-  overbudget:  { label: 'Sobre límite', bar: 'bg-red-600',     text: 'text-red-800',     bg: 'bg-red-100',     border: 'border-red-300'     },
+  healthy: {
+    label: 'Saludable',
+    bar: 'bg-emerald-400',
+    text: 'text-emerald-700',
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-200',
+  },
+  warning: {
+    label: 'En alerta',
+    bar: 'bg-amber-400',
+    text: 'text-amber-700',
+    bg: 'bg-amber-50',
+    border: 'border-amber-200',
+  },
+  critical: {
+    label: 'Crítico',
+    bar: 'bg-red-400',
+    text: 'text-red-700',
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+  },
+  overbudget: {
+    label: 'Sobre límite',
+    bar: 'bg-red-600',
+    text: 'text-red-800',
+    bg: 'bg-red-100',
+    border: 'border-red-300',
+  },
 };
 
-// ─── Formatters ───────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Formateadores                                                               */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Formatea un valor numérico como moneda COP en notación compacta.
+ *
+ * @param n Valor monetario a formatear.
+ * @returns Cadena formateada en pesos colombianos.
+ */
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: 'COP', maximumFractionDigits: 0,
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
     notation: 'compact',
   }).format(n);
 
+/**
+ * Formatea un valor numérico como moneda COP en formato completo.
+ *
+ * @param n Valor monetario a formatear.
+ * @returns Cadena formateada en pesos colombianos sin notación compacta.
+ *
+ * @remarks
+ * Se utiliza en vistas de detalle donde la precisión visual
+ * del monto es más importante que la compactación.
+ */
 const fmtFull = (n: number) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(n);
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Props                                                                       */
+/* -------------------------------------------------------------------------- */
 
-interface Props { budgets: DepartmentBudget[] }
+/**
+ * Props del componente {@link BudgetDashboard}.
+ *
+ * @property budgets Lista de presupuestos departamentales.
+ */
+interface Props {
+  budgets: DepartmentBudget[];
+}
 
-// ─── Detail Drawer ────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Drawer de detalle                                                           */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Props del componente {@link BudgetDrawer}.
+ *
+ * @property budget Presupuesto departamental seleccionado.
+ * @property quarter Trimestre actualmente activo en el dashboard.
+ * @property onClose Acción para cerrar el panel lateral.
+ */
+type BudgetDrawerProps = {
+  budget: DepartmentBudget;
+  quarter: BudgetQuarter;
+  onClose: () => void;
+};
+
+/**
+ * Panel lateral con el detalle presupuestario de un departamento.
+ *
+ * @param props Propiedades del componente.
+ * @returns Drawer con información detallada por trimestre y líneas de gasto.
+ *
+ * @remarks
+ * Este componente amplía la información de una tarjeta
+ * y permite consultar:
+ *
+ * - estado del trimestre activo
+ * - asignado, ejecutado y disponible
+ * - evolución anual por trimestre
+ * - líneas de gasto
+ * - resumen anual consolidado
+ * - responsable del presupuesto
+ * - notas adicionales
+ */
 function BudgetDrawer({
   budget, quarter, onClose,
-}: { budget: DepartmentBudget; quarter: BudgetQuarter; onClose: () => void }) {
-  const q       = getBudgetForQuarter(budget, quarter);
-  const scfg    = STATUS_CFG[q.status];
-  const allQ    = QUARTERS.map(qt => ({ qt, ...getBudgetForQuarter(budget, qt) }));
+}: BudgetDrawerProps) {
+  /**
+   * Información presupuestaria del trimestre actualmente seleccionado.
+   */
+  const q = getBudgetForQuarter(budget, quarter);
+
+  /**
+   * Configuración visual derivada del estado del trimestre activo.
+   */
+  const scfg = STATUS_CFG[q.status];
+
+  /**
+   * Colección anual consolidada de los cuatro trimestres.
+   *
+   * @remarks
+   * Se utiliza para mostrar la evolución completa del año.
+   */
+  const allQ = QUARTERS.map(qt => ({ qt, ...getBudgetForQuarter(budget, qt) }));
+
+  /**
+   * Presupuesto total anual asignado al departamento.
+   */
   const annualAssigned = budget.assignedQ1 + budget.assignedQ2 + budget.assignedQ3 + budget.assignedQ4;
+
+  /**
+   * Presupuesto total anual ejecutado por el departamento.
+   */
   const annualExecuted = budget.executedQ1 + budget.executedQ2 + budget.executedQ3 + budget.executedQ4;
-  const annualPct      = Math.round((annualExecuted / annualAssigned) * 100);
+
+  /**
+   * Porcentaje de ejecución anual consolidado.
+   */
+  const annualPct = Math.round((annualExecuted / annualAssigned) * 100);
 
   return (
     <AnimatePresence>
-      <motion.div key="ov"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      <motion.div
+        key="ov"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-sm"
         onClick={onClose}
       />
-      <motion.aside key="dr"
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      <motion.aside
+        key="dr"
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
         className="fixed right-0 top-0 z-50 h-full w-full max-w-[480px] bg-white shadow-2xl flex flex-col"
         onClick={e => e.stopPropagation()}
@@ -83,15 +251,16 @@ function BudgetDrawer({
               <p className="text-[11px] text-slate-400">Detalle presupuestario · {QUARTER_LABELS[quarter]}</p>
             </div>
           </div>
-          <button onClick={onClose}
-            className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition">
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
           {/* Status banner */}
           <div className={`rounded-xl border p-4 ${scfg.bg} ${scfg.border}`}>
             <div className="flex items-center justify-between">
@@ -101,6 +270,7 @@ function BudgetDrawer({
               </span>
               <span className={`text-[20px] font-bold ${scfg.text}`}>{q.pct}%</span>
             </div>
+
             {q.projectionPct > 100 && (
               <p className="mt-2 text-[12px] text-red-700 flex items-start gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -116,9 +286,9 @@ function BudgetDrawer({
             </h3>
             <div className="rounded-xl border border-slate-100 overflow-hidden">
               {[
-                ['Asignado',    fmtFull(q.assigned)],
-                ['Ejecutado',   fmtFull(q.executed)],
-                ['Disponible',  fmtFull(q.available)],
+                ['Asignado', fmtFull(q.assigned)],
+                ['Ejecutado', fmtFull(q.executed)],
+                ['Disponible', fmtFull(q.available)],
               ].map(([l, v]) => (
                 <div key={l} className="flex justify-between px-4 py-3 border-b border-slate-50 last:border-0">
                   <span className="text-[13px] text-slate-500">{l}</span>
@@ -147,9 +317,21 @@ function BudgetDrawer({
             </h3>
             <div className="rounded-xl border border-slate-100 bg-white overflow-hidden">
               {allQ.map(({ qt, assigned, executed, pct, status }) => {
+                /**
+                 * Indica si el trimestre corresponde al actualmente activo.
+                 */
                 const isCurrent = qt === quarter;
-                const isPast    = assigned > 0 && executed > 0;
-                const isFuture  = executed === 0 && assigned > 0;
+
+                /**
+                 * Indica si el trimestre ya tiene ejecución registrada.
+                 */
+                const isPast = assigned > 0 && executed > 0;
+
+                /**
+                 * Indica si el trimestre aún no presenta ejecución.
+                 */
+                const isFuture = executed === 0 && assigned > 0;
+
                 return (
                   <div key={qt} className={`px-4 py-3 border-b border-slate-50 last:border-0 ${isCurrent ? 'bg-indigo-50/60' : ''}`}>
                     <div className="flex items-center justify-between mb-1.5">
@@ -194,9 +376,18 @@ function BudgetDrawer({
             </h3>
             <div className="rounded-xl border border-slate-100 overflow-hidden">
               {budget.lines.map((line, i) => {
+                /**
+                 * Porcentaje de ejecución de la línea presupuestaria.
+                 */
                 const linePct = line.assigned > 0
-                  ? Math.min(100, Math.round((line.executed / line.assigned) * 100)) : 0;
+                  ? Math.min(100, Math.round((line.executed / line.assigned) * 100))
+                  : 0;
+
+                /**
+                 * Estado analítico derivado del porcentaje ejecutado.
+                 */
                 const lineStatus = getBudgetStatus(linePct);
+
                 return (
                   <div key={i} className="px-4 py-3 border-b border-slate-50 last:border-0">
                     <div className="flex items-center justify-between mb-1.5">
@@ -247,7 +438,7 @@ function BudgetDrawer({
             <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0">
                 <span className="text-[11px] font-bold text-indigo-600">
-                  {budget.owner.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                  {budget.owner.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </span>
               </div>
               <div>
@@ -273,16 +464,65 @@ function BudgetDrawer({
   );
 }
 
-// ─── Budget Card ──────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Tarjeta de presupuesto                                                      */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Props del componente {@link BudgetCard}.
+ *
+ * @property budget Presupuesto departamental a representar.
+ * @property quarter Trimestre actualmente activo.
+ * @property onClick Acción para abrir el detalle del departamento.
+ */
+type BudgetCardProps = {
+  budget: DepartmentBudget;
+  quarter: BudgetQuarter;
+  onClick: () => void;
+};
+
+/**
+ * Tarjeta resumen de un presupuesto departamental.
+ *
+ * @param props Propiedades del componente.
+ * @returns Tarjeta visual con estado, ejecución y proyección del trimestre activo.
+ *
+ * @remarks
+ * Esta tarjeta sintetiza:
+ * - responsable del presupuesto
+ * - ejecución del trimestre activo
+ * - mini resumen anual por trimestres
+ * - disponibilidad
+ * - ejecución YTD
+ * - alerta de proyección cuando aplica
+ */
 function BudgetCard({
   budget, quarter, onClick,
-}: { budget: DepartmentBudget; quarter: BudgetQuarter; onClick: () => void }) {
-  const q    = getBudgetForQuarter(budget, quarter);
+}: BudgetCardProps) {
+  /**
+   * Información presupuestaria del trimestre activo.
+   */
+  const q = getBudgetForQuarter(budget, quarter);
+
+  /**
+   * Configuración visual asociada al estado del trimestre activo.
+   */
   const scfg = STATUS_CFG[q.status];
+
+  /**
+   * Presupuesto anual asignado al departamento.
+   */
   const annualAssigned = budget.assignedQ1 + budget.assignedQ2 + budget.assignedQ3 + budget.assignedQ4;
+
+  /**
+   * Presupuesto anual ejecutado por el departamento.
+   */
   const annualExecuted = budget.executedQ1 + budget.executedQ2 + budget.executedQ3 + budget.executedQ4;
-  const annualPct      = Math.round((annualExecuted / annualAssigned) * 100);
+
+  /**
+   * Porcentaje de ejecución anual consolidado.
+   */
+  const annualPct = Math.round((annualExecuted / annualAssigned) * 100);
 
   return (
     <motion.div
@@ -298,7 +538,7 @@ function BudgetCard({
           <div className="flex items-center gap-1.5 mt-1">
             <div className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center">
               <span className="text-[8px] font-bold text-slate-500">
-                {budget.owner.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                {budget.owner.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">{budget.owner}</p>
@@ -333,16 +573,28 @@ function BudgetCard({
       {/* Mini barras trimestrales */}
       <div className="grid grid-cols-4 gap-1 mb-4">
         {QUARTERS.map(qt => {
-          const qData   = getBudgetForQuarter(budget, qt);
+          const qData = getBudgetForQuarter(budget, qt);
+
+          /**
+           * Indica si el trimestre corresponde al actualmente seleccionado.
+           */
           const isActive = qt === quarter;
-          const isEmpty  = qData.executed === 0;
+
+          /**
+           * Indica si el trimestre no tiene ejecución registrada.
+           */
+          const isEmpty = qData.executed === 0;
+
           return (
             <div key={qt} className="text-center">
-              <div className={`h-1 rounded-full mb-1 ${
-                isEmpty  ? 'bg-slate-100' :
-                isActive ? STATUS_CFG[qData.status].bar :
-                           STATUS_CFG[qData.status].bar + ' opacity-40'
-              }`} style={{ width: `${isEmpty ? 100 : Math.min(100, qData.pct)}%` }} />
+              <div
+                className={`h-1 rounded-full mb-1 ${
+                  isEmpty ? 'bg-slate-100' :
+                  isActive ? STATUS_CFG[qData.status].bar :
+                  STATUS_CFG[qData.status].bar + ' opacity-40'
+                }`}
+                style={{ width: `${isEmpty ? 100 : Math.min(100, qData.pct)}%` }}
+              />
               <span className={`text-[9px] font-medium ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>{qt}</span>
             </div>
           );
@@ -376,21 +628,68 @@ function BudgetCard({
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Componente principal                                                        */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Dashboard principal de presupuesto.
+ *
+ * @param props Propiedades del componente.
+ * @returns Vista interactiva con selector de trimestre, ordenamiento y tarjetas por departamento.
+ *
+ * @remarks
+ * Este componente administra:
+ * - el trimestre activo
+ * - el presupuesto seleccionado para detalle
+ * - el criterio de ordenamiento
+ *
+ * Los departamentos pueden ordenarse por:
+ * - nombre
+ * - porcentaje de ejecución
+ * - monto asignado
+ *
+ * @example
+ * ```tsx
+ * <BudgetDashboard budgets={budgets} />
+ * ```
+ */
 export function BudgetDashboard({ budgets }: Props) {
-  const [quarter, setQuarter]   = useState<BudgetQuarter>('Q1');
-  const [selected, setSelected] = useState<DepartmentBudget | null>(null);
-  const [sortBy, setSortBy]     = useState<'dept' | 'pct' | 'amount'>('pct');
+  /**
+   * Trimestre actualmente activo.
+   */
+  const [quarter, setQuarter] = useState<BudgetQuarter>('Q1');
 
+  /**
+   * Presupuesto departamental actualmente seleccionado.
+   */
+  const [selected, setSelected] = useState<DepartmentBudget | null>(null);
+
+  /**
+   * Criterio actual de ordenamiento del dashboard.
+   */
+  const [sortBy, setSortBy] = useState<'dept' | 'pct' | 'amount'>('pct');
+
+  /**
+   * Colección de presupuestos ordenada según el criterio activo.
+   *
+   * @remarks
+   * Reglas aplicadas:
+   * - `dept`: orden alfabético por nombre de departamento
+   * - `amount`: mayor monto asignado del trimestre activo primero
+   * - `pct`: mayor porcentaje de ejecución primero
+   */
   const sorted = [...budgets].sort((a, b) => {
-    if (sortBy === 'dept')   return a.department.localeCompare(b.department);
+    if (sortBy === 'dept') {
+      return a.department.localeCompare(b.department);
+    }
+
     if (sortBy === 'amount') {
       const aQ = getBudgetForQuarter(a, quarter);
       const bQ = getBudgetForQuarter(b, quarter);
       return bQ.assigned - aQ.assigned;
     }
-    // pct — más críticos primero
+
     const aQ = getBudgetForQuarter(a, quarter);
     const bQ = getBudgetForQuarter(b, quarter);
     return bQ.pct - aQ.pct;
@@ -400,7 +699,6 @@ export function BudgetDashboard({ budgets }: Props) {
     <>
       {/* ── Controls ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
-
         {/* Quarter selector */}
         <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1 w-fit">
           {QUARTERS.map(q => (

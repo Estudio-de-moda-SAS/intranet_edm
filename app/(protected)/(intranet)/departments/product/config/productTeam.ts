@@ -1,7 +1,36 @@
-// app/product/config/productTeam.ts
+/**
+ * @module productTeam
+ * Configuración del equipo del módulo de Producto.
+ *
+ * @remarks
+ * Este módulo define el listado de integrantes del departamento de Producto
+ * y provee un dataset estático utilizado en la intranet.
+ *
+ * La información aquí contenida es consumida por componentes como:
+ * - Secciones de equipo
+ * - Tarjetas de perfil
+ * - Directorios internos
+ *
+ * Puede evolucionar a una fuente dinámica en el futuro (API o servicio).
+ */
 
 import type { DepartmentMember } from "@/types/DepartmentMember";
 
+/**
+ * Listado de miembros del equipo de Producto.
+ *
+ * @remarks
+ * Este arreglo contiene los datos del equipo del área que se muestran
+ * en la intranet.
+ *
+ * Cada elemento representa un colaborador con su información básica
+ * (identificación, rol y contacto).
+ *
+ * @example
+ * ```ts
+ * productTeam.map(member => member.name);
+ * ```
+ */
 export const productTeam: DepartmentMember[] = [
   {
     id:          "prod-001",

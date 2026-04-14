@@ -1,9 +1,55 @@
+/**
+ * @module ProductBlockersCard
+ * Tarjeta de bloqueos activos del módulo de Producto.
+ *
+ * @remarks
+ * Este componente renderiza un listado resumido de bloqueos o dependencias
+ * activas que afectan el avance de iniciativas dentro del área de Producto.
+ *
+ * Su propósito es ofrecer visibilidad inmediata sobre impedimentos
+ * relevantes para la operación, facilitando la priorización y el acceso
+ * rápido a su detalle.
+ *
+ * Los bloqueos mostrados pueden representar situaciones como:
+ * - dependencias externas
+ * - aprobaciones pendientes
+ * - limitaciones de infraestructura
+ * - revisiones interáreas
+ *
+ * La información actual es estática y funciona como mock para la interfaz.
+ * En una implementación productiva, estos datos podrían obtenerse desde:
+ * - sistemas de seguimiento de iniciativas
+ * - herramientas de gestión de proyectos
+ * - tableros operativos
+ * - servicios internos de incidentes o riesgos
+ */
+
 // app/product/components/ProductBlockersCard.tsx
 // CLIENT COMPONENT — Equivalente a FinanceAlertsCard
 "use client";
 
 import { ShieldAlert, ExternalLink } from "lucide-react";
 
+/**
+ * Representa un bloqueo activo dentro del flujo del área de Producto.
+ *
+ * @remarks
+ * Este tipo modela una incidencia, dependencia o restricción
+ * que impide o ralentiza el avance de una iniciativa o proceso.
+ *
+ * Cada bloqueo incluye:
+ * - un identificador único
+ * - una descripción breve del problema
+ * - el squad responsable o afectado
+ * - un nivel de severidad
+ * - una ruta de navegación al detalle
+ *
+ * @property id Identificador único del bloqueo.
+ * @property title Título o descripción resumida del bloqueo.
+ * @property squad Squad, equipo o frente asociado.
+ * @property severity Nivel de severidad del bloqueo.
+ * @property href Ruta de navegación hacia el detalle del bloqueo.
+ */
 type Blocker = {
   id:       string;
   title:    string;
@@ -12,6 +58,24 @@ type Blocker = {
   href:     string;
 };
 
+/**
+ * Dataset estático de bloqueos activos.
+ *
+ * @remarks
+ * Este arreglo contiene bloqueos representativos del módulo de Producto,
+ * utilizados para poblar la tarjeta de blockers en la homepage.
+ *
+ * Los ejemplos incluidos reflejan escenarios comunes de seguimiento:
+ * - dependencias técnicas externas
+ * - aprobaciones pendientes
+ * - limitaciones de entorno
+ * - revisiones legales o transversales
+ *
+ * Este dataset permite validar:
+ * - la visualización del componente
+ * - los estados de severidad
+ * - el comportamiento de navegación
+ */
 const BLOCKERS: Blocker[] = [
   {
     id:       "blk-1",
@@ -43,12 +107,57 @@ const BLOCKERS: Blocker[] = [
   },
 ];
 
+/**
+ * Configuración visual asociada a cada nivel de severidad.
+ *
+ * @remarks
+ * Este objeto centraliza la representación visual de los bloqueos
+ * según su severidad.
+ *
+ * Para cada nivel se define:
+ * - `label`: texto visible para el usuario
+ * - `cls`: clases utilitarias del badge
+ * - `dot`: color del indicador puntual
+ *
+ * Esto permite mantener consistencia visual y simplifica
+ * el renderizado del listado.
+ */
 const SEV = {
   high:   { label: "Alta",   cls: "bg-rose-50  text-rose-700  border-rose-100",  dot: "bg-rose-400"   },
   medium: { label: "Media",  cls: "bg-amber-50 text-amber-700 border-amber-100", dot: "bg-amber-400"  },
   low:    { label: "Baja",   cls: "bg-slate-50 text-slate-500 border-slate-200", dot: "bg-slate-300"  },
 };
 
+/**
+ * Tarjeta de bloqueos activos del área de Producto.
+ *
+ * @returns Un componente visual con el listado de blockers pendientes de resolución.
+ *
+ * @remarks
+ * Este componente presenta una vista compacta de los bloqueos activos
+ * del módulo, organizada como un listado navegable.
+ *
+ * Cada elemento muestra:
+ * - descripción resumida del bloqueo
+ * - squad asociado
+ * - severidad
+ * - acceso directo al detalle
+ *
+ * La tarjeta está pensada para brindar una lectura rápida del estado
+ * de impedimentos del área y favorecer la atención temprana
+ * de elementos críticos o de alto impacto.
+ *
+ * Resulta útil para:
+ * - monitoreo operativo
+ * - visibilidad ejecutiva de riesgos
+ * - seguimiento de dependencias
+ * - navegación rápida a incidencias relevantes
+ *
+ * @example
+ * ```tsx
+ * <ProductBlockersCard />
+ * ```
+ */
 export default function ProductBlockersCard() {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
