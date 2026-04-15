@@ -1,6 +1,6 @@
 // app/(protected)/(intranet)/departments/legal/components/LegalHomePage.tsx
 // SERVER COMPONENT
-
+import { LEGAL_UI_CONFIG } from "../config/legalSections";
 import { QuickLinksSection }      from "@/app/components/ui/QuickLinksSection";
 import LegalContractsPanel         from "./LegalContractsPanel";
 import LegalRequestsCard           from "./LegalRequestPanel";
@@ -54,12 +54,12 @@ const TEAM_ACCENT = {
 export default function LegalHomePage({ data, accessLevel }: Props) {
 
   const showKPIs       = can(accessLevel, "legal:view_kpis");
-  const showCalendar   = can(accessLevel, "legal:view_calendar");
-  const showRegulatory = can(accessLevel, "legal:view_regulatory");
+  const showCalendar   = LEGAL_UI_CONFIG.showCalendar && can(accessLevel, "legal:view_calendar");
+  const showRegulatory = LEGAL_UI_CONFIG.showRegulatory && can(accessLevel, "legal:view_regulatory");
   const showQuickLinks = can(accessLevel, "legal:view_quicklinks");
   const showContracts  = can(accessLevel, "legal:view_contracts");
-  const showRequests   = can(accessLevel, "legal:view_requests");
-  const showLitigation = can(accessLevel, "legal:view_litigation");
+  const showRequests   = LEGAL_UI_CONFIG.showRequests && can(accessLevel, "legal:view_requests");
+  const showLitigation = LEGAL_UI_CONFIG.showLitigation && can(accessLevel, "legal:view_litigation");
   const showDocuments  = can(accessLevel, "legal:view_documents");
 
   // ── Pills del hero — datos sensibles solo para quien puede verlos ─────────
