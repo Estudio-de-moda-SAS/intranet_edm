@@ -1,11 +1,32 @@
+/**
+ * @module AdminHomePage
+ * Vista principal del módulo de Servicios Administrativos dentro de la intranet.
+ *
+ * Este componente organiza la experiencia principal del área administrativa,
+ * incluyendo:
+ * - banner principal del departamento,
+ * - indicadores clave,
+ * - accesos rápidos,
+ * - calendario y anuncios,
+ * - solicitudes y documentos,
+ * - funcionalidades sensibles como visitantes y tarjetas de acceso,
+ * - sección del equipo del área.
+ *
+ * @remarks
+ * Es un componente de servidor que compone la página a partir de múltiples
+ * tarjetas y secciones reutilizables. La visibilidad de algunos bloques
+ * depende del {@link AccessLevel} del usuario mediante la función {@link can}.
+ *
+ * Reglas de acceso aplicadas:
+ * - Hero, equipo, KPI strip, quick links, calendario, anuncios, solicitudes y documentos:
+ *   disponibles para todos los usuarios con acceso al módulo.
+ * - Visitantes y tarjetas de acceso:
+ *   disponibles únicamente para perfiles con permisos
+ *   `admin_services:view_visitors` y `admin_services:view_access_cards`.
+ */
+
 // app/(protected)/(intranet)/departments/administrative/components/AdminHomePage.tsx
 // SERVER COMPONENT
-//
-// Guards aplicados:
-//   Hero + Equipo + KPI Strip          → todos            (employee+)
-//   Quick Links + Calendario           → todos            (employee+)
-//   Anuncios + Solicitudes + Documentos→ todos            (employee+)
-//   Visitantes + Tarjetas de Acceso    → admin_services + admin
 
 import AdminMyRequestsCard             from "./AdminMyRequestsCard";
 import AdminDocumentsCenterCard        from "./AdminDocumentsCenterCard";
@@ -32,6 +53,12 @@ import { can, type AccessLevel }       from "@/lib/roles";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades requeridas por {@link AdminHomePage}.
+ *
+ * @property data Datos consolidados del módulo de Servicios Administrativos.
+ * @property accessLevel Nivel de acceso del usuario autenticado.
+ */
 type Props = {
   data:        AdminData;
   accessLevel: AccessLevel;
@@ -39,6 +66,16 @@ type Props = {
 
 // ── Team accent ───────────────────────────────────────────────────────────────
 
+/**
+ * Configuración visual utilizada por la sección del equipo del departamento.
+ *
+ * Define colores, gradientes, bordes, estados hover y estilos de avatar
+ * aplicados en {@link DepartmentTeamSection}.
+ *
+ * @remarks
+ * Este objeto centraliza la identidad visual del módulo de Servicios
+ * Administrativos para mantener consistencia de estilo en la sección del equipo.
+ */
 const TEAM_ACCENT = {
   sectionBg:       "bg-white",
   sectionBorder:   "border-rose-300",
@@ -63,12 +100,48 @@ const TEAM_ACCENT = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+/**
+ * Renderiza la página principal del módulo de Servicios Administrativos.
+ *
+ * @param props Propiedades del componente.
+ * @param props.data Datos del módulo obtenidos desde la capa de servicios.
+ * @param props.accessLevel Nivel de acceso del usuario actual.
+ * @returns La interfaz principal del área administrativa.
+ *
+ * @remarks
+ * Este componente:
+ * 1. Evalúa permisos para mostrar bloques sensibles.
+ * 2. Filtra enlaces rápidos según el nivel de acceso.
+ * 3. Organiza el contenido en una grilla principal con columna de contenido y sidebar.
+ * 4. Renderiza una sección final con el equipo del departamento.
+ *
+ * La función {@link can} controla la exposición de funcionalidades sensibles
+ * para asegurar que solo usuarios autorizados visualicen información
+ * operativa específica.
+ */
 export default function AdminHomePage({ data, accessLevel }: Props) {
 
-  const showVisitors    = can(accessLevel, "admin_services:view_visitors");
+  /**
+   * Indica si el usuario puede visualizar el registro de visitantes.
+   */
+  const showVisitors = can(accessLevel, "admin_services:view_visitors");
+
+  /**
+   * Indica si el usuario puede visualizar la gestión de tarjetas de acceso.
+   */
   const showAccessCards = can(accessLevel, "admin_services:view_access_cards");
+
+  /**
+   * Indica si existe al menos un bloque sensible visible en la columna principal.
+   *
+   * Se usa para ajustar los delays de animación del resto de tarjetas.
+   */
   const showSensitiveMain = showVisitors || showAccessCards;
 
+  /**
+   * Determina si hay accesos rápidos disponibles para el usuario actual
+   * después de aplicar el filtrado por permisos.
+   */
   const showQuickLinks = processQuickLinks(adminQuickLinks, accessLevel).length > 0;
 
   return (
@@ -136,9 +209,10 @@ export default function AdminHomePage({ data, accessLevel }: Props) {
           >
             {showQuickLinks && (
               <AnimatedCard delay={0.15}>
-                {/* ↓ Reemplaza QuickLinksSection + processQuickLinks manual.
-                    AdminQuickLinksSection es "use client" e inyecta las
-                    acciones de modal internamente. */}
+                {/* 
+                  AdminQuickLinksSection encapsula la lógica cliente para
+                  rendering de accesos rápidos y acciones de modal internas.
+                */}
                 <AdminQuickLinksSection accessLevel={accessLevel} />
               </AnimatedCard>
             )}

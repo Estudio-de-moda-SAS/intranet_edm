@@ -1,3 +1,16 @@
+/**
+ * @module DepartmentTeamSection
+ * Componente cliente para mostrar la sección de equipo de un departamento.
+ *
+ * @remarks
+ * Este archivo renderiza una sección visual con:
+ * - encabezado configurable,
+ * - tarjetas de miembros del área,
+ * - estilos temáticos por acento,
+ * - animaciones de entrada,
+ * - y un enlace final al directorio completo.
+ */
+
 "use client";
 
 import Image from "next/image";
@@ -7,8 +20,21 @@ import { useState, useEffect } from "react";
 import { Mail, Linkedin, Users } from "lucide-react";
 import { DepartmentMember } from "@/types/DepartmentMember";
 
+/**
+ * Props del componente {@link DepartmentTeamSection}.
+ */
 interface Props {
+  /**
+   * Lista de miembros del departamento.
+   */
   members: DepartmentMember[];
+
+  /**
+   * Configuración visual opcional del tema de la sección.
+   *
+   * @remarks
+   * Permite personalizar colores, fondos, bordes y gradientes.
+   */
   accent?: {
     sectionBg: string;
     sectionBorder: string;
@@ -30,11 +56,26 @@ interface Props {
     subtitleColor: string;
     topAccent: string;
   };
+
+  /**
+   * Título principal de la sección.
+   */
   title?: string;
+
+  /**
+   * Subtítulo descriptivo de la sección.
+   */
   subtitle?: string;
+
+  /**
+   * Ruta del enlace al directorio completo.
+   */
   directoryHref?: string;
 }
 
+/**
+ * Configuración visual por defecto para la sección.
+ */
 const DEFAULT_ACCENT: Required<Props>["accent"] = {
   sectionBg: "bg-white",
   sectionBorder: "border-slate-200",
@@ -57,6 +98,12 @@ const DEFAULT_ACCENT: Required<Props>["accent"] = {
   topAccent: "from-emerald-500 via-teal-400 to-cyan-500",
 };
 
+/**
+ * Genera iniciales a partir del nombre del miembro.
+ *
+ * @param name Nombre completo.
+ * @returns Iniciales en mayúscula.
+ */
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -66,13 +113,37 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+/**
+ * Props del componente {@link MemberAvatar}.
+ */
+interface MemberAvatarProps {
+  /**
+   * Miembro a representar visualmente.
+   */
+  member: DepartmentMember;
+
+  /**
+   * Configuración visual aplicada al avatar.
+   */
+  accent: Required<Props>["accent"];
+}
+
+/**
+ * Renderiza el avatar del miembro.
+ *
+ * @param props Propiedades del componente.
+ * @param props.member Datos del miembro.
+ * @param props.accent Configuración visual.
+ * @returns Imagen de perfil o avatar fallback con iniciales.
+ *
+ * @remarks
+ * Si la imagen no existe o falla, se muestra un avatar con gradiente
+ * e iniciales generadas.
+ */
 function MemberAvatar({
   member,
   accent,
-}: {
-  member: DepartmentMember;
-  accent: Required<Props>["accent"];
-}) {
+}: MemberAvatarProps) {
   const [imgError, setImgError] = useState(false);
   const hasImage = member.image && member.image.trim() !== "" && !imgError;
 
@@ -98,6 +169,9 @@ function MemberAvatar({
   );
 }
 
+/**
+ * Variantes de animación para cada tarjeta de miembro.
+ */
 const cardReveal: Variants = {
   hidden: { opacity: 0, y: 24 },
   show: {
@@ -110,6 +184,12 @@ const cardReveal: Variants = {
   },
 };
 
+/**
+ * Variantes de animación del contenedor.
+ *
+ * @remarks
+ * Aplica entrada escalonada a las tarjetas hijas.
+ */
 const container: Variants = {
   hidden: {},
   show: {
@@ -120,9 +200,18 @@ const container: Variants = {
   },
 };
 
-/** Lee el color computado de una clase Tailwind de texto montando un nodo temporal en el DOM */
+/**
+ * Resuelve el color computado de una clase Tailwind de texto.
+ *
+ * @param twClass Clase Tailwind que define un color de texto.
+ * @returns Color CSS computado o `"currentColor"` como fallback.
+ *
+ * @remarks
+ * Se usa para sincronizar visualmente el hover del enlace al directorio.
+ */
 function resolveTextColor(twClass: string): string {
   if (typeof window === "undefined") return "currentColor";
+
   try {
     const el = document.createElement("span");
     el.className = twClass;
@@ -136,7 +225,30 @@ function resolveTextColor(twClass: string): string {
   }
 }
 
-function DirectoryLink({ href, pillText }: { href: string; pillText: string }) {
+/**
+ * Props del componente {@link DirectoryLink}.
+ */
+interface DirectoryLinkProps {
+  /**
+   * Ruta de destino.
+   */
+  href: string;
+
+  /**
+   * Clase de color usada para derivar el color activo del enlace.
+   */
+  pillText: string;
+}
+
+/**
+ * Renderiza el enlace al directorio completo.
+ *
+ * @param props Propiedades del componente.
+ * @param props.href Ruta de navegación.
+ * @param props.pillText Clase base para resolver el color de hover.
+ * @returns Enlace estilizado hacia el directorio.
+ */
+function DirectoryLink({ href, pillText }: DirectoryLinkProps) {
   const [accentColor, setAccentColor] = useState("currentColor");
 
   useEffect(() => {
@@ -183,6 +295,25 @@ function DirectoryLink({ href, pillText }: { href: string; pillText: string }) {
   );
 }
 
+/**
+ * Renderiza la sección de equipo de un departamento.
+ *
+ * @param props Propiedades del componente.
+ * @param props.members Miembros del área.
+ * @param props.accent Configuración visual opcional.
+ * @param props.title Título de la sección.
+ * @param props.subtitle Subtítulo descriptivo.
+ * @param props.directoryHref Ruta al directorio completo.
+ * @returns Sección visual con tarjetas de miembros y enlace final.
+ *
+ * @remarks
+ * Flujo general:
+ * 1. Aplica un tema visual configurable mediante `accent`.
+ * 2. Renderiza el encabezado con título, subtítulo y contador.
+ * 3. Muestra los miembros en una grilla animada.
+ * 4. Cada tarjeta incluye avatar, rol, descripción y acciones de contacto.
+ * 5. Finaliza con un enlace al directorio completo.
+ */
 export function DepartmentTeamSection({
   members,
   accent = DEFAULT_ACCENT,
@@ -297,7 +428,6 @@ export function DepartmentTeamSection({
         ))}
       </motion.div>
 
-      {/* Botón Ver directorio — esquina inferior derecha */}
       <DirectoryLink href={directoryHref} pillText={accent.pillText} />
     </motion.section>
   );

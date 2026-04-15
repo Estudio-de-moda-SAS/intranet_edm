@@ -1,9 +1,11 @@
 @import "tailwindcss";
+@import "../config/dark.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ═══════════════════════════════════════════════════════════════════
+   Tailwind v4: habilitar dark: con la clase html.dark
+   Sin esta línea, NINGUNA clase dark: funciona.
+   ═══════════════════════════════════════════════════════════════════ */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -12,11 +14,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+html.dark {
+  --background: #0d1117;
+  --foreground: #e6edf3;
 }
 
 body {

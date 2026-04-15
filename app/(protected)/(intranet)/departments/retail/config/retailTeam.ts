@@ -1,6 +1,46 @@
-// config/retailTeam.ts
-// Tipo alineado exactamente con DepartmentMember de DepartmentTeamSection.
+/**
+ * @module retailTeam
+ * Configuración del equipo del departamento de Retail.
+ *
+ * @remarks
+ * Este módulo define la estructura de los miembros del equipo de Retail
+ * y provee un listado estático utilizado en la intranet.
+ *
+ * La información aquí contenida es consumida por componentes como:
+ * - Secciones de equipo
+ * - Tarjetas de colaboradores
+ * - Directorios internos
+ *
+ * El equipo está organizado por frentes operativos principales:
+ * - Dirección
+ * - Canal Comercial (B2B)
+ * - E-Commerce
+ * - Tiendas físicas
+ *
+ * ⚠️ Actualmente es un dataset estático.
+ * En producción podría integrarse con:
+ * - Directorios corporativos (LDAP, Azure AD)
+ * - Sistemas de recursos humanos
+ */
 
+// config/retailTeam.ts
+
+/**
+ * Representa un miembro del equipo de Retail.
+ *
+ * @property id Identificador único del colaborador.
+ * @property name Nombre completo.
+ * @property role Cargo o rol dentro del área.
+ * @property image URL de la imagen de perfil (opcional).
+ * @property description Descripción breve del rol o responsabilidades (opcional).
+ * @property linkedin Perfil profesional (opcional).
+ * @property email Correo corporativo (opcional).
+ *
+ * @remarks
+ * Este tipo está alineado con los requerimientos del componente
+ * de presentación de equipos, permitiendo una integración directa
+ * con secciones reutilizables de la intranet.
+ */
 export type DepartmentMember = {
   id: string;
   name: string;
@@ -11,6 +51,28 @@ export type DepartmentMember = {
   email?: string;
 };
 
+/**
+ * Listado de miembros del equipo de Retail.
+ *
+ * @remarks
+ * Este arreglo contiene los datos estáticos del equipo,
+ * organizados por áreas funcionales del negocio:
+ *
+ * - Dirección: liderazgo estratégico del área
+ * - Comercial: gestión de cuentas y ventas B2B
+ * - E-Commerce: canal digital y marketing
+ * - Tiendas: operación física y experiencia en punto de venta
+ *
+ * Permite alimentar componentes como:
+ * - {@link DepartmentTeamSection}
+ * - vistas de equipo por departamento
+ * - directorios internos
+ *
+ * @example
+ * ```ts
+ * retailTeam.map(member => member.name);
+ * ```
+ */
 export const retailTeam: DepartmentMember[] = [
   // ── Dirección ────────────────────────────────────────────────
   {
@@ -21,6 +83,7 @@ export const retailTeam: DepartmentMember[] = [
     description: "Responsable de los 3 canales de venta. Estrategia P&L y objetivos cross-canal.",
     image:       null,
   },
+
   // ── Canal Comercial ───────────────────────────────────────────
   {
     id:          "carlos-ruiz",
@@ -46,6 +109,7 @@ export const retailTeam: DepartmentMember[] = [
     description: "Gestión de inbound, llamadas de seguimiento y cierre de oportunidades.",
     image:       null,
   },
+
   // ── Canal E-Commerce ──────────────────────────────────────────
   {
     id:          "lucia-torres",
@@ -71,6 +135,7 @@ export const retailTeam: DepartmentMember[] = [
     description: "Gestión del catálogo online, fotografía de producto y fichas técnicas.",
     image:       null,
   },
+
   // ── Canal Tiendas ─────────────────────────────────────────────
   {
     id:          "david-mora",

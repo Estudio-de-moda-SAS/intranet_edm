@@ -1,3 +1,29 @@
+/**
+ * @module NewRequestModal
+ * Modal tipo wizard para la creación de solicitudes administrativas.
+ *
+ * Permite registrar solicitudes del módulo de Servicios Administrativos
+ * mediante un flujo guiado de múltiples pasos.
+ *
+ * Categorías soportadas:
+ * - acceso,
+ * - reserva de sala,
+ * - servicio general.
+ *
+ * @remarks
+ * Este componente implementa un flujo de tres pasos:
+ *
+ * 1. **Categoría**: selección del tipo de solicitud.
+ * 2. **Detalle**: captura de información específica según la categoría.
+ * 3. **Confirmar**: captura de datos del solicitante y resumen del envío.
+ *
+ * Tras el envío exitoso, muestra una pantalla final de confirmación mediante
+ * {@link SuccessBanner}.
+ *
+ * La persistencia del trámite se delega a {@link createAdminRequest}, dejando
+ * el componente enfocado en interacción, validación y orquestación del flujo.
+ */
+
 // app/(protected)/(intranet)/departments/administrative/components/modals/NewRequestModal.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 // Modal wizard de 3 pasos para crear una solicitud administrativa.
@@ -30,6 +56,12 @@ import {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades de {@link NewRequestModal}.
+ *
+ * @property open Indica si el modal se encuentra abierto.
+ * @property onClose Función ejecutada al cerrar el modal.
+ */
 interface Props {
   open:    boolean;
   onClose: () => void;
@@ -37,8 +69,28 @@ interface Props {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+/**
+ * Lista ordenada de pasos del wizard.
+ *
+ * @remarks
+ * Se utiliza en {@link StepIndicator} para reflejar el avance del usuario
+ * durante el proceso de creación de la solicitud.
+ */
 const STEPS = ["Categoría", "Detalle", "Confirmar"];
 
+/**
+ * Catálogo de categorías disponibles para nuevas solicitudes administrativas.
+ *
+ * @remarks
+ * Cada categoría define:
+ * - el valor técnico del tipo de solicitud,
+ * - una etiqueta visible,
+ * - una breve descripción funcional,
+ * - un ícono representativo.
+ *
+ * Este catálogo se usa en el primer paso del wizard para permitir al usuario
+ * seleccionar el tipo de trámite que desea registrar.
+ */
 const CATEGORIES: {
   value:       RequestCategory;
   label:       string;
@@ -65,12 +117,22 @@ const CATEGORIES: {
   },
 ];
 
+/**
+ * Opciones de prioridad disponibles para la solicitud.
+ */
 const PRIORITY_OPTIONS = [
   { value: "low",    label: "Baja"  },
   { value: "medium", label: "Media" },
   { value: "high",   label: "Alta"  },
 ];
 
+/**
+ * Opciones de zonas de acceso para solicitudes de categoría `access`.
+ *
+ * @remarks
+ * Estas opciones solo se usan cuando el usuario solicita permisos o
+ * habilitaciones de acceso.
+ */
 const ACCESS_ZONE_OPTIONS = [
   {
     value:       "general",
@@ -94,18 +156,27 @@ const ACCESS_ZONE_OPTIONS = [
   },
 ];
 
+/**
+ * Opciones de tipo de servicio para solicitudes de categoría `service`.
+ */
 const SERVICE_TYPE_OPTIONS = [
   { value: "mensajeria",    label: "Mensajería / envíos"     },
-  { value: "mantenimiento", label: "Mantenimiento"            },
-  { value: "limpieza",      label: "Limpieza especial"        },
-  { value: "cafeteria",     label: "Cafetería / suministros"  },
-  { value: "otro",          label: "Otro"                     },
+  { value: "mantenimiento", label: "Mantenimiento"           },
+  { value: "limpieza",      label: "Limpieza especial"       },
+  { value: "cafeteria",     label: "Cafetería / suministros" },
+  { value: "otro",          label: "Otro"                    },
 ];
 
 // ── Initial State ─────────────────────────────────────────────────────────────
-// Fix: attendeesCount omitido del objeto inicial para no asignar `undefined`
-// a una prop opcional con exactOptionalPropertyTypes: true
 
+/**
+ * Estado inicial del formulario de nueva solicitud.
+ *
+ * @remarks
+ * Sirve como base para inicializar y reiniciar el wizard.
+ * `attendeesCount` se omite intencionalmente por tratarse de una propiedad
+ * opcional, evitando asignar `undefined` explícitamente.
+ */
 const INITIAL: NewRequestPayload = {
   category:        "access",
   title:           "",
@@ -121,59 +192,150 @@ const INITIAL: NewRequestPayload = {
   requesterName:   "",
   requesterEmail:  "",
   department:      "",
-  // attendeesCount: omitido intencionalmente — es opcional y no debe ser undefined explícito
 };
+
+/**
+ * Estructura de errores utilizada por el wizard.
+ *
+ * @remarks
+ * Incluye tanto campos del {@link NewRequestPayload} como errores auxiliares
+ * específicos del formulario, por ejemplo `accessZones_err`.
+ */
+type Errors = Partial<Record<keyof NewRequestPayload | "accessZones_err", string>>;
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-type Errors = Partial<Record<keyof NewRequestPayload | "accessZones_err", string>>;
-
+/**
+ * Valida el paso 2 del wizard, correspondiente al detalle de la solicitud.
+ *
+ * @param payload Estado actual del formulario.
+ * @returns Objeto con errores de validación por campo.
+ *
+ * @remarks
+ * Las reglas de validación dependen de la categoría seleccionada:
+ * - `access`: zonas y fecha de inicio obligatorias.
+ * - `room`: fecha, hora de inicio y hora de fin obligatorias.
+ * - `service`: tipo de servicio obligatorio.
+ *
+ * Además, título y descripción son siempre requeridos en este paso.
+ */
 function validateStep2(payload: NewRequestPayload): Errors {
   const e: Errors = {};
+
   if (!payload.title.trim())       e.title       = "Campo requerido";
   if (!payload.description.trim()) e.description = "Campo requerido";
+
   if (payload.category === "access") {
     if (!payload.accessZones?.length) e.accessZones_err = "Selecciona al menos una zona";
     if (!payload.accessStartDate)     e.accessStartDate = "Fecha requerida";
   }
+
   if (payload.category === "room") {
     if (!payload.roomDate)       e.roomDate      = "Fecha requerida";
     if (!payload.roomStartTime)  e.roomStartTime = "Hora de inicio requerida";
     if (!payload.roomEndTime)    e.roomEndTime   = "Hora de fin requerida";
   }
+
   if (payload.category === "service") {
     if (!payload.serviceType)    e.serviceType   = "Selecciona un tipo";
   }
+
   return e;
 }
 
+/**
+ * Valida el paso 3 del wizard, correspondiente a los datos del solicitante.
+ *
+ * @param payload Estado actual del formulario.
+ * @returns Objeto con errores de validación por campo.
+ *
+ * @remarks
+ * Verifica la presencia de:
+ * - nombre del solicitante,
+ * - correo corporativo,
+ * - departamento.
+ */
 function validateStep3(payload: NewRequestPayload): Errors {
   const e: Errors = {};
+
   if (!payload.requesterName?.trim())  e.requesterName  = "Campo requerido";
   if (!payload.requesterEmail?.trim()) e.requesterEmail = "Campo requerido";
   if (!payload.department?.trim())     e.department     = "Campo requerido";
+
   return e;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+/**
+ * Modal principal para crear una nueva solicitud administrativa.
+ *
+ * @param props Propiedades del componente.
+ * @returns Wizard interactivo de solicitud o pantalla de éxito.
+ *
+ * @remarks
+ * Este componente coordina:
+ * - la navegación entre pasos,
+ * - la validación parcial por etapa,
+ * - el almacenamiento del payload,
+ * - el envío al servicio,
+ * - la visualización de confirmación final.
+ *
+ * Dependiendo del paso actual:
+ * - renderiza la selección de categoría,
+ * - el formulario contextual,
+ * - el resumen del solicitante,
+ * - o la pantalla de éxito.
+ */
 export default function NewRequestModal({ open, onClose }: Props) {
+  /**
+   * Índice del paso actual del wizard.
+   */
   const [step,    setStep]    = useState(0);
+
+  /**
+   * Payload acumulado de la solicitud.
+   */
   const [payload, setPayload] = useState<NewRequestPayload>(INITIAL);
+
+  /**
+   * Errores actuales de validación.
+   */
   const [errors,  setErrors]  = useState<Errors>({});
+
+  /**
+   * Indica si el envío se encuentra en progreso.
+   */
   const [loading, setLoading] = useState(false);
+
+  /**
+   * Resultado de la solicitud creada exitosamente.
+   */
   const [result,  setResult]  = useState<NewRequestResult | null>(null);
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
+  /**
+   * Actualiza una propiedad específica del payload.
+   *
+   * @param key Campo a modificar.
+   * @param value Nuevo valor del campo.
+   */
   const set = <K extends keyof NewRequestPayload>(
     key: K,
     value: NewRequestPayload[K],
   ) => setPayload((p) => ({ ...p, [key]: value }));
 
+  /**
+   * Cierra el modal y reinicia el estado interno del wizard.
+   *
+   * @remarks
+   * El reinicio se difiere ligeramente para evitar parpadeos visuales durante
+   * la animación de cierre.
+   */
   const handleClose = () => {
     onClose();
-    // reset al cerrar — pequeño delay para no ver el flash
+
     setTimeout(() => {
       setStep(0);
       setPayload(INITIAL);
@@ -184,31 +346,73 @@ export default function NewRequestModal({ open, onClose }: Props) {
 
   // ── navigation ───────────────────────────────────────────────────────────
 
+  /**
+   * Avanza al siguiente paso del wizard.
+   *
+   * @remarks
+   * Antes de avanzar:
+   * - valida el paso 2 cuando el usuario está en detalle,
+   * - valida el paso 3 cuando el usuario está en confirmación.
+   *
+   * Si existen errores, el avance se bloquea.
+   */
   const goNext = () => {
     if (step === 1) {
       const e = validateStep2(payload);
-      if (Object.keys(e).length) { setErrors(e); return; }
+      if (Object.keys(e).length) {
+        setErrors(e);
+        return;
+      }
     }
+
     if (step === 2) {
       const e = validateStep3(payload);
-      if (Object.keys(e).length) { setErrors(e); return; }
+      if (Object.keys(e).length) {
+        setErrors(e);
+        return;
+      }
     }
+
     setErrors({});
     setStep((s) => s + 1);
   };
 
-  const goBack = () => { setErrors({}); setStep((s) => s - 1); };
+  /**
+   * Regresa al paso anterior del wizard.
+   */
+  const goBack = () => {
+    setErrors({});
+    setStep((s) => s - 1);
+  };
 
   // ── submit ───────────────────────────────────────────────────────────────
 
+  /**
+   * Envía la solicitud administrativa.
+   *
+   * @returns Promesa que registra la solicitud y actualiza el estado final.
+   *
+   * @remarks
+   * Flujo de envío:
+   * 1. Revalida los datos del solicitante.
+   * 2. Llama a {@link createAdminRequest}.
+   * 3. Guarda el resultado en `result`.
+   * 4. Mueve el wizard al paso final de éxito.
+   *
+   * Si ocurre un error, se muestra una notificación en el formulario.
+   */
   const handleSubmit = async () => {
     const e = validateStep3(payload);
-    if (Object.keys(e).length) { setErrors(e); return; }
+    if (Object.keys(e).length) {
+      setErrors(e);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await createAdminRequest(payload);
       setResult(res);
-      setStep(3); // pantalla de éxito
+      setStep(3);
     } catch {
       setErrors({ title: "Error al enviar. Intenta de nuevo." });
     } finally {
@@ -218,11 +422,18 @@ export default function NewRequestModal({ open, onClose }: Props) {
 
   // ── modal title por paso ─────────────────────────────────────────────────
 
+  /**
+   * Títulos del modal según el paso actual.
+   */
   const MODAL_TITLES = [
     "Nueva solicitud",
     "Detalle de solicitud",
     "Solicitante",
   ];
+
+  /**
+   * Subtítulos del modal según el paso actual.
+   */
   const MODAL_SUBTITLES = [
     "¿Qué tipo de solicitud necesitas?",
     "Completa la información requerida",
@@ -233,7 +444,6 @@ export default function NewRequestModal({ open, onClose }: Props) {
     <Modal
       open={open}
       onClose={handleClose}
-      // Fix: no pasar las props cuando sean undefined (exactOptionalPropertyTypes)
       {...(step < 3 && { title: MODAL_TITLES[step] })}
       {...(step < 3 && { subtitle: MODAL_SUBTITLES[step] })}
       size="md"
@@ -253,6 +463,7 @@ export default function NewRequestModal({ open, onClose }: Props) {
                 ) : (
                   <span />
                 )}
+
                 {step < 2 ? (
                   <SubmitButton
                     loading={false}
@@ -291,7 +502,6 @@ export default function NewRequestModal({ open, onClose }: Props) {
                 type="button"
                 onClick={() => {
                   set("category", cat.value);
-                  // auto-avanza al paso 1
                   setTimeout(() => {
                     setErrors({});
                     setStep(1);
@@ -345,7 +555,6 @@ export default function NewRequestModal({ open, onClose }: Props) {
             </p>
           )}
 
-          {/* Fix: spread condicional en lugar de pasar undefined directamente */}
           <FieldWrapper label="Título" required {...(errors.title && { error: errors.title })}>
             <Input
               placeholder="Ej. Tarjeta de acceso para colaborador nuevo"
@@ -468,7 +677,7 @@ export default function NewRequestModal({ open, onClose }: Props) {
                   />
                 </FieldWrapper>
               </div>
-              {/* Fix: attendeesCount — usar set condicional para no asignar undefined explícito */}
+
               <FieldWrapper label="Nº asistentes" hint="Opcional">
                 <Input
                   type="number"
@@ -480,7 +689,6 @@ export default function NewRequestModal({ open, onClose }: Props) {
                     if (e.target.value) {
                       set("attendeesCount", Number(e.target.value));
                     } else {
-                      // Fix: para eliminar la prop, reconstruimos el payload sin attendeesCount
                       setPayload((p) => {
                         const { attendeesCount: _, ...rest } = p;
                         return rest as NewRequestPayload;

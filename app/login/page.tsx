@@ -1,3 +1,25 @@
+/**
+ * @module LoginPage
+ * Página de inicio de sesión de la intranet corporativa.
+ *
+ * @remarks
+ * Este componente representa la experiencia de acceso principal
+ * para los usuarios de la plataforma, utilizando autenticación
+ * corporativa con Microsoft 365 mediante NextAuth.
+ *
+ * La vista se divide en dos paneles principales:
+ *
+ * - panel izquierdo: branding e identidad corporativa
+ * - panel derecho: tarjeta de autenticación
+ *
+ * Es un **Client Component** porque:
+ *
+ * - maneja estado local de carga
+ * - utiliza `useSearchParams`
+ * - ejecuta `signIn` en cliente
+ * - incorpora animaciones con `framer-motion`
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -9,6 +31,16 @@ import Image from "next/image";
 
 // ── Microsoft logo SVG ────────────────────────────────────────────
 
+/**
+ * Logo simplificado de Microsoft en formato SVG.
+ *
+ * @param props Propiedades del componente.
+ * @param props.size Tamaño del ícono en píxeles.
+ * @returns SVG del logotipo de Microsoft.
+ *
+ * @remarks
+ * Se utiliza como elemento visual dentro del botón de acceso SSO.
+ */
 function MicrosoftLogo({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -22,6 +54,19 @@ function MicrosoftLogo({ size = 18 }: { size?: number }) {
 
 // ── Background blobs ──────────────────────────────────────────────
 
+/**
+ * Fondo decorativo animado para la página de login.
+ *
+ * @returns Elementos visuales de fondo con blobs y patrón de puntos.
+ *
+ * @remarks
+ * Este componente no tiene funcionalidad interactiva.
+ * Su objetivo es enriquecer la estética del login mediante:
+ *
+ * - blobs animados
+ * - degradados suaves
+ * - patrón de puntos decorativo
+ */
 function BackgroundBlobs() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
@@ -54,6 +99,13 @@ function BackgroundBlobs() {
 
 // ── Department pills ──────────────────────────────────────────────
 
+/**
+ * Lista de áreas o módulos destacados de la plataforma.
+ *
+ * @remarks
+ * Se utiliza en el panel izquierdo como refuerzo visual del alcance
+ * funcional de la intranet.
+ */
 const FEATURES = [
   { label: "Recursos Humanos",  delay: 0    },
   { label: "Finanzas",          delay: 0.12 },
@@ -65,10 +117,53 @@ const FEATURES = [
 
 // ── Page ──────────────────────────────────────────────────────────
 
+/**
+ * Página principal de inicio de sesión.
+ *
+ * @returns Interfaz de login con branding corporativo y autenticación Microsoft.
+ *
+ * @remarks
+ * Flujo principal:
+ *
+ * 1. El usuario pulsa el botón de acceso.
+ * 2. Se activa el estado local `loading`.
+ * 3. Se lee `callbackUrl` desde query params.
+ * 4. Se valida que la ruta sea interna para evitar open redirects.
+ * 5. Se inicia autenticación con `signIn("microsoft-entra-id")`.
+ *
+ * Este componente combina:
+ *
+ * - branding corporativo
+ * - navegación segura hacia SSO
+ * - animaciones de entrada y microinteracciones
+ *
+ * @example
+ * ```tsx
+ * <LoginPage />
+ * ```
+ */
 export default function LoginPage() {
+  /**
+   * Estado de carga del proceso de autenticación.
+   */
   const [loading, setLoading] = useState(false);
+
+  /**
+   * Parámetros de búsqueda de la URL actual.
+   *
+   * @remarks
+   * Se utiliza para leer `callbackUrl` enviado por middleware o rutas protegidas.
+   */
   const searchParams = useSearchParams();
 
+  /**
+   * Inicia el flujo de autenticación con Microsoft Entra ID.
+   *
+   * @remarks
+   * - Lee `callbackUrl` del query string.
+   * - Valida que la URL sea interna.
+   * - Redirige al proveedor configurado en NextAuth.
+   */
   const handleLogin = async () => {
     setLoading(true);
 

@@ -1,7 +1,22 @@
-import * as React from "react"
+/**
+ * @module Card
+ * Conjunto de componentes base para construir tarjetas reutilizables.
+ *
+ * @remarks
+ * Este archivo define una API compuesta (Card + subcomponentes)
+ * para estructurar contenido en bloques visuales consistentes.
+ */
 
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
+/**
+ * Contenedor principal de tarjeta.
+ *
+ * @remarks
+ * Provee estilos base (bordes, fondo, sombra) y permite composición
+ * con los subcomponentes: Header, Content y Footer.
+ */
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -14,9 +29,15 @@ const Card = React.forwardRef<
     )}
     {...props}
   />
-))
-Card.displayName = "Card"
+));
+Card.displayName = "Card";
 
+/**
+ * Sección superior de la tarjeta.
+ *
+ * @remarks
+ * Usada para títulos, subtítulos o encabezados.
+ */
 const CardHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -26,11 +47,17 @@ const CardHeader = React.forwardRef<
     className={cn("flex flex-col space-y-1.5 p-6", className)}
     {...props}
   />
-))
-CardHeader.displayName = "CardHeader"
+));
+CardHeader.displayName = "CardHeader";
 
+/**
+ * Título principal de la tarjeta.
+ *
+ * @remarks
+ * Generalmente usado dentro de {@link CardHeader}.
+ */
 const CardTitle = React.forwardRef<
-  HTMLParagraphElement,
+  HTMLHeadingElement,
   React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, ...props }, ref) => (
   <h3
@@ -41,9 +68,15 @@ const CardTitle = React.forwardRef<
     )}
     {...props}
   />
-))
-CardTitle.displayName = "CardTitle"
+));
+CardTitle.displayName = "CardTitle";
 
+/**
+ * Descripción secundaria de la tarjeta.
+ *
+ * @remarks
+ * Complementa al título con texto adicional.
+ */
 const CardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
@@ -53,17 +86,33 @@ const CardDescription = React.forwardRef<
     className={cn("text-sm text-gray-500", className)}
     {...props}
   />
-))
-CardDescription.displayName = "CardDescription"
+));
+CardDescription.displayName = "CardDescription";
 
+/**
+ * Contenido principal de la tarjeta.
+ *
+ * @remarks
+ * Área donde se renderiza la información central.
+ */
 const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
-))
-CardContent.displayName = "CardContent"
+  <div
+    ref={ref}
+    className={cn("p-6 pt-0", className)}
+    {...props}
+  />
+));
+CardContent.displayName = "CardContent";
 
+/**
+ * Pie de la tarjeta.
+ *
+ * @remarks
+ * Usado para acciones, botones o información adicional.
+ */
 const CardFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -73,8 +122,8 @@ const CardFooter = React.forwardRef<
     className={cn("flex items-center p-6 pt-0", className)}
     {...props}
   />
-))
-CardFooter.displayName = "CardFooter"
+));
+CardFooter.displayName = "CardFooter";
 
 export {
   Card,
@@ -83,4 +132,4 @@ export {
   CardTitle,
   CardDescription,
   CardContent,
-}
+};

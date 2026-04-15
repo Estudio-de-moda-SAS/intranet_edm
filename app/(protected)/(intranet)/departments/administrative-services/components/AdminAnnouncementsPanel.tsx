@@ -1,12 +1,54 @@
+/**
+ * @module AdminAnnouncementsPanel
+ * Panel de avisos del módulo de Servicios Administrativos.
+ *
+ * Muestra comunicados relevantes del área, priorizando aquellos marcados
+ * como fijados para que aparezcan primero en la interfaz.
+ *
+ * @remarks
+ * Este componente consume la colección `announcements` desde {@link AdminData}
+ * y aplica una ordenación visual simple para destacar los avisos con mayor
+ * importancia operativa.
+ *
+ * Se renderiza como Server Component y forma parte del sidebar informativo
+ * del módulo administrativo.
+ */
+
 // app/(protected)/(intranet)/departments/administrative/components/AdminAnnouncementsPanel.tsx
 // SERVER COMPONENT
 
 import { Megaphone, Pin } from "lucide-react";
 import type { AdminData } from "@/lib/graph/departments/administrative.service";
 
+/**
+ * Propiedades de {@link AdminAnnouncementsPanel}.
+ *
+ * @property data Datos consolidados del módulo administrativo.
+ */
 type Props = { data: AdminData };
 
+/**
+ * Renderiza el panel de avisos del área administrativa.
+ *
+ * @param props Propiedades del componente.
+ * @param props.data Datos administrativos requeridos para construir el panel.
+ * @returns Tarjeta con el listado de avisos y comunicados del área.
+ *
+ * @remarks
+ * El componente:
+ * - obtiene los avisos desde `data.announcements`,
+ * - ordena primero los avisos fijados,
+ * - presenta título, cuerpo y fecha de publicación,
+ * - resalta visualmente los elementos marcados como importantes.
+ */
 export default function AdminAnnouncementsPanel({ data }: Props) {
+  /**
+   * Lista de avisos ordenada, priorizando los elementos fijados.
+   *
+   * @remarks
+   * La ordenación coloca primero los avisos con `pinned = true`, manteniendo
+   * después el resto en su orden relativo.
+   */
   const sorted = [...data.announcements].sort((a, b) =>
     a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1,
   );
