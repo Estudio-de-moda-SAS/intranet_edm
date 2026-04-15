@@ -1,3 +1,17 @@
+/**
+ * @module QuickLinksSection
+ * Sección de accesos rápidos reutilizable para la intranet.
+ *
+ * @remarks
+ * Este componente renderiza una grilla de enlaces o acciones rápidas,
+ * con soporte para:
+ * - colores temáticos por tarjeta,
+ * - enlaces deshabilitados,
+ * - acciones personalizadas,
+ * - integración con favoritos mediante `FavoritesContext`,
+ * - y apertura de `AddFavoriteModal` para guardar accesos.
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -21,6 +35,13 @@ import type { AppColor } from "@/app/components/ui/AppsGrid";
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 
+/**
+ * Mapa de íconos disponibles por clave.
+ *
+ * @remarks
+ * Permite convertir un `iconKey` en el componente visual correspondiente
+ * para cada acceso rápido.
+ */
 const ICON_MAP: Record<string, React.ElementType> = {
   FileText, LayoutDashboard, Users, Calendar,
   BarChart2, BookOpen, Wrench, MessageSquare,
@@ -33,47 +54,123 @@ const ICON_MAP: Record<string, React.ElementType> = {
   FolderOpen, Landmark, Scale, FileSignature,
 };
 
+/**
+ * Resuelve el componente de ícono a partir de una clave.
+ *
+ * @param iconKey Clave del ícono.
+ * @returns El componente de ícono asociado o `LayoutDashboard` como fallback.
+ */
 function resolveIcon(iconKey: string): React.ElementType {
   return ICON_MAP[iconKey] ?? LayoutDashboard;
 }
 
 // ─── Tipos públicos ───────────────────────────────────────────────────────────
 
+/**
+ * Colores disponibles para los quick links.
+ */
 export type QuickLinkColor =
   | "purple" | "teal" | "blue" | "amber"
   | "pink"   | "green" | "coral";
 
+/**
+ * Modelo de un acceso rápido individual.
+ */
 export type QuickLinkItem = {
-  label:        string;
-  href:         string;
-  icon:         string;
+  /**
+   * Texto principal del acceso.
+   */
+  label: string;
+
+  /**
+   * Ruta o identificador de navegación.
+   */
+  href: string;
+
+  /**
+   * Clave del ícono a mostrar.
+   */
+  icon: string;
+
+  /**
+   * Texto descriptivo secundario.
+   */
   description?: string;
-  color?:       QuickLinkColor;
-  disabled?:    boolean;
+
+  /**
+   * Color visual del item.
+   */
+  color?: QuickLinkColor;
+
+  /**
+   * Indica si el acceso está deshabilitado.
+   */
+  disabled?: boolean;
+
+  /**
+   * Mensaje de ayuda cuando el acceso está deshabilitado.
+   */
   disabledMsg?: string;
-  action?:      () => void;
+
+  /**
+   * Acción personalizada opcional.
+   *
+   * @remarks
+   * Si existe, el item se renderiza como botón en lugar de enlace.
+   */
+  action?: () => void;
 };
 
+/**
+ * Props del componente {@link QuickLinksSection}.
+ */
 type QuickLinksSectionProps = {
-  quickLinks:  QuickLinkItem[];
-  title?:      string;
+  /**
+   * Lista de accesos rápidos a renderizar.
+   */
+  quickLinks: QuickLinkItem[];
+
+  /**
+   * Título visible de la sección.
+   *
+   * @defaultValue "Accesos rápidos"
+   */
+  title?: string;
+
+  /**
+   * Indica si la sección debe ocupar toda la altura disponible.
+   *
+   * @defaultValue false
+   */
   fillHeight?: boolean;
-  columns?:    2 | 3 | 4;
+
+  /**
+   * Cantidad de columnas de la grilla.
+   *
+   * @defaultValue 2
+   */
+  columns?: 2 | 3 | 4;
 };
 
 // ─── Color map ────────────────────────────────────────────────────────────────
-// Cada color tiene:
-//  · iconBg   — fondo del icono (base + dark)
-//  · iconText — color del icono (base + dark)
-//  · border   — borde izquierdo de acento (base + dark)
-//  · hover    — estado hover completo (base + dark), SIN gradiente forzado
 
+/**
+ * Mapa visual por color.
+ *
+ * @remarks
+ * Cada color define:
+ * - fondo del ícono,
+ * - color del ícono,
+ * - borde izquierdo de acento,
+ * - comportamiento hover de la tarjeta,
+ * - color de la flecha.
+ */
 const colorMap: Record<QuickLinkColor, {
-  iconBg:    string;
-  iconText:  string;
-  border:    string;
+  iconBg: string;
+  iconText: string;
+  border: string;
   hoverCard: string;
-  arrow:     string;
+  arrow: string;
 }> = {
   purple: {
     iconBg:    "bg-[#EEEDFE] dark:bg-violet-500/[0.15]",
@@ -126,27 +223,31 @@ const colorMap: Record<QuickLinkColor, {
   },
 };
 
+/**
+ * Configuración de color por defecto.
+ */
 const DEFAULT_COLOR = colorMap["purple"]!;
 
 // ─── Clases del item activo ───────────────────────────────────────────────────
 
+/**
+ * Construye las clases base de un acceso rápido habilitado.
+ *
+ * @param c Configuración visual del color actual.
+ * @returns Cadena de clases Tailwind combinadas.
+ *
+ * @remarks
+ * Centraliza las clases para mantener consistencia entre enlaces y botones.
+ */
 function activeItemClasses(c: typeof DEFAULT_COLOR) {
   return cn(
-    // Layout
     "flex items-center gap-2.5 rounded-[10px] h-full w-full",
-    // Borde
     "border border-l-[3px]",
-    // Base light
     "border-slate-200 bg-slate-50",
-    // Base dark
     "dark:border-[#30363d] dark:bg-[#1c2128]",
-    // Padding
     "px-3 py-2 pr-8",
-    // Transición
     "transition-all duration-200 ease-out",
-    // Hover lift
     "group-hover:-translate-y-[2px] group-hover:scale-[1.015] group-hover:shadow-sm",
-    // Hover color (por color, sin gradiente forzado)
     c.border,
     c.hoverCard,
   );
@@ -154,6 +255,27 @@ function activeItemClasses(c: typeof DEFAULT_COLOR) {
 
 // ─── QuickLinksSection ────────────────────────────────────────────────────────
 
+/**
+ * Renderiza una sección de accesos rápidos con soporte para favoritos.
+ *
+ * @param props Propiedades del componente.
+ * @param props.quickLinks Lista de accesos.
+ * @param props.title Título visible de la sección.
+ * @param props.fillHeight Define si ocupa todo el alto disponible.
+ * @param props.columns Número de columnas de la grilla.
+ * @returns Sección visual con items navegables o accionables.
+ *
+ * @remarks
+ * Este componente soporta tres tipos de item:
+ *
+ * 1. **Enlace normal**: navega usando `Link`.
+ * 2. **Acción personalizada**: ejecuta `link.action`.
+ * 3. **Item deshabilitado**: muestra estado bloqueado y no interactúa.
+ *
+ * Además, se integra con favoritos:
+ * - si el acceso ya existe en favoritos, lo elimina;
+ * - si no existe, abre `AddFavoriteModal` con el item preseleccionado.
+ */
 export function QuickLinksSection({
   quickLinks,
   title      = "Accesos rápidos",
@@ -161,8 +283,22 @@ export function QuickLinksSection({
   columns    = 2,
 }: QuickLinksSectionProps) {
   const { favoriteHrefs, addFavorite, removeFavorite, getFavoriteByHref } = useFavorites();
+
+  /**
+   * Item actualmente seleccionado para agregar a favoritos.
+   */
   const [pendingLink, setPendingLink] = useState<QuickLinkItem | null>(null);
 
+  /**
+   * Maneja el click sobre la estrella de favorito.
+   *
+   * @param link Acceso rápido seleccionado.
+   *
+   * @remarks
+   * - Si el item está deshabilitado, no hace nada.
+   * - Si ya existe en favoritos, lo elimina.
+   * - Si no existe, abre el modal para agregarlo.
+   */
   function handleStarClick(link: QuickLinkItem) {
     if (link.disabled) return;
     const existing = getFavoriteByHref(link.href);
@@ -170,11 +306,20 @@ export function QuickLinksSection({
     else setPendingLink(link);
   }
 
+  /**
+   * Cantidad de enlaces activos, excluyendo deshabilitados.
+   */
   const activeCount = quickLinks.filter((l) => !l.disabled).length;
 
-  // ─── Contenido interno del item (icono + label + flecha) ──────────────────
+  /**
+   * Contenido visual interno de un item habilitado.
+   *
+   * @param props Propiedades internas.
+   * @returns Estructura visual del acceso rápido.
+   */
   function ItemContent({ link, c }: { link: QuickLinkItem; c: typeof DEFAULT_COLOR }) {
     const Icon = resolveIcon(link.icon);
+
     return (
       <>
         <span className={cn(
@@ -184,6 +329,7 @@ export function QuickLinksSection({
         )}>
           <Icon size={13} className={c.iconText} />
         </span>
+
         <span className="flex-1 min-w-0">
           <span className="block text-[12.5px] font-medium leading-tight truncate transition-colors duration-200
                            text-slate-700 group-hover:text-violet-700
@@ -197,6 +343,7 @@ export function QuickLinksSection({
             </span>
           )}
         </span>
+
         <ChevronRight
           size={12}
           className={cn(
@@ -292,7 +439,7 @@ export function QuickLinksSection({
               );
             }
 
-            // ── Estrella compartida ────────────────────────────
+            // ── Botón estrella de favoritos ───────────────────
             const StarButton = (
               <button
                 onClick={() => handleStarClick(link)}
@@ -314,7 +461,7 @@ export function QuickLinksSection({
               </button>
             );
 
-            // ── Acción (abre modal u otra función) ─────────────
+            // ── Acción personalizada ──────────────────────────
             if (link.action) {
               return (
                 <li key={link.href} className="relative group min-h-0">
@@ -330,7 +477,7 @@ export function QuickLinksSection({
               );
             }
 
-            // ── Navegación normal ──────────────────────────────
+            // ── Navegación normal ─────────────────────────────
             return (
               <li key={link.href} className="relative group min-h-0">
                 <Link href={link.href} className={activeItemClasses(c)}>
@@ -343,7 +490,7 @@ export function QuickLinksSection({
         </ul>
       </section>
 
-      {/* Modal favoritos */}
+      {/* Modal de agregar a favoritos */}
       <AddFavoriteModal
         open={pendingLink !== null}
         onClose={() => setPendingLink(null)}

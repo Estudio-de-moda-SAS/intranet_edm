@@ -1,7 +1,33 @@
+/**
+ * @module DocumentSidebarCards
+ * Componentes de resumen visual del módulo de Gestión Documental.
+ *
+ * Este archivo agrupa tarjetas informativas reutilizables orientadas a mostrar:
+ * - actividad reciente del repositorio documental,
+ * - responsables documentales por área,
+ * - y métricas rápidas asociadas al mantenimiento del sistema.
+ *
+ * @remarks
+ * Los componentes definidos aquí están pensados para enriquecer el dashboard
+ * documental con bloques compactos de contexto operativo.
+ *
+ * Actualmente utilizan datos mock locales, pero su estructura permite
+ * integrarlos fácilmente con servicios reales o métricas dinámicas.
+ */
+
 "use client";
 
 import { FileText, Users } from "lucide-react";
 
+/**
+ * Representa un documento reciente mostrado en la tarjeta de actividad.
+ *
+ * @property id Identificador único del documento.
+ * @property name Nombre visible del documento.
+ * @property owner Responsable o autor asociado al documento.
+ * @property updated Texto descriptivo de la última actualización.
+ * @property status Estado resumido del documento reciente.
+ */
 type RecentDoc = {
   id:      string;
   name:    string;
@@ -10,12 +36,35 @@ type RecentDoc = {
   status:  "approved" | "pending";
 };
 
+/**
+ * Colección mock de documentos recientes.
+ *
+ * @remarks
+ * Se utiliza para mostrar las últimas actualizaciones del repositorio
+ * documental dentro del dashboard.
+ */
 const RECENT: RecentDoc[] = [
   { id: "DOC-101", name: "Política de Seguridad de la Información", owner: "Beatriz Londoño",  updated: "Hace 2h", status: "approved" },
   { id: "DOC-102", name: "Procedimiento Gestión de Incidentes",     owner: "Ernesto Palacio",  updated: "Hace 4h", status: "pending"  },
   { id: "DOC-103", name: "Manual de Compras",                       owner: "Marcela Quintero", updated: "Ayer",    status: "approved" },
 ];
 
+/**
+ * Tarjeta de documentos recientes del módulo documental.
+ *
+ * @returns Tarjeta con los últimos documentos actualizados en el repositorio.
+ *
+ * @remarks
+ * Este componente presenta una vista compacta de actividad reciente,
+ * mostrando:
+ * - nombre del documento,
+ * - responsable,
+ * - momento de actualización,
+ * - estado resumido.
+ *
+ * Resulta útil como bloque de seguimiento rápido en dashboards y vistas
+ * generales del sistema documental.
+ */
 export function DocumentRecentCard() {
   return (
     <div className="rounded-2xl border overflow-hidden shadow-sm
@@ -42,9 +91,11 @@ export function DocumentRecentCard() {
 
       <ul className="divide-y divide-slate-50 dark:divide-[#21262d]">
         {RECENT.map((doc) => (
-          <li key={doc.id}
-              className="group px-5 py-3 transition-colors
-                         hover:bg-slate-50 dark:hover:bg-[#1c2128]">
+          <li
+            key={doc.id}
+            className="group px-5 py-3 transition-colors
+                       hover:bg-slate-50 dark:hover:bg-[#1c2128]"
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-[12px] font-semibold truncate
@@ -70,14 +121,47 @@ export function DocumentRecentCard() {
   );
 }
 
-type Owner = { id: string; name: string; role: string; docs: number };
+/**
+ * Representa un responsable documental dentro del sistema.
+ *
+ * @property id Identificador único del responsable.
+ * @property name Nombre del responsable.
+ * @property role Área o función asociada.
+ * @property docs Cantidad de documentos bajo su gestión.
+ */
+type Owner = {
+  id: string;
+  name: string;
+  role: string;
+  docs: number;
+};
 
+/**
+ * Colección mock de responsables documentales.
+ *
+ * @remarks
+ * Se utiliza para mostrar responsables por área y el volumen aproximado
+ * de documentos asociados a su gestión.
+ */
 const OWNERS: Owner[] = [
   { id: "1", name: "Beatriz Londoño",  role: "Compliance",  docs: 42 },
   { id: "2", name: "Ernesto Palacio",  role: "Operaciones", docs: 31 },
-  { id: "3", name: "Marcela Quintero", role: "Compras",      docs: 25 },
+  { id: "3", name: "Marcela Quintero", role: "Compras",     docs: 25 },
 ];
 
+/**
+ * Tarjeta de responsables documentales por área.
+ *
+ * @returns Tarjeta con listado de responsables y cantidad de documentos
+ * administrados.
+ *
+ * @remarks
+ * Este componente permite identificar rápidamente a los responsables
+ * funcionales del sistema documental y su carga aproximada de gestión.
+ *
+ * Es útil para vistas gerenciales, dashboards operativos o módulos
+ * informativos de gobernanza documental.
+ */
 export function DocumentOwnersCard() {
   return (
     <div className="rounded-2xl border overflow-hidden shadow-sm
@@ -104,9 +188,11 @@ export function DocumentOwnersCard() {
 
       <ul className="divide-y divide-slate-50 dark:divide-[#21262d]">
         {OWNERS.map((o) => (
-          <li key={o.id}
-              className="px-5 py-3 flex items-center justify-between transition-colors
-                         hover:bg-slate-50 dark:hover:bg-[#1c2128]">
+          <li
+            key={o.id}
+            className="px-5 py-3 flex items-center justify-between transition-colors
+                       hover:bg-slate-50 dark:hover:bg-[#1c2128]"
+          >
             <div>
               <p className="text-[12px] font-semibold text-slate-800 dark:text-[#e6edf3]">
                 {o.name}
@@ -124,4 +210,3 @@ export function DocumentOwnersCard() {
     </div>
   );
 }
-

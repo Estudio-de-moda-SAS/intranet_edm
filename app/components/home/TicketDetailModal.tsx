@@ -1,3 +1,20 @@
+/**
+ * @module TicketDetailModal
+ * Modal de detalle para visualizar la información completa de un ticket o solicitud.
+ *
+ * @remarks
+ * Este archivo implementa un componente modal reutilizable que permite consultar:
+ *
+ * - información general del ticket,
+ * - comentarios,
+ * - archivos adjuntos,
+ * - historial de eventos,
+ * - y acciones rápidas desde una interfaz tabulada.
+ *
+ * Actualmente incluye un objeto mock {@link MOCK_DETAIL} como ejemplo de uso,
+ * pero está preparado para recibir datos reales desde props.
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -23,53 +40,203 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/**
+ * Estados posibles de una solicitud o ticket.
+ */
 type RequestStatus = "pending" | "in_progress" | "resolved" | "rejected";
 
+/**
+ * Representa un evento dentro del historial del ticket.
+ */
 type TimelineEvent = {
+  /**
+   * Identificador único del evento.
+   */
   id: string;
+
+  /**
+   * Tipo de evento registrado en la línea de tiempo.
+   */
   type: "created" | "status_change" | "comment" | "attachment";
+
+  /**
+   * Texto descriptivo del evento.
+   */
   label: string;
+
+  /**
+   * Usuario o actor que realizó la acción.
+   */
   by: string;
+
+  /**
+   * Fecha legible del evento.
+   */
   date: string;
 };
 
+/**
+ * Representa un comentario asociado al ticket.
+ */
 type Comment = {
+  /**
+   * Identificador único del comentario.
+   */
   id: string;
+
+  /**
+   * Nombre del autor del comentario.
+   */
   author: string;
+
+  /**
+   * Iniciales del autor para el avatar.
+   */
   initials: string;
+
+  /**
+   * Color principal usado en el avatar del autor.
+   */
   color: string;
+
+  /**
+   * Contenido del comentario.
+   */
   message: string;
+
+  /**
+   * Fecha legible del comentario.
+   */
   date: string;
 };
 
+/**
+ * Representa un archivo adjunto del ticket.
+ */
 type Attachment = {
+  /**
+   * Identificador único del adjunto.
+   */
   id: string;
+
+  /**
+   * Nombre del archivo.
+   */
   name: string;
+
+  /**
+   * Tamaño legible del archivo.
+   */
   size: string;
+
+  /**
+   * Extensión del archivo.
+   */
   ext: string;
 };
 
+/**
+ * Modelo completo de detalle de ticket usado por el modal.
+ *
+ * @remarks
+ * Este tipo concentra toda la información necesaria para las pestañas:
+ * detalles, comentarios, adjuntos e historial.
+ */
 export type TicketDetail = {
+  /**
+   * Identificador interno del ticket.
+   */
   id: string;
+
+  /**
+   * Código visible del ticket.
+   */
   ticketNumber: string;
+
+  /**
+   * Título resumido de la solicitud.
+   */
   title: string;
+
+  /**
+   * Descripción detallada del requerimiento.
+   */
   description: string;
+
+  /**
+   * Identificador del departamento asociado.
+   */
   departmentId: string;
+
+  /**
+   * Nombre legible del departamento.
+   */
   departmentLabel: string;
+
+  /**
+   * Estado actual del ticket.
+   */
   status: RequestStatus;
+
+  /**
+   * Fecha de creación.
+   */
   date: string;
+
+  /**
+   * Fecha estimada o comprometida de vencimiento.
+   */
   dueDate?: string;
+
+  /**
+   * Nombre del solicitante.
+   */
   requester: string;
+
+  /**
+   * Nombre del responsable asignado.
+   */
   assignee?: string;
+
+  /**
+   * Categoría funcional del ticket.
+   */
   category?: string;
+
+  /**
+   * Etiquetas asociadas al ticket.
+   */
   tags?: string[];
+
+  /**
+   * Historial cronológico del ticket.
+   */
   timeline: TimelineEvent[];
+
+  /**
+   * Comentarios registrados en el ticket.
+   */
   comments: Comment[];
+
+  /**
+   * Archivos adjuntos vinculados al ticket.
+   */
   attachments: Attachment[];
 };
 
 // ─── Status config (same tokens as RequestsPanel) ────────────────────────────
 
+/**
+ * Configuración visual de cada estado del ticket.
+ *
+ * @remarks
+ * Define:
+ * - texto visible,
+ * - color principal,
+ * - fondo del badge,
+ * - color del punto indicador,
+ * - ícono asociado.
+ */
 const STATUS_CONFIG: Record<
   RequestStatus,
   { label: string; color: string; bg: string; dot: string; icon: React.ReactNode }
@@ -106,6 +273,13 @@ const STATUS_CONFIG: Record<
 
 // ─── Mock ticket detail (reemplaza con fetch real) ────────────────────────────
 
+/**
+ * Ejemplo mock de detalle de ticket.
+ *
+ * @remarks
+ * Este objeto sirve como referencia visual y funcional para pruebas locales.
+ * En producción debería ser reemplazado por datos obtenidos desde API o backend.
+ */
 export const MOCK_DETAIL: TicketDetail = {
   id: "1",
   ticketNumber: "TI-0041",
@@ -122,10 +296,10 @@ export const MOCK_DETAIL: TicketDetail = {
   category: "Software",
   tags: ["Adobe", "Licencias", "Marketing"],
   timeline: [
-    { id: "t1", type: "created",       label: "Ticket creado",                        by: "Laura Martínez",  date: "10 jun · 9:14 am" },
-    { id: "t2", type: "status_change", label: "Estado cambiado a En proceso",         by: "Carlos Jiménez",  date: "11 jun · 8:02 am" },
-    { id: "t3", type: "comment",       label: "Comentario agregado",                  by: "Carlos Jiménez",  date: "11 jun · 8:05 am" },
-    { id: "t4", type: "attachment",    label: "Adjunto: Licencia_Adobe_2025.pdf",     by: "Laura Martínez",  date: "12 jun · 2:31 pm" },
+    { id: "t1", type: "created",       label: "Ticket creado",                    by: "Laura Martínez", date: "10 jun · 9:14 am" },
+    { id: "t2", type: "status_change", label: "Estado cambiado a En proceso",     by: "Carlos Jiménez", date: "11 jun · 8:02 am" },
+    { id: "t3", type: "comment",       label: "Comentario agregado",              by: "Carlos Jiménez", date: "11 jun · 8:05 am" },
+    { id: "t4", type: "attachment",    label: "Adjunto: Licencia_Adobe_2025.pdf", by: "Laura Martínez", date: "12 jun · 2:31 pm" },
   ],
   comments: [
     {
@@ -153,6 +327,15 @@ export const MOCK_DETAIL: TicketDetail = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+/**
+ * Fila de metadato dentro de la pestaña de detalles.
+ *
+ * @param props Propiedades del componente.
+ * @param props.icon Ícono representativo del dato.
+ * @param props.label Etiqueta del campo.
+ * @param props.children Valor renderizado del campo.
+ * @returns Fila estructurada con ícono, etiqueta y contenido.
+ */
 function MetaRow({
   icon,
   label,
@@ -173,6 +356,15 @@ function MetaRow({
   );
 }
 
+/**
+ * Avatar circular con iniciales para autores de comentarios.
+ *
+ * @param props Propiedades del componente.
+ * @param props.initials Iniciales visibles.
+ * @param props.color Color principal del avatar.
+ * @param props.size Tamaño del avatar en píxeles.
+ * @returns Avatar visual generado con estilos inline.
+ */
 function Avatar({
   initials,
   color,
@@ -206,43 +398,116 @@ function Avatar({
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Tabs disponibles en el modal.
+ */
 type Tab = "details" | "comments" | "attachments" | "timeline";
 
+/**
+ * Configuración de pestañas mostradas en la navegación superior del modal.
+ */
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "details",     label: "Detalles",  icon: <FileText className="h-3.5 w-3.5" />    },
-  { id: "comments",   label: "Comentarios", icon: <MessageSquare className="h-3.5 w-3.5" /> },
-  { id: "attachments",label: "Adjuntos",  icon: <Paperclip className="h-3.5 w-3.5" />   },
-  { id: "timeline",   label: "Historial", icon: <Clock className="h-3.5 w-3.5" />       },
+  { id: "details",     label: "Detalles",    icon: <FileText className="h-3.5 w-3.5" /> },
+  { id: "comments",    label: "Comentarios", icon: <MessageSquare className="h-3.5 w-3.5" /> },
+  { id: "attachments", label: "Adjuntos",    icon: <Paperclip className="h-3.5 w-3.5" /> },
+  { id: "timeline",    label: "Historial",   icon: <Clock className="h-3.5 w-3.5" /> },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+/**
+ * Props del componente {@link TicketDetailModal}.
+ */
 interface TicketDetailModalProps {
+  /**
+   * Indica si el modal está abierto.
+   */
   open: boolean;
+
+  /**
+   * Callback de cierre del modal.
+   */
   onClose: () => void;
+
+  /**
+   * Información completa del ticket a mostrar.
+   */
   ticket: TicketDetail;
 }
 
+/**
+ * Modal principal para visualizar el detalle completo de un ticket.
+ *
+ * @param props Propiedades del componente.
+ * @param props.open Estado de apertura del modal.
+ * @param props.onClose Función para cerrar el modal.
+ * @param props.ticket Ticket seleccionado.
+ * @returns Modal tabulado con información completa del ticket.
+ *
+ * @remarks
+ * Flujo de ejecución:
+ *
+ * 1. Recibe el ticket completo por props.
+ * 2. Inicializa la pestaña activa en `details`.
+ * 3. Ejecuta una animación de entrada al abrirse.
+ * 4. Renderiza pestañas para detalles, comentarios, adjuntos e historial.
+ * 5. Muestra acciones de cierre y acceso externo desde el footer.
+ *
+ * Actualmente:
+ * - el envío de comentarios es visual,
+ * - la descarga de adjuntos es visual,
+ * - y el botón “Ver en portal” es una acción placeholder.
+ *
+ * @example
+ * ```tsx
+ * <TicketDetailModal
+ *   open={!!selected}
+ *   onClose={() => setSelected(null)}
+ *   ticket={selected}
+ * />
+ * ```
+ */
 export function TicketDetailModal({ open, onClose, ticket }: TicketDetailModalProps) {
+  /**
+   * Pestaña actualmente seleccionada.
+   */
   const [activeTab, setActiveTab] = useState<Tab>("details");
+
+  /**
+   * Texto del comentario en el composer.
+   */
   const [comment, setComment] = useState("");
+
+  /**
+   * Estado usado para animar visualmente la entrada del contenido.
+   */
   const [animateIn, setAnimateIn] = useState(false);
 
+  /**
+   * Configuración visual derivada del estado actual del ticket.
+   */
   const cfg = STATUS_CONFIG[ticket.status];
 
-  // Trigger entry animation whenever modal opens
-useEffect(() => {
-  if (!open) return;
-  setAnimateIn(false);
-  const t = setTimeout(() => setAnimateIn(true), 20);
-  return () => clearTimeout(t);
-}, [open]);
+  /**
+   * Dispara la animación de entrada cada vez que el modal se abre.
+   */
+  useEffect(() => {
+    if (!open) return;
+    setAnimateIn(false);
+    const t = setTimeout(() => setAnimateIn(true), 20);
+    return () => clearTimeout(t);
+  }, [open]);
 
-  // Reset tab on open
+  /**
+   * Reinicia la pestaña activa al abrir el modal.
+   */
   useEffect(() => {
     if (open) setActiveTab("details");
   }, [open]);
 
+  /**
+   * Footer personalizado del modal.
+   */
   const footer = (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <span style={{ fontSize: "11px", color: "#94a3b8" }}>
@@ -287,14 +552,14 @@ useEffect(() => {
   );
 
   return (
-<Modal
-  open={open}
-  onClose={onClose}
-  size="xl"
-  accentColor="bg-blue-600"
-  footer={footer}
-  hideCloseButton
->
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="xl"
+      accentColor="bg-blue-600"
+      footer={footer}
+      hideCloseButton
+    >
       {/* ── Animated wrapper ── */}
       <div
         style={{
@@ -304,16 +569,16 @@ useEffect(() => {
           transition: "opacity 0.25s ease, transform 0.25s ease",
         }}
       >
-
         {/* ── Ticket header ── */}
         <div style={{ marginBottom: "20px" }}>
-          {/* Top row: ticket number + status + close */}
+          {/* Top row */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {/* Ticket number pill */}
               <span
                 style={{
-                  display: "flex", alignItems: "center", gap: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
                   padding: "3px 10px",
                   borderRadius: "20px",
                   background: "#eff6ff",
@@ -327,7 +592,6 @@ useEffect(() => {
                 {ticket.ticketNumber}
               </span>
 
-              {/* Department */}
               <span
                 style={{
                   padding: "3px 10px",
@@ -344,10 +608,11 @@ useEffect(() => {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {/* Status pill */}
               <span
                 style={{
-                  display: "flex", alignItems: "center", gap: "5px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
                   padding: "4px 12px",
                   borderRadius: "20px",
                   background: cfg.bg,
@@ -360,16 +625,18 @@ useEffect(() => {
                 {cfg.label}
               </span>
 
-              {/* Close button */}
               <button
                 onClick={onClose}
                 style={{
-                  width: 30, height: 30,
+                  width: 30,
+                  height: 30,
                   borderRadius: "8px",
                   border: "1.5px solid #e2e8f0",
                   background: "transparent",
                   cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   color: "#94a3b8",
                   flexShrink: 0,
                 }}
@@ -379,17 +646,14 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Title */}
           <h2 style={{ margin: "0 0 6px", fontSize: "17px", fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>
             {ticket.title}
           </h2>
 
-          {/* Description */}
           <p style={{ margin: 0, fontSize: "13px", color: "#64748b", lineHeight: 1.6 }}>
             {ticket.description}
           </p>
 
-          {/* Tags */}
           {ticket.tags && ticket.tags.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "10px" }}>
               {ticket.tags.map((tag) => (
@@ -402,7 +666,9 @@ useEffect(() => {
                     color: "#475569",
                     fontSize: "10.5px",
                     fontWeight: 600,
-                    display: "flex", alignItems: "center", gap: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
                   }}
                 >
                   <Tag className="h-2.5 w-2.5" />
@@ -432,6 +698,7 @@ useEffect(() => {
                 : tab.id === "timeline"
                 ? ticket.timeline.length
                 : null;
+
             return (
               <button
                 key={tab.id}
@@ -458,12 +725,16 @@ useEffect(() => {
                 {count !== null && (
                   <span
                     style={{
-                      minWidth: 18, height: 18,
+                      minWidth: 18,
+                      height: 18,
                       borderRadius: "9px",
                       background: isActive ? "#2563eb" : "#e2e8f0",
                       color: isActive ? "#fff" : "#64748b",
-                      fontSize: "10px", fontWeight: 700,
-                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                       padding: "0 4px",
                     }}
                   >
@@ -477,11 +748,8 @@ useEffect(() => {
 
         {/* ── Tab content ── */}
         <div style={{ minHeight: "220px" }}>
-
-          {/* DETAILS */}
           {activeTab === "details" && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
-              {/* Left column */}
               <div>
                 <MetaRow icon={<User className="h-3.5 w-3.5" />} label="Solicitante">
                   {ticket.requester}
@@ -493,7 +761,6 @@ useEffect(() => {
                   {ticket.category ?? "—"}
                 </MetaRow>
               </div>
-              {/* Right column */}
               <div>
                 <MetaRow icon={<User className="h-3.5 w-3.5" />} label="Asignado a">
                   {ticket.assignee ?? (
@@ -506,17 +773,14 @@ useEffect(() => {
                 <MetaRow icon={<AlertCircle className="h-3.5 w-3.5" />} label="Vencimiento">
                   {ticket.dueDate
                     ? new Date(ticket.dueDate).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" })
-                    : <span style={{ color: "#94a3b8", fontStyle: "italic" }}>Sin fecha</span>
-                  }
+                    : <span style={{ color: "#94a3b8", fontStyle: "italic" }}>Sin fecha</span>}
                 </MetaRow>
               </div>
             </div>
           )}
 
-          {/* COMMENTS */}
           {activeTab === "comments" && (
             <div>
-              {/* Comment list */}
               <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "18px" }}>
                 {ticket.comments.length === 0 ? (
                   <Empty text="Sin comentarios aún" />
@@ -557,7 +821,6 @@ useEffect(() => {
                 )}
               </div>
 
-              {/* New comment input */}
               <div
                 style={{
                   display: "flex",
@@ -592,7 +855,8 @@ useEffect(() => {
                 <button
                   disabled={!comment.trim()}
                   style={{
-                    width: 32, height: 32,
+                    width: 32,
+                    height: 32,
                     borderRadius: "8px",
                     border: "none",
                     background: comment.trim()
@@ -600,7 +864,9 @@ useEffect(() => {
                       : "#e2e8f0",
                     color: comment.trim() ? "#fff" : "#94a3b8",
                     cursor: comment.trim() ? "pointer" : "default",
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     flexShrink: 0,
                     transition: "all .15s",
                   }}
@@ -611,7 +877,6 @@ useEffect(() => {
             </div>
           )}
 
-          {/* ATTACHMENTS */}
           {activeTab === "attachments" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {ticket.attachments.length === 0 ? (
@@ -643,16 +908,18 @@ useEffect(() => {
                       (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
                     }}
                   >
-                    {/* Ext badge */}
                     <span
                       style={{
-                        width: 36, height: 36,
+                        width: 36,
+                        height: 36,
                         borderRadius: "8px",
                         background: "#eff6ff",
                         color: "#2563eb",
                         fontSize: "9px",
                         fontWeight: 800,
-                        display: "flex", alignItems: "center", justifyContent: "center",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         flexShrink: 0,
                         border: "1px solid #dbeafe",
                         letterSpacing: ".5px",
@@ -670,12 +937,15 @@ useEffect(() => {
 
                     <button
                       style={{
-                        width: 28, height: 28,
+                        width: 28,
+                        height: 28,
                         borderRadius: "7px",
                         border: "1.5px solid #e2e8f0",
                         background: "transparent",
                         cursor: "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         color: "#94a3b8",
                         flexShrink: 0,
                         transition: "all .15s",
@@ -699,10 +969,8 @@ useEffect(() => {
             </div>
           )}
 
-          {/* TIMELINE */}
           {activeTab === "timeline" && (
             <div style={{ position: "relative", paddingLeft: "20px" }}>
-              {/* Vertical line */}
               <div
                 style={{
                   position: "absolute",
@@ -727,13 +995,13 @@ useEffect(() => {
                       animationDelay: `${i * 70}ms`,
                     }}
                   >
-                    {/* Dot */}
                     <span
                       style={{
                         position: "absolute",
                         left: "-16px",
                         top: "4px",
-                        width: "10px", height: "10px",
+                        width: "10px",
+                        height: "10px",
                         borderRadius: "50%",
                         background: i === 0 ? "#2563eb" : "#e2e8f0",
                         border: i === 0 ? "2px solid #bfdbfe" : "2px solid #f1f5f9",
@@ -757,7 +1025,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* ── CSS keyframes injected once ── */}
       <style>{`
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(6px); }
@@ -770,6 +1037,13 @@ useEffect(() => {
 
 // ─── Tiny helpers ─────────────────────────────────────────────────────────────
 
+/**
+ * Estado vacío simple para pestañas sin contenido.
+ *
+ * @param props Propiedades del componente.
+ * @param props.text Texto mostrado al usuario.
+ * @returns Vista vacía centrada con ícono.
+ */
 function Empty({ text }: { text: string }) {
   return (
     <div style={{ textAlign: "center", padding: "40px 24px", color: "#94a3b8", fontSize: "13px" }}>
@@ -781,6 +1055,11 @@ function Empty({ text }: { text: string }) {
   );
 }
 
+/**
+ * Ícono SVG de cierre.
+ *
+ * @returns Ícono visual para botones de cerrar.
+ */
 function CloseIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -790,6 +1069,11 @@ function CloseIcon() {
   );
 }
 
+/**
+ * Ícono SVG de enlace externo.
+ *
+ * @returns Ícono visual para navegación externa.
+ */
 function ExternalLinkIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -800,20 +1084,26 @@ function ExternalLinkIcon() {
   );
 }
 
-// ─── Usage example: hook into RequestsPanel ───────────────────────────────────
-//
-// In RequestsPanel.tsx, add:
-//
-//   const [selected, setSelected] = useState<TicketDetail | null>(null);
-//
-// On each card click:
-//   onClick={() => setSelected(MOCK_DETAIL)} // → replace with fetch(req.id)
-//
-// At the bottom of the JSX:
-//   {selected && (
-//     <TicketDetailModal
-//       open={!!selected}
-//       onClose={() => setSelected(null)}
-//       ticket={selected}
-//     />
-//   )}
+/**
+ * Ejemplo de integración con un panel de solicitudes.
+ *
+ * @remarks
+ * En un componente padre podrías:
+ *
+ * 1. mantener un estado `selected`,
+ * 2. cargar el detalle real del ticket,
+ * 3. abrir el modal cuando exista selección.
+ *
+ * @example
+ * ```tsx
+ * const [selected, setSelected] = useState<TicketDetail | null>(null);
+ *
+ * {selected && (
+ *   <TicketDetailModal
+ *     open={!!selected}
+ *     onClose={() => setSelected(null)}
+ *     ticket={selected}
+ *   />
+ * )}
+ * ```
+ */

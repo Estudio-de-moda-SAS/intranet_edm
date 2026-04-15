@@ -1,9 +1,34 @@
+/**
+ * @module HRHeroBanner
+ * Banner principal del módulo de Recursos Humanos.
+ *
+ * @remarks
+ * Este componente renderiza la cabecera visual destacada del área de RRHH,
+ * combinando:
+ * - Imagen de fondo
+ * - Overlays y efectos decorativos
+ * - Título y descripción del módulo
+ * - Acciones rápidas principales
+ * - KPIs destacados mediante {@link HRHeroKPIs}
+ *
+ * Está construido como componente cliente debido al uso de animaciones
+ * con `framer-motion`.
+ */
+
 "use client";
 
 import { motion, type Variants } from "framer-motion";
 import Link from "next/link";
 import HRHeroKPIs from "./HRHeroKPIs";
 
+/**
+ * Variantes de animación para el bloque de título.
+ *
+ * @remarks
+ * Aplica una entrada suave con:
+ * - Fade in
+ * - Desplazamiento vertical
+ */
 const titleVariant: Variants = {
   hidden: { opacity: 0, y: 16 },
   show: {
@@ -13,15 +38,54 @@ const titleVariant: Variants = {
   },
 };
 
+/**
+ * Variantes de animación para las acciones rápidas.
+ *
+ * @remarks
+ * Aplica una entrada lateral con:
+ * - Fade in
+ * - Desplazamiento horizontal
+ * - Pequeño delay respecto al título
+ */
 const actionsVariant: Variants = {
   hidden: { opacity: 0, x: 12 },
   show: {
     opacity: 1,
     x: 0,
-    transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] },
+    transition: {
+      duration: 0.45,
+      delay: 0.1,
+      ease: [0.22, 1, 0.36, 1],
+    },
   },
 };
 
+/**
+ * Componente banner principal de RRHH.
+ *
+ * @returns Hero visual con acciones y KPIs del módulo.
+ *
+ * @remarks
+ * Estructura del banner:
+ * - Fondo con imagen de portada
+ * - Overlay en gradiente
+ * - Patrón de puntos decorativo
+ * - Efectos glow
+ * - Título y descripción del área
+ * - Acciones rápidas visibles en pantallas medianas o superiores
+ * - Separador animado
+ * - Bloque de KPIs destacado
+ *
+ * Características:
+ * - Usa ancho completo del viewport
+ * - Emplea `framer-motion` para animaciones de entrada
+ * - Integra visualmente el componente {@link HRHeroKPIs}
+ *
+ * @example
+ * ```tsx
+ * <HRHeroBanner />
+ * ```
+ */
 export default function HRHeroBanner() {
   return (
     <section
@@ -44,7 +108,12 @@ export default function HRHeroBanner() {
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          <pattern id="hr-dots" width="28" height="28" patternUnits="userSpaceOnUse">
+          <pattern
+            id="hr-dots"
+            width="28"
+            height="28"
+            patternUnits="userSpaceOnUse"
+          >
             <circle cx="2" cy="2" r="1.5" fill="white" />
           </pattern>
         </defs>
@@ -61,7 +130,6 @@ export default function HRHeroBanner() {
       <div className="relative px-6 py-10 lg:px-14 lg:py-14">
         {/* Title + actions */}
         <div className="flex flex-col gap-1 lg:flex-row lg:items-end lg:justify-between">
-
           <motion.div variants={titleVariant} initial="hidden" animate="show">
             <div className="mb-1">
               <span className="rounded-full border border-white/20 bg-white/10 px-3 py-0.5 text-[11px] font-semibold uppercase tracking-widest text-white/70 backdrop-blur-sm">
@@ -74,7 +142,8 @@ export default function HRHeroBanner() {
             </h1>
 
             <p className="mt-2 text-rose-100 text-base">
-              Gestión de personas, nómina, reclutamiento y bienestar organizacional.
+              Gestión de personas, nómina, reclutamiento y bienestar
+              organizacional.
             </p>
           </motion.div>
 
@@ -98,7 +167,6 @@ export default function HRHeroBanner() {
               Procesar nómina
             </Link>
           </motion.div>
-
         </div>
 
         {/* Divider */}

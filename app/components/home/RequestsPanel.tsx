@@ -1,3 +1,18 @@
+/**
+ * @module RequestsPanel
+ * Panel cliente para visualizar, filtrar y consultar solicitudes del usuario.
+ *
+ * @remarks
+ * Este archivo implementa:
+ *
+ * - utilidades visuales para metadatos, avatares y estados vacíos,
+ * - un modal de detalle para tickets,
+ * - y el panel principal de solicitudes con filtros por área y estado.
+ *
+ * La vista está pensada para ofrecer una navegación rápida desde un resumen
+ * de tickets hacia un detalle expandido, con opción de abrir la vista completa.
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -23,45 +38,142 @@ import { cn } from "@/lib/utils";
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Pestañas disponibles dentro del modal de detalle.
+ */
 type ModalTab = "details" | "comments" | "attachments" | "timeline";
 
-const MODAL_TABS: { id: ModalTab; label: string; icon: React.ReactNode; countKey?: keyof TicketDetail }[] = [
+/**
+ * Configuración de pestañas del modal.
+ *
+ * @remarks
+ * `countKey` permite mostrar el contador asociado a colecciones
+ * como comentarios, adjuntos o historial.
+ */
+const MODAL_TABS: {
+  id: ModalTab;
+  label: string;
+  icon: React.ReactNode;
+  countKey?: keyof TicketDetail;
+}[] = [
   { id: "details",     label: "Detalles",    icon: <FileText      className="h-3.5 w-3.5" /> },
   { id: "comments",    label: "Comentarios", icon: <MessageSquare className="h-3.5 w-3.5" />, countKey: "comments"    },
   { id: "attachments", label: "Adjuntos",    icon: <Paperclip     className="h-3.5 w-3.5" />, countKey: "attachments" },
   { id: "timeline",    label: "Historial",   icon: <Clock         className="h-3.5 w-3.5" />, countKey: "timeline"    },
 ];
 
-function MetaRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+/**
+ * Props del componente {@link MetaRow}.
+ */
+interface MetaRowProps {
+  /**
+   * Ícono representativo del dato.
+   */
+  icon: React.ReactNode;
+
+  /**
+   * Etiqueta del metadato.
+   */
+  label: string;
+
+  /**
+   * Valor renderizado del metadato.
+   */
+  children: React.ReactNode;
+}
+
+/**
+ * Renderiza una fila compacta de metadato en el detalle del ticket.
+ *
+ * @param props Propiedades del componente.
+ * @returns Fila con icono, etiqueta y contenido.
+ */
+function MetaRow({ icon, label, children }: MetaRowProps) {
   return (
     <div className="flex items-start gap-2.5 py-2 border-b border-slate-100 dark:border-[#21262d]">
       <span className="text-slate-400 dark:text-[#545d68] mt-px shrink-0">{icon}</span>
       <span className="text-[10.5px] font-semibold text-slate-400 dark:text-[#545d68] uppercase tracking-[0.4px] w-20 shrink-0 mt-0.5">
         {label}
       </span>
-      <span className="text-[12.5px] font-medium text-slate-700 dark:text-[#cdd9e5]">{children}</span>
+      <span className="text-[12.5px] font-medium text-slate-700 dark:text-[#cdd9e5]">
+        {children}
+      </span>
     </div>
   );
 }
 
-function AvatarBubble({ initials, color, size = 30 }: { initials: string; color: string; size?: number }) {
+/**
+ * Props del componente {@link AvatarBubble}.
+ */
+interface AvatarBubbleProps {
+  /**
+   * Iniciales del autor.
+   */
+  initials: string;
+
+  /**
+   * Color principal del avatar.
+   */
+  color: string;
+
+  /**
+   * Tamaño opcional del avatar.
+   *
+   * @defaultValue 30
+   */
+  size?: number;
+}
+
+/**
+ * Renderiza un avatar circular basado en iniciales.
+ *
+ * @param props Propiedades del componente.
+ * @returns Burbuja circular estilizada.
+ */
+function AvatarBubble({ initials, color, size = 30 }: AvatarBubbleProps) {
   return (
-    <span style={{
-      width: size, height: size, borderRadius: "50%",
-      background: color + "20", color,
-      flexShrink: 0, fontSize: size * 0.35, fontWeight: 700,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      border: `1.5px solid ${color}40`,
-    }}>
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: color + "20",
+        color,
+        flexShrink: 0,
+        fontSize: size * 0.35,
+        fontWeight: 700,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: `1.5px solid ${color}40`,
+      }}
+    >
       {initials}
     </span>
   );
 }
 
-function EmptyState({ label }: { label: string }) {
+/**
+ * Props del componente {@link EmptyState}.
+ */
+interface EmptyStateProps {
+  /**
+   * Texto principal del estado vacío.
+   */
+  label: string;
+}
+
+/**
+ * Renderiza un estado vacío reutilizable dentro del modal.
+ *
+ * @param props Propiedades del componente.
+ * @returns Estado vacío visual.
+ */
+function EmptyState({ label }: EmptyStateProps) {
   return (
     <div className="text-center py-9 text-slate-400 dark:text-[#545d68] text-[13px]">
-      <FileText className="mx-auto mb-2 opacity-35 w-7 h-7" />{label}
+      <FileText className="mx-auto mb-2 opacity-35 w-7 h-7" />
+      {label}
     </div>
   );
 }
@@ -70,40 +182,137 @@ function EmptyState({ label }: { label: string }) {
 // MODAL
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Props del componente {@link TicketDetailModal}.
+ */
+interface TicketDetailModalProps {
+  /**
+   * Ticket seleccionado para mostrar el detalle.
+   */
+  ticket: TicketDetail;
+
+  /**
+   * Acción para cerrar el modal.
+   */
+  onClose: () => void;
+
+  /**
+   * Acción para navegar al detalle completo.
+   */
+  onViewFull: () => void;
+}
+
+/**
+ * Modal de detalle para una solicitud.
+ *
+ * @param props Propiedades del componente.
+ * @returns Modal renderizado en portal.
+ *
+ * @remarks
+ * Flujo general:
+ *
+ * 1. Se monta el portal del modal.
+ * 2. Se activa una animación de entrada.
+ * 3. Permite navegación por pestañas:
+ *    - detalles,
+ *    - comentarios,
+ *    - adjuntos,
+ *    - historial.
+ * 4. Permite cerrar por:
+ *    - backdrop,
+ *    - tecla Escape,
+ *    - botón de cierre.
+ * 5. Puede redirigir al detalle completo del ticket.
+ */
 function TicketDetailModal({
   ticket,
   onClose,
   onViewFull,
-}: {
-  ticket:     TicketDetail;
-  onClose:    () => void;
-  onViewFull: () => void;
-}) {
-  const [tab,     setTab]     = useState<ModalTab>("details");
+}: TicketDetailModalProps) {
+  /**
+   * Pestaña activa dentro del modal.
+   */
+  const [tab, setTab] = useState<ModalTab>("details");
+
+  /**
+   * Texto del comentario local.
+   *
+   * @remarks
+   * Actualmente es solo visual; no persiste ni envía comentarios reales.
+   */
   const [comment, setComment] = useState("");
+
+  /**
+   * Controla la animación visible del modal.
+   */
   const [visible, setVisible] = useState(false);
+
+  /**
+   * Indica si el componente ya fue montado en cliente.
+   */
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { if (mounted) requestAnimationFrame(() => setVisible(true)); }, [mounted]);
+  /**
+   * Marca el componente como montado.
+   */
   useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+    setMounted(true);
+  }, []);
+
+  /**
+   * Activa la animación de entrada tras montar.
+   */
+  useEffect(() => {
+    if (mounted) requestAnimationFrame(() => setVisible(true));
+  }, [mounted]);
+
+  /**
+   * Maneja cierre por tecla Escape.
+   */
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
   }, []);
+
+  /**
+   * Bloquea el scroll del body mientras el modal está abierto.
+   */
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, []);
 
-  function handleClose()    { setVisible(false); setTimeout(onClose,    220); }
-  function handleViewFull() { setVisible(false); setTimeout(onViewFull, 220); }
+  /**
+   * Cierra el modal con animación de salida.
+   */
+  function handleClose() {
+    setVisible(false);
+    setTimeout(onClose, 220);
+  }
 
+  /**
+   * Cierra el modal y luego navega al detalle completo.
+   */
+  function handleViewFull() {
+    setVisible(false);
+    setTimeout(onViewFull, 220);
+  }
+
+  /**
+   * Configuración visual del estado del ticket.
+   */
   const cfg = STATUS_CONFIG[ticket.status];
 
   const modalJsx = (
     <div
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center p-4",
         "transition-all duration-[220ms] ease-out",
@@ -112,18 +321,17 @@ function TicketDetailModal({
           : "bg-slate-900/0 backdrop-blur-0"
       )}
     >
-      <div className={cn(
-        "w-full max-w-[700px] rounded-[20px] overflow-hidden flex flex-col",
-        "max-h-[90vh]",
-        // Light
-        "bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18),0_4px_12px_rgba(0,0,0,0.08)]",
-        // Dark
-        "dark:bg-[#161b22] dark:shadow-[0_24px_64px_rgba(0,0,0,0.5)]",
-        "transition-[opacity,transform] duration-[220ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1.2)]",
-        visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-[0.97]",
-      )}>
-
-        {/* Violet gradient accent */}
+      <div
+        className={cn(
+          "w-full max-w-[700px] rounded-[20px] overflow-hidden flex flex-col",
+          "max-h-[90vh]",
+          "bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18),0_4px_12px_rgba(0,0,0,0.08)]",
+          "dark:bg-[#161b22] dark:shadow-[0_24px_64px_rgba(0,0,0,0.5)]",
+          "transition-[opacity,transform] duration-[220ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1.2)]",
+          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-[0.97]"
+        )}
+      >
+        {/* Accent line */}
         <div className="h-[3px] w-full bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-500 shrink-0" />
 
         <div className="overflow-y-auto flex-1">
@@ -135,25 +343,32 @@ function TicketDetailModal({
                 <span className="flex items-center gap-1 px-2.5 py-[3px] rounded-full
                                  bg-violet-50 text-violet-700 text-[11px] font-bold
                                  dark:bg-violet-500/[0.12] dark:text-violet-400">
-                  <Hash className="h-3 w-3" />{ticket.ticketNumber}
+                  <Hash className="h-3 w-3" />
+                  {ticket.ticketNumber}
                 </span>
+
                 <span className="px-2.5 py-[3px] rounded-full border text-[11px] font-semibold
                                  bg-slate-50 border-slate-200 text-slate-600
                                  dark:bg-[#1c2128] dark:border-[#30363d] dark:text-[#768390]">
                   {ticket.departmentLabel}
                 </span>
+
                 <span className="px-2.5 py-[3px] rounded-full border text-[11px] font-semibold
                                  bg-slate-50 border-slate-200 text-slate-600
                                  dark:bg-[#1c2128] dark:border-[#30363d] dark:text-[#768390]">
                   {ticket.category}
                 </span>
               </div>
+
               <div className="flex items-center gap-2 shrink-0">
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
-                      style={{ background: cfg.bg, color: cfg.color }}>
+                <span
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+                  style={{ background: cfg.bg, color: cfg.color }}
+                >
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.dot }} />
                   {cfg.label}
                 </span>
+
                 <button
                   onClick={handleClose}
                   className="w-[30px] h-[30px] rounded-lg flex items-center justify-center transition-colors
@@ -170,6 +385,7 @@ function TicketDetailModal({
                            text-slate-900 dark:text-[#e6edf3]">
               {ticket.title}
             </h2>
+
             <p className="m-0 mb-2.5 text-[13px] leading-relaxed text-slate-500 dark:text-[#768390]">
               {ticket.description}
             </p>
@@ -178,10 +394,14 @@ function TicketDetailModal({
             {ticket.tags && ticket.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {ticket.tags.filter(Boolean).map((t) => (
-                  <span key={t} className="flex items-center gap-1 px-2.5 py-[2px] rounded-full text-[10.5px] font-semibold
-                                           bg-violet-50 text-violet-700
-                                           dark:bg-violet-500/[0.12] dark:text-violet-400">
-                    <Tag className="h-2.5 w-2.5" />{t}
+                  <span
+                    key={t}
+                    className="flex items-center gap-1 px-2.5 py-[2px] rounded-full text-[10.5px] font-semibold
+                               bg-violet-50 text-violet-700
+                               dark:bg-violet-500/[0.12] dark:text-violet-400"
+                  >
+                    <Tag className="h-2.5 w-2.5" />
+                    {t}
                   </span>
                 ))}
               </div>
@@ -191,7 +411,8 @@ function TicketDetailModal({
             <div className="flex gap-0.5 border-b border-slate-100 dark:border-[#21262d]">
               {MODAL_TABS.map((t) => {
                 const isActive = tab === t.id;
-                const count    = t.countKey ? (ticket[t.countKey] as unknown[]).length : null;
+                const count = t.countKey ? (ticket[t.countKey] as unknown[]).length : null;
+
                 return (
                   <button
                     key={t.id}
@@ -204,14 +425,17 @@ function TicketDetailModal({
                         : "border-transparent text-slate-500 hover:text-slate-700 dark:text-[#545d68] dark:hover:text-[#768390]"
                     )}
                   >
-                    {t.icon}{t.label}
+                    {t.icon}
+                    {t.label}
                     {count !== null && (
-                      <span className={cn(
-                        "min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 text-[10px] font-bold",
-                        isActive
-                          ? "bg-violet-600 text-white dark:bg-violet-500"
-                          : "bg-slate-200 text-slate-500 dark:bg-[#30363d] dark:text-[#768390]"
-                      )}>
+                      <span
+                        className={cn(
+                          "min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 text-[10px] font-bold",
+                          isActive
+                            ? "bg-violet-600 text-white dark:bg-violet-500"
+                            : "bg-slate-200 text-slate-500 dark:bg-[#30363d] dark:text-[#768390]"
+                        )}
+                      >
                         {count}
                       </span>
                     )}
@@ -223,13 +447,18 @@ function TicketDetailModal({
 
           {/* Tab content */}
           <div className="px-6 py-[18px] min-h-[200px]">
-
             {tab === "details" && (
               <div className="grid grid-cols-2 gap-x-8">
                 <div>
-                  <MetaRow icon={<User className="h-3.5 w-3.5" />} label="Solicitante">{ticket.requester}</MetaRow>
-                  <MetaRow icon={<Building2 className="h-3.5 w-3.5" />} label="Área">{ticket.departmentLabel}</MetaRow>
-                  <MetaRow icon={<FileText className="h-3.5 w-3.5" />} label="Categoría">{ticket.category}</MetaRow>
+                  <MetaRow icon={<User className="h-3.5 w-3.5" />} label="Solicitante">
+                    {ticket.requester}
+                  </MetaRow>
+                  <MetaRow icon={<Building2 className="h-3.5 w-3.5" />} label="Área">
+                    {ticket.departmentLabel}
+                  </MetaRow>
+                  <MetaRow icon={<FileText className="h-3.5 w-3.5" />} label="Categoría">
+                    {ticket.category}
+                  </MetaRow>
                 </div>
                 <div>
                   <MetaRow icon={<User className="h-3.5 w-3.5" />} label="Asignado a">
@@ -238,12 +467,22 @@ function TicketDetailModal({
                     )}
                   </MetaRow>
                   <MetaRow icon={<Calendar className="h-3.5 w-3.5" />} label="Creado">
-                    {new Date(ticket.date).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" })}
+                    {new Date(ticket.date).toLocaleDateString("es-CO", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                    })}
                   </MetaRow>
                   <MetaRow icon={<AlertCircle className="h-3.5 w-3.5" />} label="Vencimiento">
-                    {ticket.dueDate
-                      ? new Date(ticket.dueDate).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" })
-                      : <span className="text-slate-400 dark:text-[#545d68] italic">Sin fecha</span>}
+                    {ticket.dueDate ? (
+                      new Date(ticket.dueDate).toLocaleDateString("es-CO", {
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric",
+                      })
+                    ) : (
+                      <span className="text-slate-400 dark:text-[#545d68] italic">Sin fecha</span>
+                    )}
                   </MetaRow>
                 </div>
               </div>
@@ -255,12 +494,20 @@ function TicketDetailModal({
                   {ticket.comments.length === 0 ? (
                     <EmptyState label="Sin comentarios aún" />
                   ) : ticket.comments.map((c, i) => (
-                    <div key={c.id} className="flex gap-2.5" style={{ animation: `fadeSlideUp .22s ease ${i * 60}ms both` }}>
+                    <div
+                      key={c.id}
+                      className="flex gap-2.5"
+                      style={{ animation: `fadeSlideUp .22s ease ${i * 60}ms both` }}
+                    >
                       <AvatarBubble initials={c.initials} color={c.color} />
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-[12.5px] font-bold text-slate-800 dark:text-[#e6edf3]">{c.author}</span>
-                          <span className="text-[10.5px] text-slate-400 dark:text-[#545d68]">{c.date}</span>
+                          <span className="text-[12.5px] font-bold text-slate-800 dark:text-[#e6edf3]">
+                            {c.author}
+                          </span>
+                          <span className="text-[10.5px] text-slate-400 dark:text-[#545d68]">
+                            {c.date}
+                          </span>
                         </div>
                         <div className="px-3 py-2 rounded-[10px] text-[12.5px] leading-relaxed
                                         bg-slate-50 border border-slate-100 text-slate-600
@@ -271,6 +518,7 @@ function TicketDetailModal({
                     </div>
                   ))}
                 </div>
+
                 {/* Composer */}
                 <div className="flex gap-2 items-end p-2.5 rounded-[10px] transition-colors
                                 border border-slate-200 bg-slate-50
@@ -320,8 +568,12 @@ function TicketDetailModal({
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="m-0 text-[12.5px] font-semibold truncate
-                                    text-slate-800 dark:text-[#e6edf3]">{a.name}</p>
-                      <p className="m-0 text-[11px] text-slate-400 dark:text-[#545d68]">{a.size}</p>
+                                    text-slate-800 dark:text-[#e6edf3]">
+                        {a.name}
+                      </p>
+                      <p className="m-0 text-[11px] text-slate-400 dark:text-[#545d68]">
+                        {a.size}
+                      </p>
                     </div>
                     <button className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center transition-all
                                        border border-slate-200 bg-transparent text-slate-400
@@ -345,14 +597,18 @@ function TicketDetailModal({
                       className={cn("relative", i < ticket.timeline.length - 1 && "pb-4")}
                       style={{ animation: `fadeSlideUp .22s ease ${i * 70}ms both` }}
                     >
-                      <span className={cn(
-                        "absolute -left-[18px] top-1 w-2.5 h-2.5 rounded-full z-[1]",
-                        i === 0
-                          ? "bg-violet-100 border-2 border-violet-300 dark:bg-violet-500/20 dark:border-violet-500/50"
-                          : "bg-slate-100 border-2 border-slate-200 dark:bg-[#21262d] dark:border-[#30363d]"
-                      )} />
+                      <span
+                        className={cn(
+                          "absolute -left-[18px] top-1 w-2.5 h-2.5 rounded-full z-[1]",
+                          i === 0
+                            ? "bg-violet-100 border-2 border-violet-300 dark:bg-violet-500/20 dark:border-violet-500/50"
+                            : "bg-slate-100 border-2 border-slate-200 dark:bg-[#21262d] dark:border-[#30363d]"
+                        )}
+                      />
                       <p className="m-0 mb-px text-[12.5px] font-semibold
-                                    text-slate-800 dark:text-[#e6edf3]">{ev.label}</p>
+                                    text-slate-800 dark:text-[#e6edf3]">
+                        {ev.label}
+                      </p>
                       <p className="m-0 text-[11px] text-slate-400 dark:text-[#545d68]">
                         {ev.by} · {ev.date}
                       </p>
@@ -369,7 +625,11 @@ function TicketDetailModal({
                         border-slate-100 bg-white
                         dark:border-[#21262d] dark:bg-[#161b22]">
           <span className="text-[11px] text-slate-400 dark:text-[#545d68]">
-            {new Date(ticket.date).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+            {new Date(ticket.date).toLocaleDateString("es-CO", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
           </span>
           <div className="flex gap-2">
             <button
@@ -410,32 +670,93 @@ function TicketDetailModal({
 // REQUESTS PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Renderiza el panel principal de solicitudes del usuario.
+ *
+ * @returns Sección con filtros por área y estado, listado de tickets
+ * y modal de detalle opcional.
+ *
+ * @remarks
+ * Flujo general:
+ *
+ * 1. Obtiene tickets desde {@link useTickets}.
+ * 2. Construye filtros dinámicos por departamento y estado.
+ * 3. Filtra el listado según las selecciones activas.
+ * 4. Muestra estados de carga, error o vacío según corresponda.
+ * 5. Al seleccionar una solicitud, construye su detalle con {@link buildDetail}
+ *    y abre {@link TicketDetailModal}.
+ */
 export function RequestsPanel() {
+  /**
+   * Router de Next.js para navegación al detalle completo.
+   */
   const router = useRouter();
-  const [activeTab,    setActiveTab]    = useState<string>("all");
-  const [activeStatus, setActiveStatus] = useState<RequestStatus | "all">("all");
-  const [selected,     setSelected]     = useState<TicketDetail | null>(null);
 
+  /**
+   * Departamento actualmente activo en el filtro superior.
+   */
+  const [activeTab, setActiveTab] = useState<string>("all");
+
+  /**
+   * Estado actualmente activo en el filtro por status.
+   */
+  const [activeStatus, setActiveStatus] = useState<RequestStatus | "all">("all");
+
+  /**
+   * Ticket actualmente seleccionado en el modal.
+   */
+  const [selected, setSelected] = useState<TicketDetail | null>(null);
+
+  /**
+   * Datos y estado del hook de tickets.
+   */
   const { tickets, loading, error } = useTickets();
 
+  /**
+   * Lista de departamentos visibles incluyendo la pestaña "Todas".
+   */
   const allDepts = [{ id: "all", label: "Todas" }, ...DEPARTMENTS.filter((d) => d.show)];
 
+  /**
+   * Tickets filtrados por departamento y estado.
+   */
   const filtered = tickets.filter((r) => {
-    const deptMatch   = activeTab    === "all" || r.departmentId === activeTab;
-    const statusMatch = activeStatus === "all" || r.status       === activeStatus;
+    const deptMatch = activeTab === "all" || r.departmentId === activeTab;
+    const statusMatch = activeStatus === "all" || r.status === activeStatus;
     return deptMatch && statusMatch;
   });
 
+  /**
+   * Cuenta tickets por departamento.
+   *
+   * @param id Identificador del departamento.
+   * @returns Cantidad de tickets asociados.
+   */
   const countByDept = (id: string) =>
     id === "all" ? tickets.length : tickets.filter((r) => r.departmentId === id).length;
 
+  /**
+   * Habilita scroll horizontal arrastrable sobre las pestañas de departamento.
+   *
+   * @param e Evento del mouse sobre el contenedor.
+   */
   const handleTabsMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     el.style.cursor = "grabbing";
+
     const startX = e.pageX - el.offsetLeft;
     const scrollLeft = el.scrollLeft;
-    const onMove = (ev: MouseEvent) => { el.scrollLeft = scrollLeft - (ev.pageX - el.offsetLeft - startX); };
-    const onUp   = () => { el.style.cursor = "grab"; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+
+    const onMove = (ev: MouseEvent) => {
+      el.scrollLeft = scrollLeft - (ev.pageX - el.offsetLeft - startX);
+    };
+
+    const onUp = () => {
+      el.style.cursor = "grab";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
@@ -446,7 +767,7 @@ export function RequestsPanel() {
                           bg-white border border-slate-200 shadow-sm
                           dark:bg-[#161b22] dark:border-[#30363d]">
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="px-6 pt-5 pb-0 border-b border-slate-100 dark:border-[#21262d]">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
@@ -471,9 +792,10 @@ export function RequestsPanel() {
             {/* Status pills */}
             <div className="flex gap-1.5 flex-wrap justify-end">
               {(["all", "pending", "in_progress", "resolved", "rejected"] as const).map((s) => {
-                const isAll  = s === "all";
-                const cfg    = isAll ? null : STATUS_CONFIG[s];
+                const isAll = s === "all";
+                const cfg = isAll ? null : STATUS_CONFIG[s];
                 const active = activeStatus === s;
+
                 return (
                   <button
                     key={s}
@@ -485,7 +807,15 @@ export function RequestsPanel() {
                         ? "border-current"
                         : "border-slate-200 text-slate-500 hover:border-slate-300 dark:border-[#30363d] dark:text-[#545d68] dark:hover:border-[#444c56]"
                     )}
-                    style={active ? { background: cfg?.bg ?? "#f1f5f9", color: cfg?.color ?? "#334155", borderColor: cfg?.color ?? "#334155" } : {}}
+                    style={
+                      active
+                        ? {
+                            background: cfg?.bg ?? "#f1f5f9",
+                            color: cfg?.color ?? "#334155",
+                            borderColor: cfg?.color ?? "#334155",
+                          }
+                        : {}
+                    }
                   >
                     {!isAll && <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg!.dot }} />}
                     {isAll ? "Todos" : cfg!.label}
@@ -495,15 +825,16 @@ export function RequestsPanel() {
             </div>
           </div>
 
-          {/* Dept tabs — drag to scroll */}
+          {/* Dept tabs */}
           <div
             className="flex gap-0.5 overflow-x-auto [scrollbar-width:none] select-none"
             style={{ cursor: "grab" }}
             onMouseDown={handleTabsMouseDown}
           >
             {allDepts.map((dept) => {
-              const count  = countByDept(dept.id);
+              const count = countByDept(dept.id);
               const active = activeTab === dept.id;
+
               return (
                 <button
                   key={dept.id}
@@ -517,12 +848,14 @@ export function RequestsPanel() {
                   )}
                 >
                   {dept.label}
-                  <span className={cn(
-                    "min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 text-[10px] font-bold",
-                    active
-                      ? "bg-violet-600 text-white dark:bg-violet-500"
-                      : "bg-slate-200 text-slate-500 dark:bg-[#30363d] dark:text-[#768390]"
-                  )}>
+                  <span
+                    className={cn(
+                      "min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 text-[10px] font-bold",
+                      active
+                        ? "bg-violet-600 text-white dark:bg-violet-500"
+                        : "bg-slate-200 text-slate-500 dark:bg-[#30363d] dark:text-[#768390]"
+                    )}
+                  >
                     {count}
                   </span>
                 </button>
@@ -531,7 +864,7 @@ export function RequestsPanel() {
           </div>
         </div>
 
-        {/* ── List ── */}
+        {/* List */}
         <div className="px-4 pt-3 pb-4">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -553,9 +886,10 @@ export function RequestsPanel() {
           ) : (
             <div className="flex flex-col gap-2">
               {filtered.map((req) => {
-                const cfg  = STATUS_CONFIG[req.status];
+                const cfg = STATUS_CONFIG[req.status];
                 const pcfg = PRIORITY_CONFIG[req.priority];
                 const dept = DEPARTMENTS.find((d) => d.id === req.departmentId);
+
                 return (
                   <div
                     key={req.id}
@@ -572,7 +906,11 @@ export function RequestsPanel() {
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 mb-[3px] flex-wrap">
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: pcfg.dot }} title={`Prioridad: ${pcfg.label}`} />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ background: pcfg.dot }}
+                          title={`Prioridad: ${pcfg.label}`}
+                        />
                         <span className="text-[10px] font-semibold text-slate-400 dark:text-[#545d68] tracking-[0.4px]">
                           {req.ticketNumber}
                         </span>
@@ -582,11 +920,15 @@ export function RequestsPanel() {
                                          dark:bg-violet-500/[0.12] dark:text-violet-400">
                           {dept?.label ?? req.departmentId}
                         </span>
-                        <span className="text-[10px] font-medium text-slate-400 dark:text-[#545d68]">{req.category}</span>
+                        <span className="text-[10px] font-medium text-slate-400 dark:text-[#545d68]">
+                          {req.category}
+                        </span>
                       </div>
+
                       <p className="m-0 text-[13px] font-semibold truncate text-slate-800 dark:text-[#e6edf3]">
                         {req.title}
                       </p>
+
                       <p className="m-0 mt-0.5 text-[11.5px] truncate text-slate-400 dark:text-[#545d68]">
                         {req.description}
                       </p>
@@ -600,8 +942,13 @@ export function RequestsPanel() {
                         <span className="w-[5px] h-[5px] rounded-full" style={{ background: cfg.dot }} />
                         {cfg.label}
                       </span>
+
                       <span className="text-[10.5px] font-medium text-slate-400 dark:text-[#545d68]">
-                        {new Date(req.date).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+                        {new Date(req.date).toLocaleDateString("es-CO", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
                       </span>
                     </div>
                   </div>

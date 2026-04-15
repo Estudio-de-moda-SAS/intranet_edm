@@ -1,3 +1,20 @@
+/**
+ * @module PdfViewerModal
+ * Modal visor para documentos PDF y archivos de oficina con panel de metadatos.
+ *
+ * @remarks
+ * Este archivo implementa un visor enriquecido que permite:
+ *
+ * - previsualizar PDFs en navegador,
+ * - incrustar archivos Office mediante Office Online,
+ * - mostrar estados alternativos cuando no existe preview,
+ * - visualizar metadatos del documento,
+ * - controlar zoom, página, fullscreen y descarga.
+ *
+ * El componente se renderiza mediante `createPortal` para superponerse
+ * correctamente sobre el resto de la interfaz.
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,45 +28,136 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Metadatos del documento a visualizar en el modal.
+ *
+ * @remarks
+ * Este modelo concentra tanto la información descriptiva del archivo
+ * como las URLs necesarias para previsualización y descarga.
+ */
 export interface PdfMetadata {
-  id:           string;
-  title:        string;
-  category?:    string;
-  author?:      string;
-  version?:     string;
-  size?:        string;
-  updatedAt?:   string;
-  restricted?:  boolean;
-  previewUrl?:  string;
+  /**
+   * Identificador único del documento.
+   */
+  id: string;
+
+  /**
+   * Título visible del documento.
+   */
+  title: string;
+
+  /**
+   * Categoría funcional o documental.
+   */
+  category?: string;
+
+  /**
+   * Autor o responsable del documento.
+   */
+  author?: string;
+
+  /**
+   * Versión visible del archivo.
+   */
+  version?: string;
+
+  /**
+   * Tamaño legible del documento.
+   */
+  size?: string;
+
+  /**
+   * Fecha de actualización visible.
+   */
+  updatedAt?: string;
+
+  /**
+   * Indica si el acceso al documento está restringido.
+   */
+  restricted?: boolean;
+
+  /**
+   * URL de previsualización del documento.
+   */
+  previewUrl?: string;
+
+  /**
+   * URL de descarga directa del documento.
+   */
   downloadUrl?: string;
 }
 
+/**
+ * Props del componente {@link PdfViewerModal}.
+ */
 interface PdfViewerModalProps {
-  open:     boolean;
-  onClose:  () => void;
+  /**
+   * Controla si el modal está abierto.
+   */
+  open: boolean;
+
+  /**
+   * Callback para cerrar el modal.
+   */
+  onClose: () => void;
+
+  /**
+   * Documento actualmente seleccionado.
+   */
   metadata: PdfMetadata | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/**
+ * Extensiones soportadas para vista previa nativa de PDF.
+ */
 const SUPPORTED_TYPES = [".pdf"];
-const OFFICE_TYPES    = [".xlsx", ".xls", ".docx", ".doc", ".pptx", ".ppt"];
 
+/**
+ * Extensiones de documentos Office soportadas vía Office Online.
+ */
+const OFFICE_TYPES = [".xlsx", ".xls", ".docx", ".doc", ".pptx", ".ppt"];
+
+/**
+ * Obtiene la extensión de archivo a partir de una URL.
+ *
+ * @param url URL del archivo.
+ * @returns Extensión normalizada en minúsculas o cadena vacía.
+ */
 function getFileExtension(url: string): string {
   const base = url.split("?")[0] ?? "";
   return base.split(".").pop()?.toLowerCase() ?? "";
 }
 
+/**
+ * Determina si una URL corresponde a un PDF soportado.
+ *
+ * @param url URL del archivo.
+ * @returns `true` si la vista previa PDF es compatible.
+ */
 function isSupported(url: string): boolean {
   return SUPPORTED_TYPES.some(ext => url.endsWith(ext));
 }
 
+/**
+ * Determina si una URL corresponde a un archivo Office o a un embed de Office.
+ *
+ * @param url URL del archivo.
+ * @returns `true` si puede mostrarse en Office Online.
+ */
 function isOfficeFile(url: string): boolean {
   if (url.includes("view.officeapps.live.com")) return true;
   if (url.includes("action=embedview"))          return true;
   return OFFICE_TYPES.some(ext => url.toLowerCase().endsWith(ext));
 }
 
+/**
+ * Convierte una URL de archivo a una URL embebible para Office Online.
+ *
+ * @param url URL original del documento.
+ * @returns URL adaptada para `view.officeapps.live.com`.
+ */
 function toOfficeEmbedUrl(url: string): string {
   if (url.includes("view.officeapps.live.com")) return url;
   return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
@@ -57,6 +165,18 @@ function toOfficeEmbedUrl(url: string): string {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+/**
+ * Placeholder mostrado cuando aún no existe una URL de preview.
+ *
+ * @param props Propiedades del componente.
+ * @param props.metadata Metadatos del documento.
+ * @returns Vista vacía con mensaje de integración pendiente.
+ *
+ * @remarks
+ * Está orientado a escenarios donde el documento existe,
+ * pero la integración con Graph u otro servicio todavía no entrega
+ * una URL de previsualización.
+ */
 function PdfPlaceholder({ metadata }: { metadata: PdfMetadata }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-5 p-8
@@ -112,12 +232,19 @@ function PdfPlaceholder({ metadata }: { metadata: PdfMetadata }) {
   );
 }
 
+/**
+ * Fila de metadato usada en el sidebar lateral.
+ *
+ * @param props Propiedades del componente.
+ * @returns Fila visual con ícono, etiqueta y valor.
+ */
 function MetadataRow({ icon: Icon, label, value }: {
   icon:  React.ElementType;
   label: string;
   value: React.ReactNode;
 }) {
   if (!value) return null;
+
   return (
     <div className="flex items-start gap-3 py-2.5 border-b last:border-0
                     border-slate-100 dark:border-[#21262d]">
@@ -136,8 +263,16 @@ function MetadataRow({ icon: Icon, label, value }: {
   );
 }
 
+/**
+ * Vista mostrada cuando el formato no puede previsualizarse en navegador.
+ *
+ * @param props Propiedades del componente.
+ * @param props.url URL del archivo.
+ * @returns Estado de formato no soportado.
+ */
 function UnsupportedPreview({ url }: { url: string }) {
   const ext = getFileExtension(url).toUpperCase() || "desconocido";
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8
                     bg-slate-50 dark:bg-[#0d1117]">
@@ -169,30 +304,51 @@ function UnsupportedPreview({ url }: { url: string }) {
   );
 }
 
-// Detecta si el documento o el sistema operativo prefiere dark mode.
-// Se usa para mostrar el aviso en Office y activar color-scheme en PDF.
+/**
+ * Hook para detectar preferencia de modo oscuro.
+ *
+ * @returns `true` si el sistema o el documento HTML están en dark mode.
+ *
+ * @remarks
+ * Evalúa tanto:
+ * - `prefers-color-scheme: dark`
+ * - como la presencia de la clase `dark` en `<html>`.
+ */
 function usePrefersDark(): boolean {
   const [dark, setDark] = useState(false);
+
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    // También detecta la clase .dark en <html> (Tailwind dark mode class strategy)
     const htmlDark = () => document.documentElement.classList.contains("dark");
     const update = () => setDark(mq.matches || htmlDark());
+
     update();
+
     mq.addEventListener("change", update);
     const observer = new MutationObserver(update);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => { mq.removeEventListener("change", update); observer.disconnect(); };
+
+    return () => {
+      mq.removeEventListener("change", update);
+      observer.disconnect();
+    };
   }, []);
+
   return dark;
 }
 
-// PDF nativo.
-// - colorScheme:"dark" le pide al visor del browser que use tema oscuro.
-//   Funciona en Chrome/Edge same-origin. Para PDFs cross-origin (SharePoint/Graph)
-//   el browser ignora el override por seguridad — el visor queda en light.
-// - En ese caso mostramos un aviso discreto + padding oscuro alrededor del iframe
-//   para suavizar el contraste entre el chrome blanco del visor y el modal oscuro.
+/**
+ * Previsualizador nativo de PDF.
+ *
+ * @param props Propiedades del componente.
+ * @param props.url URL del PDF.
+ * @param props.title Título del documento.
+ * @returns `iframe` con visor de PDF.
+ *
+ * @remarks
+ * En modo oscuro aplica `colorScheme: "dark"` cuando el navegador lo soporta.
+ * En PDFs cross-origin este comportamiento puede no surtir efecto.
+ */
 function PdfPreview({ url, title }: { url: string; title: string }) {
   const isDark = usePrefersDark();
 
@@ -208,12 +364,23 @@ function PdfPreview({ url, title }: { url: string; title: string }) {
   );
 }
 
+/**
+ * Previsualizador para archivos Office mediante Office Online.
+ *
+ * @param props Propiedades del componente.
+ * @param props.url URL del documento.
+ * @param props.title Título del documento.
+ * @returns `iframe` embebido de Office Online.
+ *
+ * @remarks
+ * Office Online no respeta modo oscuro, por lo que en dark mode
+ * se muestra un aviso contextual al usuario.
+ */
 function OfficePreview({ url, title }: { url: string; title: string }) {
   const isDark = usePrefersDark();
 
   return (
     <div className="flex flex-col w-full h-full">
-      {/* Aviso dark mode — Office Online siempre renderiza en light */}
       {isDark && (
         <div className="flex items-center gap-2 px-4 py-2 shrink-0
                         bg-amber-500/[0.10] border-b border-amber-500/20">
@@ -234,8 +401,12 @@ function OfficePreview({ url, title }: { url: string; title: string }) {
   );
 }
 
-// ── Toolbar icon button ───────────────────────────────────────────────────────
-
+/**
+ * Botón pequeño reutilizable para la toolbar del visor.
+ *
+ * @param props Propiedades del componente.
+ * @returns Botón de acción con variantes visuales.
+ */
 function ToolbarBtn({
   onClick, title, disabled = false, danger = false, children,
 }: {
@@ -266,23 +437,85 @@ function ToolbarBtn({
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
+/**
+ * Modal principal para visualizar PDFs y documentos compatibles.
+ *
+ * @param props Propiedades del componente.
+ * @param props.open Indica si el modal está visible.
+ * @param props.onClose Callback para cerrar el modal.
+ * @param props.metadata Documento seleccionado.
+ * @returns Modal renderizado en portal con visor y sidebar de metadatos.
+ *
+ * @remarks
+ * Flujo de ejecución:
+ *
+ * 1. Valida si el modal está abierto y si existe metadata.
+ * 2. Reinicia zoom y página al cambiar el documento.
+ * 3. Cierra con tecla Escape o click en backdrop.
+ * 4. Bloquea el scroll del body mientras está abierto.
+ * 5. Decide qué tipo de preview mostrar:
+ *    - placeholder si no hay preview,
+ *    - Office embed si es documento Office,
+ *    - fallback si el formato no es compatible,
+ *    - iframe PDF nativo si sí lo es.
+ *
+ * También incorpora:
+ * - toolbar superior,
+ * - sidebar colapsable de metadatos,
+ * - modo fullscreen local,
+ * - navegación básica de página en móvil.
+ */
 export default function PdfViewerModal({ open, onClose, metadata }: PdfViewerModalProps) {
-  const [mounted,     setMounted]     = useState(false);
-  const [zoom,        setZoom]        = useState(100);
-  const [page,        setPage]        = useState(1);
-  const [fullscreen,  setFullscreen]  = useState(false);
+  /**
+   * Controla si el componente ya está montado en cliente.
+   */
+  const [mounted, setMounted] = useState(false);
+
+  /**
+   * Nivel de zoom aplicado al visor PDF.
+   */
+  const [zoom, setZoom] = useState(100);
+
+  /**
+   * Página actual usada en la navegación básica del visor.
+   */
+  const [page, setPage] = useState(1);
+
+  /**
+   * Indica si el modal está en modo fullscreen.
+   */
+  const [fullscreen, setFullscreen] = useState(false);
+
+  /**
+   * Controla la visibilidad del panel lateral de metadatos.
+   */
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  /**
+   * Marca el componente como montado.
+   */
   useEffect(() => { setMounted(true); }, []);
+
+  /**
+   * Reinicia zoom y página al abrir o cambiar de documento.
+   */
   useEffect(() => {
     if (open) { setZoom(100); setPage(1); }
   }, [open, metadata?.id]);
+
+  /**
+   * Maneja cierre por tecla Escape.
+   */
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
+
+  /**
+   * Bloquea scroll del body mientras el modal está abierto.
+   */
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -312,7 +545,7 @@ export default function PdfViewerModal({ open, onClose, metadata }: PdfViewerMod
         {/* Accent bar */}
         <div className="h-1 w-full bg-teal-500 shrink-0" />
 
-        {/* ── Toolbar ── */}
+        {/* Toolbar */}
         <div className="flex items-center justify-between px-4 py-3 shrink-0
                         border-b border-slate-100 dark:border-[#21262d]">
 
@@ -392,10 +625,10 @@ export default function PdfViewerModal({ open, onClose, metadata }: PdfViewerMod
           </div>
         </div>
 
-        {/* ── Split body ── */}
+        {/* Split body */}
         <div className="flex flex-1 min-h-0">
 
-          {/* Área de contenido */}
+          {/* Main content */}
           <div className="flex-1 overflow-auto flex flex-col
                           bg-slate-100 dark:bg-[#0d1117]">
             {!metadata.previewUrl ? (
@@ -412,7 +645,7 @@ export default function PdfViewerModal({ open, onClose, metadata }: PdfViewerMod
             )}
           </div>
 
-          {/* Sidebar de metadatos */}
+          {/* Sidebar */}
           {sidebarOpen && (
             <aside className="w-64 shrink-0 flex flex-col min-h-0
                               border-l border-slate-100 bg-white

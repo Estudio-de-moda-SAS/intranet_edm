@@ -1,4 +1,22 @@
-// ✅ SERVER COMPONENT — sin "use client"
+/**
+ * @module HomePageContent
+ * Composición principal del Home de la intranet.
+ *
+ * @remarks
+ * Este componente actúa como el layout base del Home, organizando
+ * y renderizando las diferentes secciones de la página principal.
+ *
+ * Es un **Server Component**, por lo que:
+ *
+ * - no maneja estado local
+ * - no utiliza hooks de cliente
+ * - recibe los datos ya preparados desde el servidor
+ *
+ * Su responsabilidad es exclusivamente de **composición de UI**,
+ * delegando la lógica y renderizado específico a subcomponentes.
+ */
+
+// app/(protected)/(intranet)/home/HomePageContent.tsx
 
 import { NewsSection }        from "@/app/components/home/news/NewsSection";
 import { EventsSection }      from "@/app/components/home/EventsSection";
@@ -18,28 +36,100 @@ import { AnimatedKPIStrip }   from "@/app/components/home/AnimatedKPIStrip";
 import { AnimatedCard }       from "@/app/components/ui/animated/AnimatedCard";
 import { AnimatedViewCard }   from "@/app/components/ui/animated/AnimatedViewCard";
 
-type Props = { data: any };
+/* -------------------------------------------------------------------------- */
+/* Tipos                                                                      */
+/* -------------------------------------------------------------------------- */
 
-export function HomePageContent({ data }: Props) {
+/**
+ * Props del componente {@link HomePageContent}.
+ *
+ * @property data Datos agregados necesarios para renderizar el Home.
+ *
+ * @remarks
+ * Este objeto normalmente proviene de una capa superior (server-side),
+ * e incluye información como:
+ *
+ * - usuario autenticado
+ * - anuncios
+ * - tareas
+ * - eventos
+ * - cumpleaños
+ * - reconocimientos
+ *
+ * Idealmente, este tipo debería tiparse explícitamente en lugar de `any`
+ * para mejorar la mantenibilidad y el autocompletado.
+ */
+type HomePageContentProps = {
+  data: any;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Componente principal                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Contenido principal del Home de la intranet.
+ *
+ * @param props Propiedades del componente.
+ * @returns Layout completo del Home con todas sus secciones.
+ *
+ * @remarks
+ * Este componente:
+ *
+ * - organiza la estructura visual del Home
+ * - distribuye contenido en columnas responsivas
+ * - aplica contenedores animados para mejorar la experiencia de usuario
+ *
+ * Estructura general:
+ *
+ * 1. Hero banner (bienvenida)
+ * 2. KPI strip
+ * 3. Grid principal:
+ *    - columna izquierda: noticias + solicitudes
+ *    - sidebar: favoritos, tareas, reconocimientos, eventos, cumpleaños
+ * 4. Sección de líderes
+ * 5. Panel de feedback
+ *
+ * No contiene lógica de negocio directa.
+ *
+ * @example
+ * ```tsx
+ * <HomePageContent data={homeData} />
+ * ```
+ */
+export function HomePageContent({ data }: HomePageContentProps) {
   return (
     <main
       className="min-h-screen w-full"
       style={{
-        fontFamily: "'DM Sans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
+        fontFamily:
+          "'DM Sans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
         marginTop: "calc(-1 * var(--layout-pt, 0px))",
         backgroundColor: "var(--bg-base)",
       }}
     >
+      {/* ============================================================ */}
+      {/* Hero Banner                                                  */}
+      {/* ============================================================ */}
       <AnimatedHeroBanner user={data.user} />
 
       <div className="px-4 pb-10 lg:px-14">
 
+        {/* ========================================================== */}
+        {/* KPI Strip                                                  */}
+        {/* ========================================================== */}
         <AnimatedKPIStrip />
 
+        {/* ========================================================== */}
+        {/* Grid principal                                             */}
+        {/* ========================================================== */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
 
-          {/* Left column — News + Solicitudes */}
+          {/* -------------------------------------------------------- */}
+          {/* Columna izquierda: noticias + solicitudes                */}
+          {/* -------------------------------------------------------- */}
           <div className="flex flex-col gap-6 lg:col-span-9 lg:w-[96%] order-1 lg:order-none">
+
             <AnimatedCard delay={0}>
               <NewsSection announcements={data.announcements} />
             </AnimatedCard>
@@ -47,43 +137,54 @@ export function HomePageContent({ data }: Props) {
             <AnimatedCard delay={0.08}>
               <RequestsPanel />
             </AnimatedCard>
+
           </div>
 
-          {/* Aside */}
+          {/* -------------------------------------------------------- */}
+          {/* Sidebar                                                  */}
+          {/* -------------------------------------------------------- */}
           <aside className="lg:col-span-3 flex flex-col gap-5 lg:w-[112%] lg:-ml-[12%] order-2 lg:order-none">
-            {/* 1. Favoritos */}
+
+            {/* Favoritos */}
             <AnimatedCard delay={0.08}>
               <FavoritesCard />
             </AnimatedCard>
 
-            {/* 2. Tareas */}
+            {/* Tareas */}
             <AnimatedCard delay={0.20}>
               <TasksCard tasks={data.tasks} />
             </AnimatedCard>
 
-            {/* 3. Reconocimientos */}
+            {/* Reconocimientos */}
             <AnimatedCard delay={0.24}>
-              <RecognitionsCard recognitions={data.recognitions ?? MOCK_RECOGNITIONS} />
+              <RecognitionsCard
+                recognitions={data.recognitions ?? MOCK_RECOGNITIONS}
+              />
             </AnimatedCard>
 
+            {/* Eventos */}
             <AnimatedCard delay={0.12}>
               <EventsSection events={data.events} />
             </AnimatedCard>
 
-            {/* 4. Cumpleaños */}
+            {/* Cumpleaños */}
             <AnimatedCard delay={0.28}>
               <BirthdaysCard birthdays={data.birthdays} />
             </AnimatedCard>
-          </aside>
 
+          </aside>
         </div>
 
-        {/* LeadersSection */}
+        {/* ========================================================== */}
+        {/* Sección de líderes                                         */}
+        {/* ========================================================== */}
         <AnimatedViewCard className="mt-6">
           <LeadersSection leaders={homeLeaders} />
         </AnimatedViewCard>
 
-        {/* FeedbackPanel — ancho completo debajo de Leaders */}
+        {/* ========================================================== */}
+        {/* Panel de feedback                                          */}
+        {/* ========================================================== */}
         <AnimatedViewCard className="mt-6">
           <FeedbackPanel />
         </AnimatedViewCard>

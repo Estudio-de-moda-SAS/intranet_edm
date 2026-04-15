@@ -1,24 +1,98 @@
+/**
+ * @module PrivacyModal
+ * Componente cliente encargado de mostrar y gestionar la configuración
+ * de privacidad del usuario dentro de la aplicación.
+ *
+ * @remarks
+ * Este archivo implementa un modal de configuración donde el usuario puede
+ * controlar qué información comparte dentro de la organización y cómo desea
+ * manejar ciertos aspectos de visibilidad, actividad y notificaciones.
+ *
+ * Su responsabilidad incluye:
+ *
+ * - Renderizar un modal estructurado mediante {@link Modal}.
+ * - Mostrar secciones agrupadas de preferencias de privacidad.
+ * - Permitir activar o desactivar opciones mediante switches.
+ * - Gestionar cambios locales sobre la configuración.
+ * - Mostrar una acción de guardado con retroalimentación visual.
+ *
+ * Este componente está orientado a centralizar ajustes de privacidad
+ * internos en una interfaz clara y organizada.
+ */
+
 'use client';
 
 import { useState } from 'react';
 import { Modal } from '@/app/components/ui/Modal';
 import { Shield, Eye, Database, Bell, Share2, ChevronRight } from 'lucide-react';
 
+/**
+ * Representa una opción individual de configuración dentro de una sección.
+ */
 interface Toggle {
+  /**
+   * Identificador único de la opción.
+   */
   id: string;
+
+  /**
+   * Nombre visible de la opción.
+   */
   label: string;
+
+  /**
+   * Descripción breve del comportamiento o impacto de la opción.
+   */
   description: string;
+
+  /**
+   * Estado actual de la opción.
+   *
+   * @remarks
+   * - `true`: opción activada.
+   * - `false`: opción desactivada.
+   */
   value: boolean;
 }
 
+/**
+ * Representa una sección de configuración dentro del modal.
+ */
 interface Section {
+  /**
+   * Identificador único de la sección.
+   */
   id: string;
+
+  /**
+   * Icono representativo de la sección.
+   */
   Icon: React.ElementType;
+
+  /**
+   * Título visible de la sección.
+   */
   title: string;
+
+  /**
+   * Clase de color aplicada al icono de la sección.
+   */
   color: string;
+
+  /**
+   * Lista de opciones configurables de la sección.
+   */
   toggles: Toggle[];
 }
 
+/**
+ * Configuración inicial de secciones y preferencias de privacidad.
+ *
+ * @remarks
+ * Actualmente funciona como fuente local mock del estado del modal.
+ * En una implementación real, estos datos podrían provenir de una API,
+ * un store global o una configuración persistida del usuario.
+ */
 const INITIAL_SECTIONS: Section[] = [
   {
     id: 'visibility', Icon: Eye, title: 'Visibilidad de perfil', color: 'text-blue-500 dark:text-blue-400',
@@ -50,7 +124,41 @@ const INITIAL_SECTIONS: Section[] = [
   },
 ];
 
-function ToggleSwitch({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+/**
+ * Props del componente {@link ToggleSwitch}.
+ */
+interface ToggleSwitchProps {
+  /**
+   * Valor actual del switch.
+   */
+  value: boolean;
+
+  /**
+   * Callback ejecutado cuando el usuario cambia el estado del switch.
+   */
+  onChange: (v: boolean) => void;
+}
+
+/**
+ * Componente auxiliar que representa un interruptor visual para activar
+ * o desactivar una preferencia.
+ *
+ * @param props Propiedades del componente.
+ * @param props.value Estado actual del switch.
+ * @param props.onChange Función ejecutada al cambiar el valor.
+ * @returns Interruptor visual interactivo.
+ *
+ * @remarks
+ * Flujo de ejecución:
+ *
+ * 1. Renderiza un botón con rol semántico de switch.
+ * 2. Refleja su estado actual mediante `aria-checked`.
+ * 3. Al hacer clic, invierte el valor actual y lo envía al callback.
+ *
+ * Este componente abstrae la lógica visual de los toggles para reutilizarla
+ * dentro de las distintas secciones del modal.
+ */
+function ToggleSwitch({ value, onChange }: ToggleSwitchProps) {
   return (
     <button
       role="switch"
@@ -74,15 +182,73 @@ function ToggleSwitch({ value, onChange }: { value: boolean; onChange: (v: boole
   );
 }
 
+/**
+ * Props del componente {@link PrivacyModal}.
+ */
 interface Props {
+  /**
+   * Indica si el modal debe mostrarse.
+   */
   open: boolean;
+
+  /**
+   * Función que se ejecuta al cerrar el modal.
+   */
   onClose: () => void;
 }
 
+/**
+ * Componente cliente que renderiza el modal de configuración de privacidad.
+ *
+ * @param props Propiedades del componente.
+ * @param props.open Indica si el modal está visible.
+ * @param props.onClose Función para cerrar el modal.
+ * @returns Modal con secciones de configuración de privacidad.
+ *
+ * @remarks
+ * Flujo de ejecución:
+ *
+ * 1. Inicializa el estado local de secciones a partir de `INITIAL_SECTIONS`.
+ * 2. Mantiene un estado visual `saved` para reflejar si hubo guardado reciente.
+ * 3. Permite modificar el valor de un toggle específico mediante `setToggle`.
+ * 4. Permite simular una acción de guardado mediante `handleSave`.
+ * 5. Renderiza el modal principal con:
+ *    - Encabezado y subtítulo.
+ *    - Footer con acceso a política completa y botón de guardado.
+ *    - Secciones agrupadas de preferencias.
+ *    - Nota informativa final sobre auditoría y seguridad.
+ *
+ * Actualmente los cambios se mantienen solo en memoria local.
+ * En una implementación real, `handleSave` debería persistir la configuración
+ * en backend o almacenamiento del usuario.
+ */
 export function PrivacyModal({ open, onClose }: Props) {
+  /**
+   * Estado local de secciones y preferencias configurables.
+   */
   const [sections, setSections] = useState<Section[]>(INITIAL_SECTIONS);
+
+  /**
+   * Estado visual que indica si los cambios fueron guardados recientemente.
+   */
   const [saved, setSaved] = useState(false);
 
+  /**
+   * Actualiza el valor de un toggle específico dentro de una sección.
+   *
+   * @param sectionId Identificador de la sección objetivo.
+   * @param toggleId Identificador del toggle a actualizar.
+   * @param value Nuevo valor booleano del toggle.
+   * @returns No retorna valor.
+   *
+   * @remarks
+   * Flujo de ejecución:
+   *
+   * 1. Reinicia el estado visual de guardado.
+   * 2. Recorre las secciones existentes.
+   * 3. Identifica la sección correspondiente.
+   * 4. Dentro de ella, reemplaza el toggle indicado con el nuevo valor.
+   */
   const setToggle = (sectionId: string, toggleId: string, value: boolean) => {
     setSaved(false);
     setSections((prev) =>
@@ -95,6 +261,15 @@ export function PrivacyModal({ open, onClose }: Props) {
     );
   };
 
+  /**
+   * Simula el guardado de cambios del formulario.
+   *
+   * @returns No retorna valor.
+   *
+   * @remarks
+   * Actualmente solo activa un estado visual temporal de confirmación.
+   * Después de 2.5 segundos, el indicador vuelve a su estado normal.
+   */
   const handleSave = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -165,7 +340,10 @@ export function PrivacyModal({ open, onClose }: Props) {
                     </p>
                   </div>
                   <div className="mt-0.5 shrink-0">
-                    <ToggleSwitch value={toggle.value} onChange={(v) => setToggle(section.id, toggle.id, v)} />
+                    <ToggleSwitch
+                      value={toggle.value}
+                      onChange={(v) => setToggle(section.id, toggle.id, v)}
+                    />
                   </div>
                 </div>
               ))}

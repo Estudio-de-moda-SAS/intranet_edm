@@ -1,0 +1,52 @@
+{
+  "tsconfig": "./tsconfig.typedoc.json",
+  "favicon": "./public/brand/edmIcon.png",
+  "entryPoints": [
+    "lib/**/*.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "types/**/*.ts",
+    "config/**/*.ts",
+    "stores/**/*.ts",
+    "auth.ts",
+    "proxy.ts",
+    "providers.tsx"
+  ],
+  "entryPointStrategy": "resolve",
+  "exclude": [
+    "**/.next/**",
+    "**/node_modules/**",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/layout.tsx",
+    "**/loading.tsx",
+    "**/error.tsx",
+    "**/not-found.tsx",
+    "**/route.ts",
+    "**/route.tsx",
+    "**/forms/**"
+  ],
+  "out": "docs",
+  "name": "Intranet EDM — Documentación Técnica",
+  "readme": "./docs-theme/README.md",
+  "includeVersion": true,
+  "categorizeByGroup": true,
+  "customCss": "./docs-theme/custom.css",
+  "categoryOrder": [
+    "Autenticación y Acceso",
+    "Microsoft Graph",
+    "Hooks",
+    "Tipos y Modelos",
+    "Solicitudes y Tickets",
+    "Departamentos",
+    "*"
+  ],
+  "navigationLinks": {
+    "Intranet EDM": "http://localhost:3000",
+    "Cómo contribuir": "../CONTRIBUTING.md"
+  },
+  "plugin": [],
+  "excludePrivate": false,
+  "excludeInternal": false,
+  "excludeExternals": false
+}

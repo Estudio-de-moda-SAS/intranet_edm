@@ -1,9 +1,37 @@
+/**
+ * @module ProductSamplesCard
+ * Tarjeta de estado de muestras del módulo de Producto.
+ *
+ * @remarks
+ * Este componente renderiza un resumen visual del estado de las muestras
+ * activas del área, incluyendo:
+ * - Conteo por estado
+ * - Tabla de seguimiento
+ * - Acciones de aprobación o rechazo según permisos
+ *
+ * La información mostrada es estática y sirve como mock para la intranet.
+ * En un entorno productivo, estos datos podrían provenir de un servicio
+ * conectado a sistemas de desarrollo de producto o control de calidad.
+ */
+
 // app/product/components/ProductSamplesCard.tsx
 "use client";
 
 import { Scissors, CheckCircle2, XCircle, Clock } from "lucide-react";
 import Link from "next/link";
 
+/**
+ * Representa una muestra dentro del flujo de seguimiento del área de Producto.
+ *
+ * @property id Identificador único de la muestra.
+ * @property refCode Código de referencia del producto.
+ * @property refName Nombre descriptivo de la referencia.
+ * @property supplier Proveedor asociado a la muestra.
+ * @property sentDate Fecha de envío de la muestra.
+ * @property dueDate Fecha estimada de vencimiento o entrega.
+ * @property status Estado actual de la muestra.
+ * @property round Número de ronda o iteración de revisión.
+ */
 type Sample = {
   id:         string;
   refCode:    string;
@@ -15,6 +43,13 @@ type Sample = {
   round:      number;
 };
 
+/**
+ * Dataset estático de muestras activas.
+ *
+ * @remarks
+ * Este arreglo contiene referencias utilizadas para poblar la tarjeta
+ * de seguimiento de muestras en la vista de Producto.
+ */
 const SAMPLES: Sample[] = [
   { id: "s1",  refCode: "VE-2508", refName: "Vestido lencero midi",        supplier: "Textiles Andino S.A.",  sentDate: "10 jun", dueDate: "20 jun", status: "pending",  round: 1 },
   { id: "s2",  refCode: "FA-2503", refName: "Falda plisada organza",       supplier: "Sedas del Valle",       sentDate: "08 jun", dueDate: "18 jun", status: "revision", round: 2 },
@@ -24,18 +59,62 @@ const SAMPLES: Sample[] = [
   { id: "s6",  refCode: "PA-2517", refName: "Pantalón palazzo crêpe",      supplier: "Confecciones Bogotá",   sentDate: "01 jun", dueDate: "11 jun", status: "approved", round: 1 },
 ];
 
+/**
+ * Metadatos visuales asociados al estado de cada muestra.
+ *
+ * @remarks
+ * Este objeto centraliza la configuración de:
+ * - Etiqueta visible
+ * - Ícono representativo
+ * - Clases visuales del badge
+ *
+ * Se utiliza tanto en el resumen superior como en la tabla.
+ */
 const STATUS_META = {
-  pending:  { label: "Pendiente",   icon: <Clock       className="h-3.5 w-3.5 text-amber-500" />,  badge: "bg-amber-50   text-amber-700  border-amber-200"   },
-  approved: { label: "Aprobada",    icon: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500"/>, badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  rejected: { label: "Rechazada",   icon: <XCircle     className="h-3.5 w-3.5 text-rose-500"   />,  badge: "bg-rose-50    text-rose-700   border-rose-200"    },
-  revision: { label: "En revisión", icon: <Clock       className="h-3.5 w-3.5 text-sky-500"    />,  badge: "bg-sky-50     text-sky-700    border-sky-200"     },
+  pending:  { label: "Pendiente",   icon: <Clock        className="h-3.5 w-3.5 text-amber-500" />,   badge: "bg-amber-50   text-amber-700  border-amber-200"   },
+  approved: { label: "Aprobada",    icon: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />, badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  rejected: { label: "Rechazada",   icon: <XCircle      className="h-3.5 w-3.5 text-rose-500" />,    badge: "bg-rose-50    text-rose-700   border-rose-200"    },
+  revision: { label: "En revisión", icon: <Clock        className="h-3.5 w-3.5 text-sky-500" />,     badge: "bg-sky-50     text-sky-700    border-sky-200"     },
 };
 
+/**
+ * Calcula cuántas muestras existen para un estado dado.
+ *
+ * @param status Estado a contabilizar.
+ * @returns Número de muestras que coinciden con el estado indicado.
+ *
+ * @example
+ * ```ts
+ * summaryCount("pending");
+ * ```
+ */
 const summaryCount = (status: Sample["status"]) =>
   SAMPLES.filter((s) => s.status === status).length;
 
+/**
+ * Propiedades del componente {@link ProductSamplesCard}.
+ *
+ * @property canApprove Indica si el usuario puede visualizar acciones de aprobación y rechazo.
+ */
 type Props = { canApprove: boolean };
 
+/**
+ * Tarjeta de seguimiento de muestras del módulo de Producto.
+ *
+ * @param props Propiedades del componente.
+ * @param props.canApprove Define si se deben mostrar acciones operativas sobre muestras pendientes o en revisión.
+ * @returns Un componente visual con resumen, tabla y acciones sobre muestras.
+ *
+ * @remarks
+ * Este componente muestra:
+ * - Encabezado con acceso a la vista completa
+ * - Resumen por estados
+ * - Tabla con información de cada muestra
+ * - Acciones condicionadas por permisos
+ *
+ * Si `canApprove` es `true`, se renderiza una columna adicional
+ * con acciones para aprobar o rechazar muestras en estados operativos.
+ */
 export default function ProductSamplesCard({ canApprove }: Props) {
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
@@ -85,6 +164,7 @@ export default function ProductSamplesCard({ canApprove }: Props) {
             {SAMPLES.map((s) => {
               const meta = STATUS_META[s.status];
               const isOverdue = s.status === "pending" || s.status === "revision";
+
               return (
                 <tr key={s.id} className="hover:bg-stone-50/60 transition-colors">
                   <td className="px-3 py-2.5">

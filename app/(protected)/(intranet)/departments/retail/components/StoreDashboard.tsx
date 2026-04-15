@@ -1,3 +1,32 @@
+/**
+ * @module StoreDashboard
+ * Dashboard analítico del canal de tiendas dentro del módulo de Retail.
+ *
+ * @remarks
+ * Este componente renderiza un panel de analítica histórica para la red
+ * de tiendas físicas, utilizando visualizaciones comparativas sobre
+ * desempeño comercial y conversión.
+ *
+ * El dashboard está compuesto por tres bloques principales:
+ * - facturación semanal real vs objetivo diario
+ * - tendencia de conversión de tiendas destacadas vs media de red
+ * - ventas mensuales por tienda frente al objetivo mensual
+ *
+ * Su propósito es ofrecer una lectura ejecutiva y visual del desempeño
+ * del canal físico, facilitando el seguimiento de:
+ * - cumplimiento comercial
+ * - evolución de conversión
+ * - comparación entre tiendas
+ * - brechas frente a presupuesto
+ *
+ * La información mostrada es estática y funciona como mock.
+ * En una implementación productiva, estos datos podrían provenir de:
+ * - sistemas POS
+ * - servicios de analítica retail
+ * - data warehouse comercial
+ * - plataformas de BI
+ */
+
 // ─────────────────────────────────────────────────────────────────
 // StoreDashboard.tsx
 // Analítica histórica · Estudio de Moda S.A.S · cifras en COP
@@ -10,6 +39,19 @@ import {
   ResponsiveContainer, Legend,
 } from "recharts";
 
+/**
+ * Dataset de facturación semanal consolidada.
+ *
+ * @remarks
+ * Este arreglo representa el comportamiento diario de ventas
+ * de toda la red de tiendas durante una semana, comparando:
+ * - facturación real (`actual`)
+ * - objetivo diario (`target`)
+ *
+ * Se utiliza en el gráfico principal de área del dashboard.
+ *
+ * Los valores están expresados en COP.
+ */
 const weeklyRevenue = [
   { day: "Lu",  actual: 38_200_000, target: 35_000_000 },
   { day: "Ma",  actual: 42_800_000, target: 35_000_000 },
@@ -20,6 +62,18 @@ const weeklyRevenue = [
   { day: "Do",  actual: 52_100_000, target: 50_000_000 },
 ];
 
+/**
+ * Dataset de ventas mensuales por tienda.
+ *
+ * @remarks
+ * Este arreglo resume el acumulado mensual de ventas por tienda,
+ * comparado contra el objetivo mensual correspondiente.
+ *
+ * Los valores están expresados en millones de COP
+ * para facilitar la lectura del gráfico horizontal.
+ *
+ * Se utiliza en el gráfico de barras comparativas por tienda.
+ */
 const salesByStore = [
   { store: "Diesel Andino",        mes: 198, objetivo: 185 },
   { store: "Diesel El Tesoro",     mes: 163, objetivo: 158 },
@@ -31,6 +85,18 @@ const salesByStore = [
   { store: "Kipling Buenavista",   mes: 68,  objetivo: 76  },
 ];
 
+/**
+ * Dataset de tendencia de conversión por semana.
+ *
+ * @remarks
+ * Este arreglo representa la evolución de la tasa de conversión
+ * de dos tiendas destacadas frente a la media general de la red.
+ *
+ * Se utiliza para visualizar comparativamente el comportamiento
+ * del canal físico a lo largo de seis semanas.
+ *
+ * Los valores están expresados en porcentaje.
+ */
 const conversionTrend = [
   { semana: "S1", "Diesel Andino": 5.6, "Pilatos Mayorca": 4.8, Media: 4.1 },
   { semana: "S2", "Diesel Andino": 5.3, "Pilatos Mayorca": 4.5, Media: 3.9 },
@@ -40,8 +106,29 @@ const conversionTrend = [
   { semana: "S6", "Diesel Andino": 5.8, "Pilatos Mayorca": 4.9, Media: 4.3 },
 ];
 
+/**
+ * Tooltip personalizado para los gráficos del dashboard.
+ *
+ * @param props Propiedades provistas por Recharts.
+ * @param props.active Indica si el tooltip está activo.
+ * @param props.payload Datos del punto actualmente enfocado.
+ * @param props.label Etiqueta del eje o punto actual.
+ * @returns Un tooltip visual personalizado o `null` si no aplica.
+ *
+ * @remarks
+ * Este subcomponente adapta la presentación del tooltip a distintos
+ * tipos de datos utilizados en el dashboard:
+ * - valores monetarios en COP
+ * - valores porcentuales
+ * - valores expresados en millones
+ *
+ * La lógica de formateo intenta inferir el tipo de dato con base
+ * en el valor recibido, para mantener un tooltip reutilizable
+ * entre diferentes gráficos.
+ */
 const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
+
   return (
     <div className="rounded-xl border border-slate-100 bg-white px-3 py-2.5 shadow-lg text-[12px]">
       <p className="font-semibold text-slate-700 mb-1.5">{label}</p>
@@ -61,6 +148,44 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+/**
+ * Dashboard analítico de la red de tiendas físicas.
+ *
+ * @returns Un layout con tres visualizaciones principales de desempeño retail.
+ *
+ * @remarks
+ * Este componente actúa como panel visual de analítica histórica
+ * para el canal tiendas, consolidando información relevante
+ * de desempeño comercial y conversión.
+ *
+ * La composición del dashboard se organiza en tres bloques:
+ *
+ * 1. **Facturación esta semana**
+ *    - gráfico de área
+ *    - compara facturación real vs objetivo diario
+ *    - muestra la evolución consolidada de la red en los últimos días
+ *
+ * 2. **Tasa de conversión**
+ *    - gráfico de líneas
+ *    - compara tiendas destacadas frente a la media general
+ *    - permite analizar consistencia y ventaja relativa en conversión
+ *
+ * 3. **Ventas mes por tienda**
+ *    - gráfico de barras horizontal
+ *    - compara facturación mensual acumulada contra presupuesto
+ *    - facilita lectura comparativa entre puntos de venta
+ *
+ * Este dashboard resulta útil para:
+ * - seguimiento ejecutivo del canal físico
+ * - revisión histórica de desempeño
+ * - comparación contra objetivos
+ * - monitoreo de eficiencia comercial
+ *
+ * @example
+ * ```tsx
+ * <TiendasDashboard />
+ * ```
+ */
 export default function TiendasDashboard() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -75,21 +200,38 @@ export default function TiendasDashboard() {
             Total: $361.5M
           </span>
         </div>
+
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={weeklyRevenue} margin={{ left: -10, right: 4, top: 4 }}>
             <defs>
               <linearGradient id="gActual" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%"  stopColor="#ea580c" stopOpacity={0.18} />
-                <stop offset="95%" stopColor="#ea580c" stopOpacity={0}    />
+                <stop offset="95%" stopColor="#ea580c" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis dataKey="day"    tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={v => `$${Math.round(v / 1_000_000)}M`} />
             <Tooltip content={<ChartTooltip />} />
             <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
-            <Area  type="monotone" dataKey="actual" name="Facturado" stroke="#ea580c" strokeWidth={2.5} fill="url(#gActual)" dot={{ r: 4, fill: "#ea580c" }} />
-            <Line  type="monotone" dataKey="target" name="Objetivo"  stroke="#e2e8f0" strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
+            <Area
+              type="monotone"
+              dataKey="actual"
+              name="Facturado"
+              stroke="#ea580c"
+              strokeWidth={2.5}
+              fill="url(#gActual)"
+              dot={{ r: 4, fill: "#ea580c" }}
+            />
+            <Line
+              type="monotone"
+              dataKey="target"
+              name="Objetivo"
+              stroke="#e2e8f0"
+              strokeWidth={1.5}
+              strokeDasharray="5 3"
+              dot={false}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -99,6 +241,7 @@ export default function TiendasDashboard() {
           <p className="text-sm font-semibold text-slate-800">Tasa de conversión</p>
           <p className="text-[11px] text-slate-400">Top tiendas vs media de red (últimas 6 semanas)</p>
         </div>
+
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={conversionTrend} margin={{ left: -20, right: 4, top: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -106,9 +249,9 @@ export default function TiendasDashboard() {
             <YAxis domain={[3, 7]} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
             <Tooltip content={<ChartTooltip />} />
             <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
-            <Line type="monotone" dataKey="Diesel Andino"    stroke="#ea580c" strokeWidth={2.5} dot={{ r: 3, fill: "#ea580c" }} />
-            <Line type="monotone" dataKey="Pilatos Mayorca"  stroke="#6366f1" strokeWidth={2}   dot={{ r: 3, fill: "#6366f1" }} />
-            <Line type="monotone" dataKey="Media"            stroke="#cbd5e1" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+            <Line type="monotone" dataKey="Diesel Andino"   stroke="#ea580c" strokeWidth={2.5} dot={{ r: 3, fill: "#ea580c" }} />
+            <Line type="monotone" dataKey="Pilatos Mayorca" stroke="#6366f1" strokeWidth={2}   dot={{ r: 3, fill: "#6366f1" }} />
+            <Line type="monotone" dataKey="Media"           stroke="#cbd5e1" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -123,6 +266,7 @@ export default function TiendasDashboard() {
             Exportar informe →
           </a>
         </div>
+
         <ResponsiveContainer width="100%" height={210}>
           <BarChart data={salesByStore} layout="vertical" margin={{ left: 16, right: 24, top: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />

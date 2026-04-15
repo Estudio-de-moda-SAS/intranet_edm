@@ -1,3 +1,24 @@
+/**
+ * @module DocumentTable
+ * Tabla interactiva del repositorio documental corporativo.
+ *
+ * Este componente permite visualizar, filtrar y explorar documentos del módulo
+ * de Gestión Documental mediante una interfaz tabular con búsqueda, filtros por
+ * estado y categoría, indicadores visuales de clasificación y acceso a preview.
+ *
+ * @remarks
+ * La tabla está diseñada para soportar escenarios de consulta documental con:
+ * - filtrado por texto,
+ * - filtrado por categoría,
+ * - filtrado por estado mediante tabs,
+ * - visualización opcional de clasificación documental,
+ * - apertura de visor PDF,
+ * - y métricas resumidas del subconjunto visible.
+ *
+ * También incorpora adaptación visual para modo oscuro y representa de forma
+ * consistente la información de clasificación mediante {@link CLASSIFICATION_META}.
+ */
+
 "use client";
 
 import { useState }          from "react";
@@ -9,6 +30,18 @@ import { CLASSIFICATION_META } from "../config/documentClassification";
 import type { DocumentItem }   from "../config/documentData";
 import PdfViewerModal, { type PdfMetadata } from "@/app/components/pdf/PdfViewerModal";
 
+/**
+ * Configuración visual de estados documentales.
+ *
+ * @remarks
+ * Asocia cada estado a:
+ * - una etiqueta legible,
+ * - clases visuales para badge,
+ * - un ícono representativo.
+ *
+ * Esto permite desacoplar la representación visual del estado documental
+ * respecto al valor técnico persistido en los datos.
+ */
 const STATUS_CFG = {
   draft:     { label: "Borrador",    color: "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-500/[0.10] dark:text-[#768390] dark:border-slate-500/20",           icon: Loader2      },
   review:    { label: "En revisión", color: "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-500/[0.10] dark:text-sky-400 dark:border-sky-500/20",                        icon: Clock        },
@@ -18,6 +51,13 @@ const STATUS_CFG = {
   expired:   { label: "Expirado",    color: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/[0.10] dark:text-rose-400 dark:border-rose-500/20",                   icon: AlertCircle  },
 };
 
+/**
+ * Tabs de filtrado rápido por estado documental.
+ *
+ * @remarks
+ * Algunos tabs representan uno o más estados agrupados lógicamente, por
+ * ejemplo `approved,published`.
+ */
 const FILTER_TABS = [
   { label: "Todos",       value: null                 },
   { label: "Borradores",  value: "draft"              },
@@ -26,8 +66,27 @@ const FILTER_TABS = [
   { label: "Expirados",   value: "expired"            },
 ] as const;
 
-function fmtSize(n: number) { return `${n.toFixed(1)} MB`; }
+/**
+ * Formatea el tamaño del documento en MB.
+ *
+ * @param n Tamaño numérico en megabytes.
+ * @returns Cadena formateada con una cifra decimal.
+ */
+function fmtSize(n: number) {
+  return `${n.toFixed(1)} MB`;
+}
 
+/**
+ * Convierte un {@link DocumentItem} al formato de metadatos requerido por
+ * {@link PdfViewerModal}.
+ *
+ * @param doc Documento a transformar.
+ * @returns Metadatos compatibles con el visor PDF.
+ *
+ * @remarks
+ * Además de la información básica, marca el documento como restringido cuando
+ * su clasificación es `restricted` o `confidential`.
+ */
 function toMetadata(doc: DocumentItem): PdfMetadata {
   return {
     id:         doc.id,
@@ -37,14 +96,19 @@ function toMetadata(doc: DocumentItem): PdfMetadata {
     size:       fmtSize(doc.size),
     updatedAt:  doc.updated,
     restricted: doc.classification === "restricted" || doc.classification === "confidential",
-    ...(doc.previewUrl  !== undefined && { previewUrl:  doc.previewUrl  }),
+    ...(doc.previewUrl  !== undefined && { previewUrl:  doc.previewUrl }),
     ...(doc.downloadUrl !== undefined && { downloadUrl: doc.downloadUrl }),
   };
 }
 
-// Dark mode override para los badges de clasificación.
-// CLASSIFICATION_META viene con clases light hardcodeadas desde el config —
-// este mapa las neutraliza en dark mode por nivel de acceso.
+/**
+ * Sobrescritura de estilos dark mode para badges de clasificación.
+ *
+ * @remarks
+ * Dado que {@link CLASSIFICATION_META} contiene estilos pensados
+ * principalmente para modo claro, este mapa complementa la representación
+ * visual en modo oscuro.
+ */
 const CLASSIFICATION_DARK: Record<string, string> = {
   public:       "dark:bg-slate-500/[0.10]   dark:text-slate-400   dark:border-slate-500/20",
   internal:     "dark:bg-blue-500/[0.10]    dark:text-blue-400    dark:border-blue-500/20",
@@ -52,25 +116,84 @@ const CLASSIFICATION_DARK: Record<string, string> = {
   restricted:   "dark:bg-rose-500/[0.10]    dark:text-rose-400    dark:border-rose-500/20",
 };
 
+/**
+ * Propiedades de {@link DocumentTable}.
+ *
+ * @property documents Colección de documentos a mostrar.
+ * @property showClassification Indica si debe mostrarse la columna de clasificación.
+ */
 interface DocumentTableProps {
-  documents:          DocumentItem[];
+  documents: DocumentItem[];
   showClassification?: boolean;
 }
 
+/**
+ * Renderiza una tabla documental interactiva con búsqueda, filtros y preview.
+ *
+ * @param props Propiedades del componente.
+ * @param props.documents Colección de documentos visibles/autorizados.
+ * @param props.showClassification Indica si se incluye la columna de clasificación.
+ * @returns Tabla interactiva del repositorio documental con visor PDF.
+ *
+ * @remarks
+ * Este componente administra:
+ * - búsqueda por texto sobre ID y título,
+ * - filtro por categoría,
+ * - filtro rápido por estado,
+ * - cálculo de métricas del subconjunto visible,
+ * - apertura del visor PDF,
+ * - y representación visual de clasificación, estado y sensibilidad.
+ */
 export default function DocumentTable({ documents, showClassification = false }: DocumentTableProps) {
+  /**
+   * Texto actual del buscador.
+   */
   const [search,         setSearch]         = useState("");
+
+  /**
+   * Tab de estado actualmente seleccionado.
+   */
   const [tab,            setTab]            = useState<string | null>(null);
+
+  /**
+   * Categoría actualmente seleccionada.
+   */
   const [category,       setCategory]       = useState("Todas");
+
+  /**
+   * Estado de visibilidad del visor PDF.
+   */
   const [viewerOpen,     setViewerOpen]     = useState(false);
+
+  /**
+   * Metadatos del documento actualmente abierto en el visor.
+   */
   const [viewerMetadata, setViewerMetadata] = useState<PdfMetadata | null>(null);
 
+  /**
+   * Abre el visor PDF para un documento específico.
+   *
+   * @param doc Documento a previsualizar.
+   */
   function openViewer(doc: DocumentItem) {
     setViewerMetadata(toMetadata(doc));
     setViewerOpen(true);
   }
 
+  /**
+   * Categorías disponibles calculadas dinámicamente a partir del conjunto de documentos.
+   */
   const categories = ["Todas", ...Array.from(new Set(documents.map((d) => d.category))).sort()];
 
+  /**
+   * Colección de documentos visible después de aplicar búsqueda y filtros.
+   *
+   * @remarks
+   * Se evalúan simultáneamente:
+   * - categoría,
+   * - estado/tab,
+   * - coincidencia textual sobre ID y título.
+   */
   const filtered = documents.filter((doc) => {
     const matchCat = category === "Todas" || doc.category === category;
     const matchTab = !tab || tab.split(",").includes(doc.status);
@@ -79,7 +202,14 @@ export default function DocumentTable({ documents, showClassification = false }:
     return matchCat && matchTab && matchQ;
   });
 
-  const totalSize    = filtered.reduce((s, d) => s + d.size, 0);
+  /**
+   * Tamaño total acumulado del conjunto filtrado.
+   */
+  const totalSize = filtered.reduce((s, d) => s + d.size, 0);
+
+  /**
+   * Cantidad total de documentos expirados en la colección completa.
+   */
   const expiredCount = documents.filter((d) => d.status === "expired").length;
 
   return (

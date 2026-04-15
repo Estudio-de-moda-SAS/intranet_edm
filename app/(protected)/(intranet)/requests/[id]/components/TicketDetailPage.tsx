@@ -1,3 +1,33 @@
+/**
+ * @module TicketDetailPage
+ * Vista de detalle de un ticket dentro del módulo de solicitudes de la intranet.
+ *
+ * @remarks
+ * Este archivo define la experiencia completa de visualización de una solicitud
+ * individual, incluyendo:
+ *
+ * - encabezado principal con identidad del ticket
+ * - información contextual y metadatos
+ * - descripción de la solicitud
+ * - comentarios del ticket
+ * - adjuntos asociados
+ * - historial de eventos
+ * - acciones rápidas de navegación e interacción
+ *
+ * El componente principal actúa como contenedor de presentación para el ticket,
+ * mientras que los subcomponentes internos permiten mantener cierta separación
+ * visual y estructural dentro del mismo archivo.
+ *
+ * Durante la revisión técnica se evidencia que este archivo concentra múltiples
+ * responsabilidades de UI, por lo que en un futuro sería recomendable modularizar:
+ *
+ * - tarjetas base
+ * - secciones del detalle
+ * - timeline
+ * - comentarios
+ * - adjuntos
+ * - barra lateral
+ */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,8 +45,15 @@ import {
   type TimelineEvent,
 } from "@/app/(protected)/(intranet)/requests/data/tickets";
 
-// ─── Timeline icon map ────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Tipos y contratos                                                           */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Props del componente {@link TicketDetailPage}.
+ *
+ * @property ticketId Identificador único del ticket a consultar y renderizar.
+ */
 const TYPE_ICON: Record<TimelineEvent["type"], React.ReactNode> = {
   created:       <CheckCircle2  className="h-3 w-3 text-violet-500" />,
   status_change: <ChevronRight  className="h-3 w-3 text-blue-500"   />,

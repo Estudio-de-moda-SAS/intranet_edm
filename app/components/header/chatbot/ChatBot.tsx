@@ -1,3 +1,28 @@
+/**
+ * @module ChatBot
+ * Componente cliente encargado de renderizar el acceso principal al chatbot
+ * corporativo y gestionar el inicio de conversaciones desde la interfaz.
+ *
+ * @remarks
+ * Este archivo implementa la entrada visual del asistente conversacional,
+ * permitiendo dos modos de presentación:
+ *
+ * - Un modo compacto mediante {@link ChatBotButton}.
+ * - Un modo expandido con campo de entrada integrado.
+ *
+ * Su responsabilidad incluye:
+ *
+ * - Renderizar la variante visual correspondiente según las props.
+ * - Gestionar el estado local del texto ingresado por el usuario.
+ * - Iniciar una conversación mediante {@link useChatbotStore}.
+ * - Abrir y cerrar el panel del chatbot.
+ * - Montar el panel conversacional en el `document.body` mediante portal.
+ *
+ * Este componente se ejecuta del lado del cliente porque depende de estado
+ * local, eventos de teclado, interacción de usuario y APIs del navegador
+ * como `document` y `window`.
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -7,15 +32,89 @@ import ChatBotButton from './ChatBotButton';
 import ChatBotPanel from './ChatBotPanel';
 import { useChatbotStore } from '@/stores/ChatBotStore';
 
+/**
+ * Props del componente {@link CorporateBot}.
+ */
 interface Props {
+  /**
+   * Variante visual del acceso al chatbot.
+   *
+   * @remarks
+   * Valores soportados:
+   * - `"default"`: muestra un botón compacto.
+   * - `"expanded"`: muestra una tarjeta expandida con input embebido.
+   *
+   * @defaultValue "default"
+   */
   variant?: 'default' | 'expanded';
+
+  /**
+   * Indica si el botón compacto debe mostrarse únicamente como icono.
+   *
+   * @defaultValue false
+   */
   iconOnly?: boolean;
 }
 
+/**
+ * Componente cliente que renderiza la entrada principal al chatbot corporativo.
+ *
+ * @param props Propiedades del componente.
+ * @param props.variant Variante visual del acceso al chatbot.
+ * @param props.iconOnly Indica si el botón compacto se renderiza solo como icono.
+ * @returns Interfaz de acceso al chatbot junto con el panel montado en portal.
+ *
+ * @remarks
+ * Flujo de ejecución:
+ *
+ * 1. Obtiene desde {@link useChatbotStore} el estado de apertura del chatbot
+ *    y las acciones para iniciar o cerrar conversaciones.
+ * 2. Gestiona un estado local `input` para almacenar el texto escrito
+ *    por el usuario.
+ * 3. Si la variante es `"expanded"`:
+ *    - Renderiza una tarjeta expandida con ícono, mensaje introductorio
+ *      y campo de entrada.
+ *    - Permite enviar el mensaje mediante botón o tecla `Enter`.
+ * 4. Si la variante es `"default"`:
+ *    - Renderiza un acceso compacto mediante {@link ChatBotButton}.
+ * 5. Si el entorno es navegador:
+ *    - Renderiza {@link ChatBotPanel} mediante `createPortal`
+ *      en `document.body`.
+ *
+ * Este componente funciona como punto de entrada principal para la experiencia
+ * conversacional del asistente corporativo.
+ */
 export default function CorporateBot({ variant = 'default', iconOnly = false }: Props) {
+  /**
+   * Estado y acciones globales del chatbot.
+   *
+   * @remarks
+   * Se obtienen desde {@link useChatbotStore} para:
+   * - conocer si el panel está abierto,
+   * - cerrarlo,
+   * - e iniciar una nueva conversación.
+   */
   const { open, closeChat, startConversation } = useChatbotStore();
+
+  /**
+   * Estado local del texto ingresado por el usuario.
+   */
   const [input, setInput] = useState("");
 
+  /**
+   * Envía el contenido actual del input al flujo de conversación.
+   *
+   * @returns No retorna valor.
+   *
+   * @remarks
+   * Flujo de ejecución:
+   *
+   * 1. Elimina espacios sobrantes del texto actual.
+   * 2. Si el texto está vacío, no realiza ninguna acción.
+   * 3. Si contiene contenido válido:
+   *    - inicia la conversación con {@link startConversation},
+   *    - limpia el input local.
+   */
   const handleSend = () => {
     const text = input.trim();
     if (!text) return;
@@ -23,6 +122,16 @@ export default function CorporateBot({ variant = 'default', iconOnly = false }: 
     setInput("");
   };
 
+  /**
+   * Maneja la interacción de teclado sobre el campo de entrada.
+   *
+   * @param e Evento de teclado del input.
+   * @returns No retorna valor.
+   *
+   * @remarks
+   * Cuando la tecla presionada es `Enter`, previene el comportamiento
+   * por defecto y ejecuta {@link handleSend}.
+   */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") { e.preventDefault(); handleSend(); }
   };

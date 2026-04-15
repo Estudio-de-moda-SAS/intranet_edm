@@ -1,6 +1,42 @@
+/**
+ * @module InvoicePageHeader
+ * Encabezado principal de la sección de facturas del módulo financiero.
+ *
+ * @remarks
+ * Este componente presenta el contexto visual inicial
+ * de la página de facturas de proveedores.
+ *
+ * Incluye:
+ *
+ * - breadcrumb de navegación
+ * - ícono representativo del módulo
+ * - título principal
+ * - descripción breve de la funcionalidad de la vista
+ *
+ * Su propósito es orientar al usuario dentro del flujo
+ * de gestión de facturas del área financiera.
+ */
+
 import Link from 'next/link';
 import { ChevronRight, FileText } from 'lucide-react';
 
+/**
+ * Encabezado de página para la gestión de facturas.
+ *
+ * @returns Bloque visual con breadcrumb, título e información descriptiva.
+ *
+ * @remarks
+ * Este componente funciona como introducción contextual
+ * a la vista de facturas de proveedores.
+ *
+ * Refuerza la navegación jerárquica dentro del módulo financiero
+ * y resume el propósito operativo de la sección.
+ *
+ * @example
+ * ```tsx
+ * <InvoicePageHeader />
+ * ```
+ */
 export function InvoicePageHeader() {
   return (
     <div className="mb-6">

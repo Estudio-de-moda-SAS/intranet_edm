@@ -1,3 +1,22 @@
+/**
+ * @module TasksCard
+ * Componente cliente para visualizar tareas del usuario con resumen de prioridades,
+ * expansión inline de detalle y acceso a acciones rápidas.
+ *
+ * @remarks
+ * Este archivo renderiza una tarjeta de tareas integrada con información
+ * enriquecida como:
+ * - prioridad,
+ * - estado,
+ * - fecha de vencimiento,
+ * - área y participantes,
+ * - etiquetas,
+ * - y enlaces externos, por ejemplo Microsoft Planner.
+ *
+ * La interfaz está pensada para mostrar primero una lista compacta y,
+ * al expandir una tarea, revelar un panel de detalle contextual.
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -17,24 +36,77 @@ import { fmtFecha } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Task, TaskStatus } from "@/types/home";
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+/**
+ * Extiende el modelo base {@link Task} con información adicional
+ * para la vista de detalle.
+ *
+ * @remarks
+ * Esta interfaz agrega campos opcionales útiles para enriquecer
+ * la tarjeta expandida, como responsables, etiquetas, sistema de origen
+ * y enlaces directos a Planner.
+ */
 export interface TaskDetail extends Task {
+  /**
+   * Descripción ampliada de la tarea.
+   */
   description?: string;
+
+  /**
+   * Usuario asignado a la tarea.
+   */
   assignee?: { name: string; initials: string; color?: string };
+
+  /**
+   * Usuario solicitante de la tarea.
+   */
   requester?: { name: string; initials: string; color?: string };
+
+  /**
+   * Área o dependencia responsable.
+   */
   area?: string;
+
+  /**
+   * Etiquetas asociadas a la tarea.
+   */
   tags?: string[];
+
+  /**
+   * Nombre del sistema origen.
+   */
   sourceSystem?: string;
+
+  /**
+   * Identificador de la tarea en el sistema origen.
+   */
   sourceId?: string;
+
+  /**
+   * Enlace externo a Microsoft Planner u otra herramienta.
+   */
   plannerUrl?: string;
+
+  /**
+   * Identificador de la tarea dentro de Planner.
+   */
   plannerTaskId?: string;
 }
 
 // ── Estilos de prioridad ──────────────────────────────────────────────────────
+
+/**
+ * Configuración visual por prioridad.
+ *
+ * @remarks
+ * Define colores, badges, hover y acento del detalle para cada nivel.
+ */
 const PRIORITY_CONFIG: Record<string, {
-  dot: string; bar: string;
-  badge: string; badgeText: string;
-  rowHover: string; label: string;
+  dot: string;
+  bar: string;
+  badge: string;
+  badgeText: string;
+  rowHover: string;
+  label: string;
   detailAccent: string;
 }> = {
   alta: {
@@ -66,30 +138,80 @@ const PRIORITY_CONFIG: Record<string, {
   },
 };
 
+/**
+ * Configuración visual por estado de tarea.
+ */
 const STATUS_CONFIG: Record<TaskStatus, { dot: string; bg: string; text: string; label: string }> = {
-  pendiente:   { dot: "bg-slate-400",   bg: "bg-slate-50 border-slate-200 dark:bg-slate-500/[0.10] dark:border-slate-500/20",     text: "text-slate-600 dark:text-slate-400",   label: "Pendiente"   },
-  en_progreso: { dot: "bg-amber-400",   bg: "bg-amber-50 border-amber-200 dark:bg-amber-500/[0.10] dark:border-amber-500/20",     text: "text-amber-700 dark:text-amber-400",   label: "En progreso" },
+  pendiente:   { dot: "bg-slate-400",   bg: "bg-slate-50 border-slate-200 dark:bg-slate-500/[0.10] dark:border-slate-500/20",         text: "text-slate-600 dark:text-slate-400",     label: "Pendiente"   },
+  en_progreso: { dot: "bg-amber-400",   bg: "bg-amber-50 border-amber-200 dark:bg-amber-500/[0.10] dark:border-amber-500/20",         text: "text-amber-700 dark:text-amber-400",     label: "En progreso" },
   completada:  { dot: "bg-emerald-400", bg: "bg-emerald-50 border-emerald-200 dark:bg-emerald-500/[0.10] dark:border-emerald-500/20", text: "text-emerald-700 dark:text-emerald-400", label: "Completada"  },
-  bloqueada:   { dot: "bg-rose-500",    bg: "bg-rose-50 border-rose-200 dark:bg-rose-500/[0.10] dark:border-rose-500/20",       text: "text-rose-700 dark:text-rose-400",    label: "Bloqueada"   },
+  bloqueada:   { dot: "bg-rose-500",    bg: "bg-rose-50 border-rose-200 dark:bg-rose-500/[0.10] dark:border-rose-500/20",             text: "text-rose-700 dark:text-rose-400",       label: "Bloqueada"   },
 };
 
+/**
+ * Prioridad por defecto usada como fallback.
+ */
 const DEFAULT_PRIORITY = PRIORITY_CONFIG["media"]!;
-const DEFAULT_STATUS   = STATUS_CONFIG["pendiente"]!;
+
+/**
+ * Estado por defecto usado como fallback.
+ */
+const DEFAULT_STATUS = STATUS_CONFIG["pendiente"]!;
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
-function Avatar({ initials, color = "bg-violet-500" }: { initials: string; color?: string }) {
+
+/**
+ * Props del componente {@link Avatar}.
+ */
+interface AvatarProps {
+  /**
+   * Iniciales a mostrar.
+   */
+  initials: string;
+
+  /**
+   * Clase opcional del color de fondo.
+   */
+  color?: string;
+}
+
+/**
+ * Renderiza un avatar compacto basado en iniciales.
+ *
+ * @param props Propiedades del componente.
+ * @returns Avatar circular con iniciales.
+ */
+function Avatar({ initials, color = "bg-violet-500" }: AvatarProps) {
   return (
-    <span className={cn(
-      "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
-      "text-[10px] font-semibold text-white ring-1 ring-white dark:ring-[#161b22]",
-      color
-    )}>
+    <span
+      className={cn(
+        "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+        "text-[10px] font-semibold text-white ring-1 ring-white dark:ring-[#161b22]",
+        color
+      )}
+    >
       {initials}
     </span>
   );
 }
 
-function PlannerIcon({ className }: { className?: string }) {
+/**
+ * Props del componente {@link PlannerIcon}.
+ */
+interface PlannerIconProps {
+  /**
+   * Clases opcionales del ícono SVG.
+   */
+  className?: string;
+}
+
+/**
+ * Renderiza el ícono visual de Microsoft Planner.
+ *
+ * @param props Propiedades del componente.
+ * @returns SVG estilizado del servicio.
+ */
+function PlannerIcon({ className }: PlannerIconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="3"  y="3"  width="8" height="8" rx="1.5" fill="currentColor" opacity="0.9" />
@@ -101,9 +223,31 @@ function PlannerIcon({ className }: { className?: string }) {
 }
 
 // ── Panel de detalle inline ───────────────────────────────────────────────────
-function TaskDetailPanel({ task }: { task: TaskDetail }) {
+
+/**
+ * Props del componente {@link TaskDetailPanel}.
+ */
+interface TaskDetailPanelProps {
+  /**
+   * Tarea expandida a renderizar.
+   */
+  task: TaskDetail;
+}
+
+/**
+ * Renderiza el panel expandido de detalle de una tarea.
+ *
+ * @param props Propiedades del componente.
+ * @param props.task Tarea a mostrar.
+ * @returns Panel inline con metadata, descripción, etiquetas y acciones.
+ *
+ * @remarks
+ * Este panel aparece debajo de la fila principal cuando la tarea está expandida.
+ * Incluye un bloque visual enriquecido con prioridad, estado, origen y acciones.
+ */
+function TaskDetailPanel({ task }: TaskDetailPanelProps) {
   const p = PRIORITY_CONFIG[task.priority ?? "media"] ?? DEFAULT_PRIORITY;
-  const s = STATUS_CONFIG[task.status     ?? "pendiente"] ?? DEFAULT_STATUS;
+  const s = STATUS_CONFIG[task.status ?? "pendiente"] ?? DEFAULT_STATUS;
   const isFromPlanner = !!task.plannerUrl;
 
   return (
@@ -111,12 +255,12 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
       <div className="mx-4 mb-3 rounded-xl border border-slate-100 bg-slate-50/70 overflow-hidden
                       dark:border-[#30363d] dark:bg-[#1c2128]">
 
-        {/* Franja de acento superior */}
+        {/* Franja superior de prioridad */}
         <div className={cn("h-[3px] w-full", p.bar)} />
 
         <div className="p-4 flex flex-col gap-4">
 
-          {/* Badges: prioridad + estado + origen */}
+          {/* Badges informativos */}
           <div className="flex flex-wrap gap-2">
             <span className={cn(
               "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
@@ -125,6 +269,7 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
               <span className={cn("h-1.5 w-1.5 rounded-full", p.dot)} />
               Prioridad {p.label}
             </span>
+
             <span className={cn(
               "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
               s.bg, s.text
@@ -132,6 +277,7 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
               <span className={cn("h-1.5 w-1.5 rounded-full", s.dot)} />
               {s.label}
             </span>
+
             {isFromPlanner ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border
                                border-[#e0dff5] bg-[#f2f1fb] px-2.5 py-0.5 text-[11px] font-medium text-[#5b5ea6]
@@ -149,28 +295,30 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
             ) : null}
           </div>
 
-          {/* Metadatos en grid */}
+          {/* Grid de metadatos */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-
-            {/* Vencimiento */}
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-[#545d68]">
                 Vencimiento
               </span>
-              <span className={cn(
-                "flex items-center gap-1.5 text-[12px] font-medium",
-                task.priority === "alta"
-                  ? "text-rose-600 dark:text-rose-400"
-                  : "text-slate-700 dark:text-[#adbac7]"
-              )}>
-                <Clock className={cn("h-3.5 w-3.5",
-                  task.priority === "alta" ? "text-rose-400" : "text-slate-400 dark:text-[#545d68]"
+              <span
+                className={cn(
+                  "flex items-center gap-1.5 text-[12px] font-medium",
+                  task.priority === "alta"
+                    ? "text-rose-600 dark:text-rose-400"
+                    : "text-slate-700 dark:text-[#adbac7]"
+                )}
+              >
+                <Clock className={cn(
+                  "h-3.5 w-3.5",
+                  task.priority === "alta"
+                    ? "text-rose-400"
+                    : "text-slate-400 dark:text-[#545d68]"
                 )} />
                 {fmtFecha(task.due)}
               </span>
             </div>
 
-            {/* Asignado a */}
             {task.assignee && (
               <div className="flex flex-col gap-0.5">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-[#545d68]">
@@ -183,7 +331,6 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
               </div>
             )}
 
-            {/* Solicitante */}
             {task.requester && (
               <div className="flex flex-col gap-0.5">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-[#545d68]">
@@ -196,7 +343,6 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
               </div>
             )}
 
-            {/* Área */}
             {task.area && (
               <div className="flex flex-col gap-0.5">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-[#545d68]">
@@ -208,10 +354,8 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
                 </span>
               </div>
             )}
-
           </div>
 
-          {/* Descripción */}
           {task.description && (
             <div className={cn(
               "text-[12px] leading-relaxed text-slate-500 dark:text-[#768390]",
@@ -221,7 +365,6 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
             </div>
           )}
 
-          {/* Etiquetas */}
           {task.tags?.length ? (
             <div className="flex flex-wrap gap-1.5">
               {task.tags.map((tag) => (
@@ -238,7 +381,7 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
             </div>
           ) : null}
 
-          {/* Acciones */}
+          {/* Acciones del detalle */}
           <div className="flex items-center gap-2 pt-0.5">
             {isFromPlanner && task.plannerUrl && (
               <a
@@ -256,26 +399,31 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
                 <ArrowUpRight className="h-3 w-3 text-white/70" />
               </a>
             )}
-            <button className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 transition-colors",
-              "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300",
-              "dark:border-[#30363d] dark:bg-[#161b22] dark:text-[#adbac7] dark:hover:bg-[#1c2128] dark:hover:border-[#444c56]",
-              "text-[11.5px] font-medium"
-            )}>
+
+            <button
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 transition-colors",
+                "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+                "dark:border-[#30363d] dark:bg-[#161b22] dark:text-[#adbac7] dark:hover:bg-[#1c2128] dark:hover:border-[#444c56]",
+                "text-[11.5px] font-medium"
+              )}
+            >
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
               Completar
             </button>
-            <button className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 transition-colors",
-              "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300",
-              "dark:border-[#30363d] dark:bg-[#161b22] dark:text-[#adbac7] dark:hover:bg-[#1c2128] dark:hover:border-[#444c56]",
-              "text-[11.5px] font-medium"
-            )}>
+
+            <button
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 transition-colors",
+                "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+                "dark:border-[#30363d] dark:bg-[#161b22] dark:text-[#adbac7] dark:hover:bg-[#1c2128] dark:hover:border-[#444c56]",
+                "text-[11.5px] font-medium"
+              )}
+            >
               <History className="h-3.5 w-3.5 text-slate-400 dark:text-[#545d68]" />
               Historial
             </button>
           </div>
-
         </div>
       </div>
     </div>
@@ -283,13 +431,54 @@ function TaskDetailPanel({ task }: { task: TaskDetail }) {
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
+
+/**
+ * Props del componente {@link TasksCard}.
+ */
+interface TasksCardProps {
+  /**
+   * Lista de tareas a mostrar.
+   */
+  tasks: TaskDetail[];
+}
+
+/**
+ * Renderiza la tarjeta principal de tareas del usuario.
+ *
+ * @param props Propiedades del componente.
+ * @param props.tasks Lista de tareas.
+ * @returns Tarjeta con resumen, lista de tareas y expansión inline.
+ *
+ * @remarks
+ * Flujo general:
+ * 1. Calcula si existen tareas y resume sus prioridades.
+ * 2. Renderiza un encabezado con contador total.
+ * 3. Muestra un estado vacío si no hay tareas pendientes.
+ * 4. Si existen tareas, renderiza una fila por cada una.
+ * 5. La fila puede expandirse para mostrar {@link TaskDetailPanel}.
+ */
+export function TasksCard({ tasks }: TasksCardProps) {
+  /**
+   * Identificador de la tarea actualmente expandida.
+   */
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  /**
+   * Indica si la lista de tareas está vacía.
+   */
   const isEmpty = tasks.length === 0;
 
+  /**
+   * Alterna el estado expandido de una tarea.
+   *
+   * @param id Identificador de la tarea.
+   */
   const toggle = (id: string) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
+  /**
+   * Resumen cuantitativo por prioridad.
+   */
   const counts = {
     alta:  tasks.filter((t) => t.priority === "alta").length,
     media: tasks.filter((t) => t.priority === "media").length,
@@ -300,7 +489,7 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col h-full overflow-hidden
                     dark:border-[#30363d] dark:bg-[#161b22]">
 
-      {/* ── Header ───────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0
                       dark:border-[#21262d]">
         <div className="flex items-center gap-3">
@@ -318,6 +507,7 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
             </p>
           </div>
         </div>
+
         {!isEmpty && (
           <span className="rounded-full bg-violet-50 border border-violet-100 px-2.5 py-0.5
                            text-[11px] font-semibold text-violet-600 tabular-nums
@@ -327,7 +517,7 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
         )}
       </div>
 
-      {/* ── Resumen de prioridades ────────────────────────────────── */}
+      {/* Resumen */}
       {!isEmpty && (
         <div className="flex items-center gap-4 px-5 py-2.5 border-b border-slate-100 bg-slate-50/50 shrink-0
                         dark:border-[#21262d] dark:bg-[#1c2128]/50">
@@ -339,6 +529,7 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
               </span>
             </div>
           )}
+
           {counts.media > 0 && (
             <div className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
@@ -347,6 +538,7 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
               </span>
             </div>
           )}
+
           {counts.baja > 0 && (
             <div className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -355,6 +547,7 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
               </span>
             </div>
           )}
+
           <div className="ml-auto">
             <span className="text-[10px] text-slate-300 font-medium dark:text-[#444c56]">
               Última sync: hace 5 min
@@ -363,7 +556,7 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
         </div>
       )}
 
-      {/* ── Lista de tareas ───────────────────────────────────────── */}
+      {/* Lista */}
       <div className="flex-1 overflow-y-auto">
         {isEmpty ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -373,7 +566,9 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
               <PartyPopper className="h-5 w-5 text-slate-300 dark:text-[#444c56]" />
             </div>
             <div>
-              <p className="text-[13px] font-semibold text-slate-500 dark:text-[#768390]">Todo al día</p>
+              <p className="text-[13px] font-semibold text-slate-500 dark:text-[#768390]">
+                Todo al día
+              </p>
               <p className="text-[11px] text-slate-300 mt-0.5 dark:text-[#444c56]">
                 No tienes tareas pendientes en Planner
               </p>
@@ -383,13 +578,12 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
           <ul className="divide-y divide-slate-100 dark:divide-[#21262d]">
             {tasks.map((task) => {
               const p = PRIORITY_CONFIG[task.priority ?? "media"] ?? DEFAULT_PRIORITY;
-              const s = STATUS_CONFIG[task.status     ?? "pendiente"] ?? DEFAULT_STATUS;
+              const s = STATUS_CONFIG[task.status ?? "pendiente"] ?? DEFAULT_STATUS;
               const isExpanded = expandedId === task.id;
               const isUrgent = task.priority === "alta";
 
               return (
                 <li key={task.id}>
-                  {/* Fila de tarea */}
                   <button
                     onClick={() => toggle(task.id)}
                     className={cn(
@@ -399,7 +593,6 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
                       isExpanded && "bg-slate-50/80 dark:bg-[#1c2128]/60"
                     )}
                   >
-                    {/* Barra lateral (prioridad) */}
                     <span className={cn(
                       "absolute left-0 top-3 bottom-3 w-0.5 rounded-r-full",
                       "transition-all duration-200",
@@ -407,10 +600,11 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
                       p.bar
                     )} />
 
-                    {/* Indicador de prioridad */}
-                    <span className={cn("h-2 w-2 shrink-0 rounded-full ring-2 ring-white dark:ring-[#161b22]", p.dot)} />
+                    <span className={cn(
+                      "h-2 w-2 shrink-0 rounded-full ring-2 ring-white dark:ring-[#161b22]",
+                      p.dot
+                    )} />
 
-                    {/* Contenido principal */}
                     <div className="min-w-0 flex-1">
                       <p className={cn(
                         "text-[13px] font-semibold leading-snug truncate",
@@ -420,8 +614,8 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
                       )}>
                         {task.title}
                       </p>
+
                       <div className="mt-1 flex items-center gap-2.5 flex-wrap">
-                        {/* Vencimiento */}
                         <span className={cn(
                           "flex items-center gap-1 text-[11px]",
                           isUrgent
@@ -432,7 +626,6 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
                           Vence {fmtFecha(task.due)}
                         </span>
 
-                        {/* Estado (si no es pendiente) */}
                         {task.status && task.status !== "pendiente" && (
                           <span className={cn(
                             "flex items-center gap-1 text-[10.5px] font-medium",
@@ -443,7 +636,6 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
                           </span>
                         )}
 
-                        {/* Planner / sistema origen */}
                         {task.plannerUrl ? (
                           <span className="flex items-center gap-1 text-[10.5px] font-medium text-[#5b5ea6] dark:text-violet-400">
                             <PlannerIcon className="h-3 w-3" />
@@ -457,7 +649,6 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
                       </div>
                     </div>
 
-                    {/* Badge prioridad */}
                     <span className={cn(
                       "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
                       p.badge
@@ -465,7 +656,6 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
                       {p.label}
                     </span>
 
-                    {/* Chevron */}
                     <ChevronDown className={cn(
                       "h-3.5 w-3.5 shrink-0 transition-all duration-200",
                       isExpanded
@@ -474,7 +664,6 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
                     )} />
                   </button>
 
-                  {/* Panel de detalle (inline expandible) */}
                   {isExpanded && <TaskDetailPanel task={task} />}
                 </li>
               );
@@ -483,7 +672,7 @@ export function TasksCard({ tasks }: { tasks: TaskDetail[] }) {
         )}
       </div>
 
-      {/* ── Footer ───────────────────────────────────────────────── */}
+      {/* Footer */}
       {!isEmpty && (
         <div className="flex items-center justify-between px-5 py-2.5 border-t border-slate-100 bg-slate-50/50 shrink-0
                         dark:border-[#21262d] dark:bg-[#1c2128]/50">

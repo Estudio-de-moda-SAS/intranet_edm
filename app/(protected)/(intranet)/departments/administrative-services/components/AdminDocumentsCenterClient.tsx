@@ -1,5 +1,22 @@
 "use client";
 
+/**
+ * @module AdminDocumentsCenterClient
+ * Componente cliente para visualizar y gestionar el listado de documentos
+ * administrativos del módulo de Servicios Administrativos.
+ *
+ * Renderiza una lista interactiva de documentos y permite:
+ * - identificar cada documento por categoría,
+ * - visualizar información básica como tamaño y fecha de actualización,
+ * - abrir un visor PDF embebido mediante modal,
+ * - descargar el archivo original.
+ *
+ * @remarks
+ * Este componente usa `"use client"` porque depende de estado local con
+ * {@link useState} para controlar la apertura del visor y el documento
+ * actualmente seleccionado.
+ */
+
 // AdminDocumentsCenterClient.tsx
 // Lista de documentos administrativos con visor PDF emergente.
 
@@ -12,6 +29,19 @@ import PdfViewerModal, { type PdfMetadata } from "@/app/components/pdf/PdfViewer
 
 // ── Category map ──────────────────────────────────────────────────────────────
 
+/**
+ * Mapa de configuración visual para las categorías de documentos
+ * administrativos.
+ *
+ * Asocia cada {@link AdminDocumentCategory} con:
+ * - una etiqueta legible para la interfaz,
+ * - un ícono representativo,
+ * - estilos de color, fondo y borde.
+ *
+ * @remarks
+ * Este objeto centraliza la presentación visual de las categorías para
+ * mantener consistencia en toda la lista de documentos.
+ */
 const CATEGORY_MAP: Record<
   AdminDocumentCategory,
   { label: string; Icon: React.ElementType; color: string; bg: string; border: string }
@@ -24,6 +54,17 @@ const CATEGORY_MAP: Record<
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
+/**
+ * Convierte un documento administrativo al formato de metadatos requerido
+ * por el visor PDF.
+ *
+ * @param doc Documento administrativo seleccionado.
+ * @returns Metadatos compatibles con {@link PdfViewerModal}.
+ *
+ * @remarks
+ * Esta función adapta la estructura del documento proveniente del servicio
+ * del módulo al contrato esperado por el modal de visualización PDF.
+ */
 function toMetadata(doc: AdminDocument): PdfMetadata {
   return {
     id:          doc.id,
@@ -39,16 +80,47 @@ function toMetadata(doc: AdminDocument): PdfMetadata {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link AdminDocumentsCenterClient}.
+ *
+ * @property documents Colección de documentos administrativos a mostrar.
+ */
 interface Props {
   documents: AdminDocument[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+/**
+ * Renderiza el centro de documentos administrativos en el cliente.
+ *
+ * @param props Propiedades del componente.
+ * @param props.documents Lista de documentos disponibles para visualización y descarga.
+ * @returns Interfaz con listado de documentos y visor PDF modal.
+ *
+ * @remarks
+ * Este componente:
+ * 1. Muestra documentos organizados visualmente por categoría.
+ * 2. Permite abrir un visor PDF para revisar cada documento.
+ * 3. Mantiene el estado del modal y del documento activo.
+ * 4. Ofrece descarga directa del archivo original.
+ */
 export default function AdminDocumentsCenterClient({ documents }: Props) {
+  /**
+   * Indica si el modal del visor PDF se encuentra abierto.
+   */
   const [viewerOpen,     setViewerOpen]     = useState(false);
+
+  /**
+   * Metadatos del documento actualmente seleccionado para visualización.
+   */
   const [viewerMetadata, setViewerMetadata] = useState<PdfMetadata | null>(null);
 
+  /**
+   * Abre el visor PDF para un documento específico.
+   *
+   * @param doc Documento administrativo a visualizar.
+   */
   function openViewer(doc: AdminDocument) {
     setViewerMetadata(toMetadata(doc));
     setViewerOpen(true);
@@ -61,6 +133,7 @@ export default function AdminDocumentsCenterClient({ documents }: Props) {
         {documents.map((doc) => {
           const cat  = CATEGORY_MAP[doc.category];
           const Icon = cat.Icon;
+
           return (
             <li key={doc.id}>
               <div className="group flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">

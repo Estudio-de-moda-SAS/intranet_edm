@@ -1,3 +1,15 @@
+/**
+ * @module NewsTileSquare
+ * Componente visual para representar una noticia en formato tarjeta cuadrada.
+ *
+ * @remarks
+ * Este componente muestra una noticia con imagen de fondo, overlay y contenido
+ * textual, adaptándose a dos variantes de tamaño.
+ */
+
+/**
+ * Representa una noticia o anuncio.
+ */
 interface Announcement {
   id: string;
   title: string;
@@ -6,11 +18,36 @@ interface Announcement {
   imageUrl?: string;
 }
 
+/**
+ * Props del componente {@link NewsTileSquare}.
+ */
 interface Props {
+  /**
+   * Información de la noticia a renderizar.
+   */
   news: Announcement;
+
+  /**
+   * Variante visual del componente.
+   * - `large`: mayor tamaño y más contenido.
+   * - `small`: versión compacta.
+   */
   variant?: "large" | "small";
 }
 
+/**
+ * Renderiza una tarjeta visual de noticia.
+ *
+ * @param props Propiedades del componente.
+ * @param props.news Datos de la noticia.
+ * @param props.variant Variante de visualización.
+ * @returns Tarjeta estilizada con imagen, título y metadatos.
+ *
+ * @remarks
+ * - Usa imagen de fondo o un gradiente si no existe `imageUrl`.
+ * - Aplica overlay para mejorar legibilidad del texto.
+ * - Formatea la fecha en locale `es-CO`.
+ */
 export function NewsTileSquare({ news, variant = "small" }: Props) {
   const isLarge = variant === "large";
 
@@ -24,7 +61,7 @@ export function NewsTileSquare({ news, variant = "small" }: Props) {
         cursor-pointer
       "
     >
-      {/* Background image or gradient */}
+      {/* Fondo */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-transform duration-500 hover:scale-105"
         style={{
@@ -37,14 +74,14 @@ export function NewsTileSquare({ news, variant = "small" }: Props) {
       {/* Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent pointer-events-none" />
 
-      {/* Category chip */}
+      {/* Categoría */}
       <div className="absolute top-3 left-3">
         <span className="rounded-full bg-violet-600/90 backdrop-blur-sm px-2.5 py-0.5 text-[10px] font-semibold text-white uppercase tracking-wide">
           Noticia
         </span>
       </div>
 
-      {/* Text content */}
+      {/* Contenido */}
       <div className={`absolute bottom-0 left-0 right-0 text-white ${isLarge ? "p-6" : "p-3"}`}>
         <h3 className={`font-semibold leading-tight ${isLarge ? "text-2xl" : "text-sm"}`}>
           {news.title}

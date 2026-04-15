@@ -1,5 +1,30 @@
-// app/(protected)/(intranet)/departments/administrative/rooms/page.tsx
 "use client";
+
+/**
+ * @module RoomBookingPage
+ * Página principal del flujo de reserva de salas del submódulo `room-booking`
+ * dentro de Servicios Administrativos.
+ *
+ * Permite a los usuarios:
+ * - consultar las salas disponibles,
+ * - revisar la disponibilidad por fecha y horario,
+ * - seleccionar un rango horario libre,
+ * - diligenciar los datos de la reunión,
+ * - confirmar la reserva y visualizar el resumen final.
+ *
+ * @remarks
+ * Este componente implementa un flujo paso a paso para la reserva de salas:
+ *
+ * 1. **Sala**: selección de la sala según capacidad y amenidades.
+ * 2. **Fecha y hora**: consulta de disponibilidad y selección de slots.
+ * 3. **Detalle**: captura de información de la reunión.
+ * 4. **Confirmado**: visualización del resultado exitoso de la reserva.
+ *
+ * Usa `"use client"` porque depende de estado local, efectos y navegación
+ * imperativa con {@link useRouter}.
+ */
+
+// app/(protected)/(intranet)/departments/administrative/room-booking/page.tsx
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter }                         from "next/navigation";
@@ -19,21 +44,47 @@ import {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/**
+ * Retorna la fecha actual en formato ISO corto (`YYYY-MM-DD`).
+ *
+ * @returns Fecha actual compatible con controles `input[type="date"]`.
+ */
 function todayISO(): string {
   return new Date().toISOString().split("T")[0] ?? "";
 }
 
+/**
+ * Mapa de iconos usados para representar amenidades de una sala.
+ *
+ * @remarks
+ * Se utiliza para enriquecer visualmente la presentación de cada sala y sus
+ * capacidades dentro de la interfaz.
+ */
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
   "Proyector":        <Projector size={12} />,
   "Videoconferencia": <Wifi      size={12} />,
   "TV":               <Tv2       size={12} />,
-  "Pizarrón":        <PenLine   size={12} />,
+  "Pizarrón":         <PenLine   size={12} />,
 };
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 
+/**
+ * Etapas del flujo de reserva.
+ *
+ * @remarks
+ * Estas etiquetas son usadas por {@link PageStepIndicator} para mostrar el
+ * avance del usuario durante el proceso.
+ */
 const STEPS = ["Sala", "Fecha y hora", "Detalle", "Confirmado"];
 
+/**
+ * Indicador visual del paso actual dentro del flujo de reserva.
+ *
+ * @param props Propiedades del componente.
+ * @param props.current Índice del paso actual.
+ * @returns Barra de progreso horizontal del proceso.
+ */
 function PageStepIndicator({ current }: { current: number }) {
   return (
     <ol className="flex items-center gap-0">
@@ -74,6 +125,22 @@ function PageStepIndicator({ current }: { current: number }) {
 
 // ── Room Card ─────────────────────────────────────────────────────────────────
 
+/**
+ * Tarjeta de selección de sala.
+ *
+ * Muestra la información principal de una sala:
+ * - nombre,
+ * - ubicación,
+ * - capacidad,
+ * - amenidades,
+ * - estado de selección visual.
+ *
+ * @param props Propiedades del componente.
+ * @param props.room Sala a renderizar.
+ * @param props.selected Indica si la sala está seleccionada.
+ * @param props.onSelect Acción a ejecutar al seleccionar la sala.
+ * @returns Tarjeta interactiva de sala.
+ */
 function RoomCard({
   room, selected, onSelect,
 }: {
@@ -137,6 +204,21 @@ function RoomCard({
 
 // ── Slot Grid ─────────────────────────────────────────────────────────────────
 
+/**
+ * Grilla de horarios disponibles para la sala seleccionada.
+ *
+ * Permite al usuario:
+ * - visualizar slots libres y ocupados,
+ * - elegir un horario inicial,
+ * - extender el rango de selección mientras no existan conflictos.
+ *
+ * @param props Propiedades del componente.
+ * @param props.slots Slots disponibles para la fecha seleccionada.
+ * @param props.selectedStart Hora inicial seleccionada.
+ * @param props.selectedEnd Hora final seleccionada.
+ * @param props.onToggle Función ejecutada al seleccionar un slot.
+ * @returns Grilla interactiva de horarios.
+ */
 function SlotGrid({
   slots, selectedStart, selectedEnd, onToggle,
 }: {
@@ -145,6 +227,12 @@ function SlotGrid({
   selectedEnd:   string;
   onToggle:      (slot: RoomSlot) => void;
 }) {
+  /**
+   * Determina si un slot se encuentra dentro del rango actualmente seleccionado.
+   *
+   * @param slot Slot a evaluar.
+   * @returns `true` si pertenece al rango activo, `false` en caso contrario.
+   */
   const isInRange = (slot: RoomSlot) => {
     if (!selectedStart) return false;
     const end = selectedEnd || selectedStart;
@@ -195,33 +283,137 @@ function SlotGrid({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
+/**
+ * Página principal del flujo de reserva de salas.
+ *
+ * @returns Interfaz completa del proceso de reserva de salas.
+ *
+ * @remarks
+ * Este componente coordina el flujo completo del proceso:
+ *
+ * - carga inicial de salas disponibles mediante {@link getRooms},
+ * - consulta de disponibilidad mediante {@link getRoomAvailability},
+ * - validación de horarios y campos obligatorios,
+ * - construcción del payload de reserva,
+ * - envío de la reserva con {@link bookRoom},
+ * - visualización del resultado final exitoso.
+ *
+ * También gestiona:
+ * - el paso actual del wizard,
+ * - la sala seleccionada,
+ * - la fecha,
+ * - el rango horario,
+ * - los datos de la reunión,
+ * - los estados de carga y error.
+ */
 export default function RoomBookingPage() {
   const router = useRouter();
 
+  /**
+   * Paso actual del flujo de reserva.
+   */
   const [step,          setStep]          = useState(0);
+
+  /**
+   * Colección de salas disponibles para reserva.
+   */
   const [rooms,         setRooms]         = useState<Room[]>([]);
+
+  /**
+   * Estado de carga de la consulta de salas.
+   */
   const [roomsLoading,  setRoomsLoading]  = useState(true);
+
+  /**
+   * Sala actualmente seleccionada por el usuario.
+   */
   const [selectedRoom,  setSelectedRoom]  = useState<Room | null>(null);
+
+  /**
+   * Fecha seleccionada para consultar disponibilidad.
+   */
   const [selectedDate,  setSelectedDate]  = useState(todayISO());
+
+  /**
+   * Slots horarios disponibles para la sala y fecha seleccionadas.
+   */
   const [slots,         setSlots]         = useState<RoomSlot[]>([]);
+
+  /**
+   * Estado de carga de la consulta de disponibilidad.
+   */
   const [slotsLoading,  setSlotsLoading]  = useState(false);
+
+  /**
+   * Hora inicial seleccionada dentro del rango de reserva.
+   */
   const [selectedStart, setSelectedStart] = useState("");
+
+  /**
+   * Hora final seleccionada dentro del rango de reserva.
+   */
   const [selectedEnd,   setSelectedEnd]   = useState("");
+
+  /**
+   * Título o motivo de la reunión.
+   */
   const [title,         setTitle]         = useState("");
+
+  /**
+   * Número de asistentes ingresado por el usuario.
+   */
   const [attendees,     setAttendees]     = useState("");
+
+  /**
+   * Observaciones adicionales para la reserva.
+   */
   const [notes,         setNotes]         = useState("");
+
+  /**
+   * Error de validación asociado al título.
+   */
   const [titleErr,      setTitleErr]      = useState("");
+
+  /**
+   * Error de validación asociado al rango horario.
+   */
   const [timeErr,       setTimeErr]       = useState("");
+
+  /**
+   * Estado de carga durante el envío de la reserva.
+   */
   const [loading,       setLoading]       = useState(false);
+
+  /**
+   * Identificador de la reserva creada exitosamente.
+   */
   const [bookingId,     setBookingId]     = useState("");
+
+  /**
+   * Indica si la reserva fue completada satisfactoriamente.
+   */
   const [done,          setDone]          = useState(false);
 
+  /**
+   * Carga inicial de salas disponibles al montar la página.
+   */
   useEffect(() => {
     getRooms()
       .then(setRooms)
       .finally(() => setRoomsLoading(false));
   }, []);
 
+  /**
+   * Consulta la disponibilidad de una sala para una fecha específica.
+   *
+   * @param roomId Identificador de la sala.
+   * @param date Fecha a consultar.
+   * @returns Promesa que actualiza el estado local de slots disponibles.
+   *
+   * @remarks
+   * Antes de cargar una nueva disponibilidad, reinicia la selección previa
+   * de horarios para evitar inconsistencias entre sala, fecha y rango.
+   */
   const fetchSlots = useCallback(async (roomId: string, date: string) => {
     setSlotsLoading(true);
     setSelectedStart("");
@@ -234,12 +426,27 @@ export default function RoomBookingPage() {
     }
   }, []);
 
+  /**
+   * Reconsulta la disponibilidad cuando cambia la sala o la fecha.
+   */
   useEffect(() => {
     if (selectedRoom && selectedDate) {
       fetchSlots(selectedRoom.id, selectedDate);
     }
   }, [selectedRoom, selectedDate, fetchSlots]);
 
+  /**
+   * Gestiona la selección de horarios dentro de la grilla de disponibilidad.
+   *
+   * @param slot Slot seleccionado por el usuario.
+   *
+   * @remarks
+   * Reglas principales:
+   * - Si no hay inicio seleccionado, define el slot actual como inicio.
+   * - Si se selecciona una hora anterior, reemplaza el inicio.
+   * - Si se vuelve a seleccionar el inicio, limpia la selección.
+   * - Si el rango incluye slots ocupados, muestra error y no permite continuar.
+   */
   const handleSlotToggle = (slot: RoomSlot) => {
     if (!selectedStart) {
       setSelectedStart(slot.start);
@@ -266,20 +473,44 @@ export default function RoomBookingPage() {
     setSelectedEnd(slot.start);
   };
 
+  /**
+   * Calcula la hora final efectiva de la reserva a partir del slot final seleccionado.
+   *
+   * @returns Hora final calculada o cadena vacía si no existe selección válida.
+   */
   const computedEndTime = (): string => {
     if (!selectedEnd) return "";
     const idx = slots.findIndex((s) => s.start === selectedEnd);
-    // Fix: slots[idx].end puede ser undefined — fallback a ""
     return idx >= 0 ? (slots[idx]?.end ?? "") : "";
   };
 
+  /**
+   * Ejecuta la reserva de sala.
+   *
+   * @returns Promesa que envía la reserva y actualiza el estado del flujo.
+   *
+   * @remarks
+   * Este método:
+   * - valida campos obligatorios,
+   * - valida que exista una sala seleccionada,
+   * - construye el {@link RoomBookingPayload},
+   * - envía la solicitud con {@link bookRoom},
+   * - muestra el estado final exitoso o un mensaje de error.
+   */
   const handleBook = async () => {
     setTitleErr("");
     setTimeErr("");
-    if (!title.trim())  { setTitleErr("El título es requerido"); return; }
-    if (!selectedStart) { setTimeErr("Selecciona al menos un horario"); return; }
 
-    // Fix: selectedRoom puede ser null — guard explícito antes del payload
+    if (!title.trim())  {
+      setTitleErr("El título es requerido");
+      return;
+    }
+
+    if (!selectedStart) {
+      setTimeErr("Selecciona al menos un horario");
+      return;
+    }
+
     if (!selectedRoom) return;
 
     const payload: RoomBookingPayload = {
@@ -289,7 +520,6 @@ export default function RoomBookingPage() {
       endTime:        computedEndTime(),
       title,
       attendeesCount: attendees ? Number(attendees) : 1,
-      // Fix: notes es opcional — spread condicional para no pasar undefined
       ...(notes.trim() ? { notes: notes.trim() } : {}),
     };
 

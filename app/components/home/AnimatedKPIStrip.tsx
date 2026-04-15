@@ -1,3 +1,12 @@
+/**
+ * @module AnimatedKPIStrip
+ * Componente cliente para mostrar una franja animada de indicadores KPI.
+ *
+ * @remarks
+ * Este archivo renderiza un conjunto de métricas resumidas en tarjetas
+ * visuales, aplicando animaciones de entrada y estilos por acento.
+ */
+
 "use client";
 
 import { motion, type Variants } from "framer-motion";
@@ -7,17 +16,49 @@ import {
 } from "lucide-react";
 import type { ElementType } from "react";
 
+/**
+ * Representa un indicador individual dentro de la franja KPI.
+ */
 type StatItem = {
-  label:  string;
-  value:  string;
-  sub:    string;
-  icon:   ElementType;
+  /**
+   * Nombre visible del indicador.
+   */
+  label: string;
+
+  /**
+   * Valor principal del indicador.
+   */
+  value: string;
+
+  /**
+   * Texto secundario o contexto adicional.
+   */
+  sub: string;
+
+  /**
+   * Icono representativo del indicador.
+   */
+  icon: ElementType;
+
+  /**
+   * Variante de color usada para estilos visuales.
+   */
   accent: "violet" | "purple" | "fuchsia" | "indigo" | "sky" | "emerald" | "rose" | "amber";
+
+  /**
+   * Indica si el KPI debe mostrarse.
+   */
   enabled: boolean;
 };
 
+/**
+ * Colección base de indicadores KPI.
+ *
+ * @remarks
+ * Solo se renderizan los elementos cuyo campo `enabled` sea `true`.
+ */
 const STATS: StatItem[] = [
-  { label: "Empleados activos",    value: "1,284", sub: "+12 este mes",       icon: Users,         accent: "violet",  enabled: false  },
+  { label: "Empleados activos",    value: "1,284", sub: "+12 este mes",       icon: Users,         accent: "violet",  enabled: false },
   { label: "Tareas pendientes",    value: "47",    sub: "−8 esta semana",      icon: ClipboardList, accent: "indigo",  enabled: true },
   { label: "Eventos próximos",     value: "6",     sub: "próximos 30 días",    icon: Calendar,      accent: "sky",     enabled: true },
   { label: "Noticias sin leer",    value: "13",    sub: "pendientes de leer",  icon: Bell,          accent: "fuchsia", enabled: true },
@@ -27,15 +68,15 @@ const STATS: StatItem[] = [
   { label: "Reconocimientos",      value: "17",    sub: "en el último mes",    icon: Award,         accent: "rose",    enabled: false },
 ];
 
-/*
-  Cada accent define:
-  - iconBg / iconRing:   fondo e hilo del ícono
-  - iconColor:           color del ícono
-  - valueBg / valueText: chip del valor numérico
-  
-  En dark: los pasteles se convierten en tintes semitransparentes
-  y los textos se iluminan.
-*/
+/**
+ * Mapa de estilos visuales por acento.
+ *
+ * @remarks
+ * Define colores para:
+ * - fondo e ícono,
+ * - anillo decorativo,
+ * - chip del valor principal.
+ */
 const ACCENT_MAP: Record<StatItem["accent"], {
   iconBg: string; iconRing: string; iconColor: string;
   valueBg: string; valueText: string;
@@ -98,16 +139,33 @@ const ACCENT_MAP: Record<StatItem["accent"], {
   },
 };
 
+/**
+ * Variantes de animación del contenedor.
+ */
 const container: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
 };
 
+/**
+ * Variantes de animación de cada tarjeta KPI.
+ */
 const card: Variants = {
   hidden: { opacity: 0, y: 14 },
   show:   { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] } },
 };
 
+/**
+ * Componente que renderiza la franja animada de KPIs.
+ *
+ * @returns Grilla responsive de indicadores activos.
+ *
+ * @remarks
+ * Flujo general:
+ * - Filtra los KPIs habilitados.
+ * - Aplica animación escalonada de entrada.
+ * - Usa `ACCENT_MAP` para definir el estilo visual de cada tarjeta.
+ */
 export function AnimatedKPIStrip() {
   return (
     <motion.div
@@ -119,31 +177,31 @@ export function AnimatedKPIStrip() {
     >
       {STATS.filter(stat => stat.enabled).map((stat) => {
         const c = ACCENT_MAP[stat.accent];
+
         return (
           <motion.div
             key={stat.label}
             variants={card}
             className="group flex items-center gap-3.5 rounded-xl border px-4 py-3.5
                        cursor-default transition-all duration-200 hover:shadow-md hover:-translate-y-0.5
-                       border-slate-200   bg-white   shadow-sm
+                       border-slate-200 bg-white shadow-sm
                        dark:border-[#30363d] dark:bg-[#161b22] dark:shadow-[0_1px_3px_rgb(0_0_0/0.4)]
                        dark:hover:border-[#3d444d]"
           >
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-4 ${c.iconBg} ${c.iconRing}`}>
               <stat.icon className={`h-4 w-4 ${c.iconColor}`} />
             </span>
+
             <div className="min-w-0">
               <div className="flex items-baseline gap-2">
                 <span className={`inline-block rounded-lg px-2 py-0.5 text-lg font-bold leading-snug ${c.valueBg} ${c.valueText}`}>
                   {stat.value}
                 </span>
-                <p className="truncate text-[10px] leading-tight
-                              text-slate-400 dark:text-[#545d68]">
+                <p className="truncate text-[10px] leading-tight text-slate-400 dark:text-[#545d68]">
                   {stat.sub}
                 </p>
               </div>
-              <p className="mt-1 truncate text-[11px] font-semibold leading-tight
-                            text-slate-600 dark:text-[#adbac7]">
+              <p className="mt-1 truncate text-[11px] font-semibold leading-tight text-slate-600 dark:text-[#adbac7]">
                 {stat.label}
               </p>
             </div>

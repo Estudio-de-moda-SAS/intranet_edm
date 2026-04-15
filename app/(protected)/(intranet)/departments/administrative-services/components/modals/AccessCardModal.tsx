@@ -1,3 +1,30 @@
+/**
+ * @module AccessCardModal
+ * Modal de gestión de tarjetas de acceso del módulo de Servicios Administrativos.
+ *
+ * Permite ejecutar distintos flujos relacionados con credenciales de acceso:
+ * - solicitar una tarjeta nueva,
+ * - reportar pérdida,
+ * - reportar daño,
+ * - desactivar una tarjeta existente.
+ *
+ * @remarks
+ * Este componente centraliza la captura y validación de información asociada
+ * a solicitudes de tarjetas de acceso, y delega el envío del trámite a
+ * {@link submitAccessCardRequest}.
+ *
+ * El flujo general del componente es:
+ * 1. Seleccionar la acción a realizar.
+ * 2. Completar la información del colaborador.
+ * 3. Capturar datos adicionales según el tipo de solicitud.
+ * 4. Validar el formulario mediante {@link validate}.
+ * 5. Enviar la solicitud al servicio.
+ * 6. Mostrar confirmación con {@link SuccessBanner}.
+ *
+ * Este modal está preparado para integrarse con Microsoft Graph o una API
+ * propia a través de la capa de servicios del módulo administrativo.
+ */
+
 // app/(protected)/(intranet)/departments/administrative/components/modals/AccessCardModal.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 // Modal para gestión de tarjetas de acceso:
@@ -29,6 +56,14 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades de {@link AccessCardModal}.
+ *
+ * @property open Indica si el modal se encuentra visible.
+ * @property onClose Función ejecutada al cerrar el modal.
+ * @property defaultAction Acción inicial preseleccionada, útil cuando el flujo
+ * se invoca desde un acceso rápido con contexto.
+ */
 interface Props {
   open:          boolean;
   onClose:       () => void;
@@ -38,6 +73,21 @@ interface Props {
 
 // ── Action catalog ────────────────────────────────────────────────────────────
 
+/**
+ * Catálogo de acciones disponibles para la gestión de tarjetas de acceso.
+ *
+ * @remarks
+ * Define metadatos de presentación y comportamiento para cada
+ * {@link AccessCardAction}, incluyendo:
+ * - etiqueta visible,
+ * - descripción funcional,
+ * - ícono asociado,
+ * - estilos de color,
+ * - y si la acción requiere una tarjeta existente.
+ *
+ * Esta configuración es usada para renderizar el selector visual de acciones
+ * y para determinar reglas condicionales del formulario.
+ */
 const ACTIONS: {
   value:       AccessCardAction;
   label:       string;
@@ -45,7 +95,7 @@ const ACTIONS: {
   icon:        React.ReactNode;
   color:       string;
   accentBg:    string;
-  needsCard:   boolean;   // requiere número de tarjeta actual
+  needsCard:   boolean;
 }[] = [
   {
     value:       "request_new",
@@ -85,13 +135,26 @@ const ACTIONS: {
   },
 ];
 
+/**
+ * Opciones disponibles para zonas de acceso.
+ *
+ * @remarks
+ * Se utilizan exclusivamente cuando la acción seleccionada es
+ * `"request_new"`, permitiendo definir qué áreas debe habilitar la tarjeta.
+ */
 const ZONE_OPTIONS = [
   { value: "general",    label: "Accesos generales" },
   { value: "offices",    label: "Oficinas"          },
-  { value: "warehouse",  label: "Bodega"             },
+  { value: "warehouse",  label: "Bodega"            },
   { value: "restricted", label: "Área restringida"  },
 ];
 
+/**
+ * Estado inicial del formulario de solicitud de tarjeta.
+ *
+ * @remarks
+ * Sirve como base para inicializar y reiniciar el payload del modal.
+ */
 const INITIAL: AccessCardPayload = {
   action:         "request_new",
   employeeName:   "",
@@ -103,10 +166,32 @@ const INITIAL: AccessCardPayload = {
   urgency:        "normal",
 };
 
+/**
+ * Estructura de errores parciales asociada a {@link AccessCardPayload}.
+ *
+ * @remarks
+ * Cada clave representa un campo del formulario y su valor corresponde al
+ * mensaje de error mostrado al usuario.
+ */
 type Errors = Partial<Record<keyof AccessCardPayload, string>>;
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
+/**
+ * Valida el contenido del formulario de gestión de tarjeta.
+ *
+ * @param payload Datos actuales del formulario.
+ * @returns Objeto de errores por campo.
+ *
+ * @remarks
+ * Reglas aplicadas:
+ * - nombre, correo, departamento y motivo son obligatorios,
+ * - algunas acciones requieren número de tarjeta actual,
+ * - la solicitud de tarjeta nueva requiere al menos una zona de acceso.
+ *
+ * Esta validación es contextual y depende de la acción seleccionada en
+ * {@link AccessCardPayload.action}.
+ */
 function validate(payload: AccessCardPayload): Errors {
   const e: Errors = {};
   const meta = ACTIONS.find((a) => a.value === payload.action)!;
@@ -115,11 +200,13 @@ function validate(payload: AccessCardPayload): Errors {
   if (!payload.employeeEmail?.trim()) e.employeeEmail = "Campo requerido";
   if (!payload.department?.trim())    e.department    = "Campo requerido";
 
-  if (meta.needsCard && !payload.cardNumber?.trim())
+  if (meta.needsCard && !payload.cardNumber?.trim()) {
     e.cardNumber = "Ingresa el número de tarjeta";
+  }
 
-  if (payload.action === "request_new" && !payload.zones?.length)
+  if (payload.action === "request_new" && !payload.zones?.length) {
     e.zones = "Selecciona al menos una zona" as never;
+  }
 
   if (!payload.reason?.trim()) e.reason = "Campo requerido";
 
@@ -128,21 +215,76 @@ function validate(payload: AccessCardPayload): Errors {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+/**
+ * Modal principal para la gestión de tarjetas de acceso.
+ *
+ * @param props Propiedades del componente.
+ * @returns Modal interactivo con formulario dinámico o confirmación de éxito.
+ *
+ * @remarks
+ * Este componente administra:
+ * - el estado del formulario,
+ * - la validación local,
+ * - la selección contextual de acciones,
+ * - la apertura y cierre del modal,
+ * - el envío de la solicitud,
+ * - y la transición al estado de éxito.
+ *
+ * Dependiendo del estado:
+ * - renderiza un formulario dinámico,
+ * - o muestra una confirmación con {@link SuccessBanner}.
+ */
 export default function AccessCardModal({ open, onClose, defaultAction }: Props) {
+  /**
+   * Payload actual del formulario.
+   *
+   * Se inicializa con {@link INITIAL} y puede recibir una acción por defecto
+   * desde {@link Props.defaultAction}.
+   */
   const [payload, setPayload] = useState<AccessCardPayload>({
     ...INITIAL,
     action: defaultAction ?? "request_new",
   });
+
+  /**
+   * Errores actuales de validación del formulario.
+   */
   const [errors,  setErrors]  = useState<Errors>({});
+
+  /**
+   * Indica si el formulario está siendo enviado.
+   */
   const [loading, setLoading] = useState(false);
+
+  /**
+   * Resultado retornado por el servicio al registrar la solicitud.
+   */
   const [result,  setResult]  = useState<AccessCardResult | null>(null);
+
+  /**
+   * Indica si el flujo fue completado exitosamente.
+   */
   const [done,    setDone]    = useState(false);
 
+  /**
+   * Actualiza una propiedad específica del payload.
+   *
+   * @param key Campo a actualizar.
+   * @param value Nuevo valor del campo.
+   */
   const set = <K extends keyof AccessCardPayload>(
     key: K,
     value: AccessCardPayload[K],
   ) => setPayload((p) => ({ ...p, [key]: value }));
 
+  /**
+   * Alterna la selección de una zona de acceso.
+   *
+   * @param zone Zona a agregar o remover del payload.
+   *
+   * @remarks
+   * Solo se utiliza en el flujo de solicitud de tarjeta nueva.
+   */
   const toggleZone = (zone: string) => {
     const cur = payload.zones ?? [];
     set("zones", (cur.includes(zone as never)
@@ -151,6 +293,13 @@ export default function AccessCardModal({ open, onClose, defaultAction }: Props)
     );
   };
 
+  /**
+   * Cierra el modal y reinicia su estado interno.
+   *
+   * @remarks
+   * El reinicio se difiere ligeramente para respetar la animación de cierre
+   * del modal y evitar parpadeos visuales.
+   */
   const handleClose = () => {
     onClose();
     setTimeout(() => {
@@ -161,9 +310,26 @@ export default function AccessCardModal({ open, onClose, defaultAction }: Props)
     }, 300);
   };
 
+  /**
+   * Ejecuta la validación y envío de la solicitud de tarjeta.
+   *
+   * @returns Promesa que procesa el envío del formulario.
+   *
+   * @remarks
+   * Flujo:
+   * 1. Valida el payload con {@link validate}.
+   * 2. Si hay errores, actualiza el estado y detiene el envío.
+   * 3. Si es válido, llama a {@link submitAccessCardRequest}.
+   * 4. Guarda el resultado y cambia al estado de éxito.
+   * 5. Si falla, muestra un error general sobre el formulario.
+   */
   const handleSubmit = async () => {
     const e = validate(payload);
-    if (Object.keys(e).length) { setErrors(e); return; }
+    if (Object.keys(e).length) {
+      setErrors(e);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await submitAccessCardRequest(payload);
@@ -176,9 +342,25 @@ export default function AccessCardModal({ open, onClose, defaultAction }: Props)
     }
   };
 
+  /**
+   * Acción actualmente seleccionada dentro del formulario.
+   *
+   * Contiene los metadatos visuales y funcionales definidos en {@link ACTIONS}.
+   */
   const selectedAction = ACTIONS.find((a) => a.value === payload.action)!;
+
+  /**
+   * Indica si la acción actual requiere número de tarjeta existente.
+   */
   const needsCard      = selectedAction.needsCard;
 
+  /**
+   * Mensajes contextuales para acciones críticas o sensibles.
+   *
+   * @remarks
+   * Ayudan a anticipar consecuencias operativas del trámite, como bloqueos
+   * inmediatos o desactivaciones.
+   */
   const URGENCY_LABELS: Record<string, string> = {
     report_lost: "Esta acción bloqueará la tarjeta inmediatamente.",
     deactivate:  "La tarjeta quedará inactiva al procesar la solicitud.",
@@ -188,7 +370,6 @@ export default function AccessCardModal({ open, onClose, defaultAction }: Props)
     <Modal
       open={open}
       onClose={handleClose}
-      // ↓ Fix: no pasar la prop cuando sea undefined (exactOptionalPropertyTypes)
       {...(!done && { title: "Gestión de tarjeta de acceso" })}
       {...(!done && { subtitle: "Solicita, reporta o desactiva tarjetas" })}
       size="md"
@@ -280,7 +461,6 @@ export default function AccessCardModal({ open, onClose, defaultAction }: Props)
 
           {/* ── Datos del colaborador ──────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
-            {/* ↓ Fix: spread condicional en lugar de pasar undefined directamente */}
             <FieldWrapper
               label="Nombre"
               required
