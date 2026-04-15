@@ -1,6 +1,64 @@
-// app/components/company/config/companyHistory.ts
+/**
+ * @module companyHistory
+ * Línea de tiempo histórica de la compañía Estudio de Moda (EDM).
+ *
+ * @remarks
+ * Este módulo define la evolución de la empresa a través de hitos clave,
+ * utilizados en la sección "Conoce la Empresa".
+ *
+ * La información aquí contenida es de carácter corporativo y puede ser
+ * reutilizada en diferentes componentes como:
+ *
+ * - timelines
+ * - secciones informativas
+ * - presentaciones institucionales
+ *
+ * Se recomienda mantener esta fuente como la "única verdad" para la historia
+ * de la compañía dentro de la aplicación.
+ */
 
-export const companyHistory = [
+/* -------------------------------------------------------------------------- */
+/* Tipos                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Representa un hito dentro de la historia de la empresa.
+ *
+ * @remarks
+ * Cada elemento describe un momento clave en la evolución de EDM:
+ *
+ * - `year`: referencia temporal (puede ser año o rango)
+ * - `title`: nombre del hito
+ * - `description`: detalle del evento
+ */
+export type CompanyHistoryItem = {
+  year: string;
+  title: string;
+  description: string;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Datos                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Línea de tiempo de la empresa.
+ *
+ * @remarks
+ * Contiene los hitos más relevantes desde la fundación hasta la actualidad.
+ *
+ * Notas:
+ *
+ * - Se utilizan strings en `year` para permitir flexibilidad
+ *   (ej: "2000s", "Hoy").
+ * - El orden es cronológico ascendente.
+ *
+ * En el futuro, estos datos podrían provenir de:
+ *
+ * - un CMS corporativo
+ * - una API institucional
+ */
+export const companyHistory: readonly CompanyHistoryItem[] = [
   {
     year: "1980",
     title: "Nace Estudio de Moda",

@@ -1,9 +1,24 @@
-"use client";
+/**
+ * @module DirectoryHomePage
+ * Componente cliente principal para la visualización y gestión del directorio de empleados.
+ *
+ * @remarks
+ * Este archivo implementa la interfaz principal del directorio de empleados,
+ * permitiendo al usuario explorar, filtrar y visualizar la información del personal.
+ *
+ * Su responsabilidad incluye:
+ *
+ * - Mostrar métricas generales del directorio.
+ * - Gestionar filtros por texto, estado y departamento.
+ * - Alternar entre vista en cuadrícula y vista en lista.
+ * - Renderizar los empleados filtrados.
+ * - Controlar la selección de empleados para visualizar su detalle en un modal.
+ *
+ * Este componente se ejecuta del lado del cliente porque utiliza estado local,
+ * memoización, callbacks y eventos de interacción.
+ */
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DirectoryClient.tsx — Wrapper cliente del directorio
-// "use client" por: búsqueda, filtros, toggle de vista, modal state
-// ─────────────────────────────────────────────────────────────────────────────
+"use client";
 
 import { useState, useMemo, useCallback } from "react";
 import { Employee, Department, DirectoryFilters } from "../types";
@@ -11,6 +26,13 @@ import { DEPARTMENT_COLORS, searchEmployees } from "../mockEmployees";
 import { EmployeeCard } from "./EmployeeCard";
 import { EmployeeModal } from "./EmployeeModal";
 
+/**
+ * Lista de departamentos disponibles para el filtrado del directorio.
+ *
+ * @remarks
+ * Incluye la opción especial `"Todos"` para permitir una vista sin restricción
+ * por departamento.
+ */
 const DEPARTMENTS: Array<Department | "Todos"> = [
   "Todos",
   "Dirección General",
@@ -24,41 +46,134 @@ const DEPARTMENTS: Array<Department | "Todos"> = [
   "Tiendas",
 ];
 
+/**
+ * Props del componente {@link DirectoryClient}.
+ */
 interface Props {
+  /**
+   * Colección completa de empleados que alimenta el directorio.
+   */
   employees: Employee[];
 }
 
+/**
+ * Componente cliente que renderiza el directorio interactivo de empleados.
+ *
+ * @param props Propiedades del componente.
+ * @param props.employees Listado completo de empleados disponibles.
+ * @returns Estructura visual principal del directorio.
+ *
+ * @remarks
+ * Flujo general del componente:
+ *
+ * 1. Inicializa el estado de filtros, vista y empleado seleccionado.
+ * 2. Calcula dinámicamente la lista de empleados filtrados.
+ * 3. Calcula métricas generales para el encabezado KPI.
+ * 4. Renderiza controles de búsqueda, estado, departamento y tipo de vista.
+ * 5. Muestra los resultados en formato grid o lista.
+ * 6. Abre un modal con el detalle del empleado seleccionado.
+ *
+ * Este componente actúa como contenedor principal de experiencia de usuario
+ * para el módulo de directorio.
+ */
 export function DirectoryClient({ employees }: Props) {
+  /**
+   * Estado local de filtros aplicados al directorio.
+   *
+   * @remarks
+   * Incluye:
+   * - `search`: texto libre de búsqueda.
+   * - `department`: departamento seleccionado.
+   * - `status`: estado laboral seleccionado.
+   */
   const [filters, setFilters] = useState<DirectoryFilters>({
     search: "",
     department: "Todos",
     status: "Todos",
   });
+
+  /**
+   * Estado que controla el modo actual de visualización.
+   *
+   * @remarks
+   * Valores posibles:
+   * - `"grid"`: muestra empleados como tarjetas.
+   * - `"list"`: muestra empleados en formato de lista vertical.
+   */
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  /**
+   * Estado que almacena el empleado seleccionado actualmente.
+   *
+   * @remarks
+   * Cuando tiene valor, alimenta el modal de detalle.
+   * Cuando es `null`, el modal permanece cerrado.
+   */
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
-  // ── Filtered employees ────────────────────────────────────────────────────
+  /**
+   * Colección de empleados filtrados según los criterios activos.
+   *
+   * @remarks
+   * El filtrado se realiza en el siguiente orden:
+   *
+   * 1. Filtro por departamento.
+   * 2. Filtro por estado.
+   * 3. Búsqueda textual mediante {@link searchEmployees}.
+   *
+   * Se memoiza para evitar cálculos innecesarios en cada render.
+   */
   const filtered = useMemo(() => {
     let result = employees;
+
     if (filters.department !== "Todos") {
       result = result.filter((e) => e.department === filters.department);
     }
+
     if (filters.status !== "Todos") {
       result = result.filter((e) => e.status === filters.status);
     }
+
     result = searchEmployees(filters.search, result);
     return result;
   }, [employees, filters]);
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
-  const stats = useMemo(() => ({
-    total: employees.length,
-    active: employees.filter((e) => e.status === "active").length,
-    remote: employees.filter((e) => e.status === "remote").length,
-    departments: new Set(employees.map((e) => e.department)).size,
-  }), [employees]);
+  /**
+   * Métricas resumidas del directorio.
+   *
+   * @remarks
+   * Incluye indicadores para:
+   *
+   * - Total de empleados.
+   * - Empleados activos.
+   * - Empleados remotos.
+   * - Cantidad de departamentos únicos.
+   *
+   * Se utiliza en la franja superior de KPIs.
+   */
+  const stats = useMemo(
+    () => ({
+      total: employees.length,
+      active: employees.filter((e) => e.status === "active").length,
+      remote: employees.filter((e) => e.status === "remote").length,
+      departments: new Set(employees.map((e) => e.department)).size,
+    }),
+    [employees]
+  );
 
+  /**
+   * Selecciona un empleado y actualiza el estado del modal de detalle.
+   *
+   * @param emp Empleado seleccionado por el usuario.
+   * @returns No retorna valor.
+   */
   const handleSelect = useCallback((emp: Employee) => setSelectedEmployee(emp), []);
+
+  /**
+   * Cierra el modal de detalle limpiando el empleado seleccionado.
+   *
+   * @returns No retorna valor.
+   */
   const handleClose = useCallback(() => setSelectedEmployee(null), []);
 
   return (
@@ -74,9 +189,9 @@ export function DirectoryClient({ employees }: Props) {
       >
         {[
           { label: "Total empleados", value: stats.total, icon: "👥", color: "#1e3a5f" },
-          { label: "Activos",         value: stats.active, icon: "✅", color: "#10b981" },
-          { label: "Remotos",         value: stats.remote, icon: "🏠", color: "#3b82f6" },
-          { label: "Departamentos",   value: stats.departments, icon: "🏢", color: "#8b5cf6" },
+          { label: "Activos", value: stats.active, icon: "✅", color: "#10b981" },
+          { label: "Remotos", value: stats.remote, icon: "🏠", color: "#3b82f6" },
+          { label: "Departamentos", value: stats.departments, icon: "🏢", color: "#8b5cf6" },
         ].map((kpi) => (
           <div
             key={kpi.label}
@@ -128,7 +243,6 @@ export function DirectoryClient({ employees }: Props) {
       >
         {/* Búsqueda + toggle */}
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
-          {/* Search input */}
           <div style={{ flex: 1, minWidth: "200px", position: "relative" }}>
             <div
               style={{
@@ -167,7 +281,6 @@ export function DirectoryClient({ employees }: Props) {
             />
           </div>
 
-          {/* Filtro status */}
           <select
             value={filters.status}
             onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value as any }))}
@@ -190,7 +303,6 @@ export function DirectoryClient({ employees }: Props) {
             <option value="away">Ausente</option>
           </select>
 
-          {/* Toggle grid/list */}
           <div
             style={{
               display: "flex",
@@ -227,6 +339,7 @@ export function DirectoryClient({ employees }: Props) {
           {DEPARTMENTS.map((dept) => {
             const color = dept === "Todos" ? "#6b7280" : (DEPARTMENT_COLORS[dept] ?? "#6b7280");
             const isActive = filters.department === dept;
+
             return (
               <button
                 key={dept}
@@ -267,6 +380,7 @@ export function DirectoryClient({ employees }: Props) {
             : `${filtered.length} ${filtered.length === 1 ? "empleado" : "empleados"} encontrado${filtered.length === 1 ? "" : "s"}`}
           {filters.department !== "Todos" && ` en ${filters.department}`}
         </p>
+
         {(filters.search || filters.department !== "Todos" || filters.status !== "Todos") && (
           <button
             onClick={() => setFilters({ search: "", department: "Todos", status: "Todos" })}
@@ -308,15 +422,20 @@ export function DirectoryClient({ employees }: Props) {
         </div>
       )}
 
-      {/* ── Modal de detalle ──────────────────────────────────────────────── */}
       <EmployeeModal employee={selectedEmployee} onClose={handleClose} />
     </>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Empty state
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Componente auxiliar para representar el estado vacío del directorio.
+ *
+ * @returns Vista informativa cuando no existen resultados para los filtros aplicados.
+ *
+ * @remarks
+ * Se renderiza cuando la colección filtrada de empleados está vacía.
+ * Su objetivo es comunicar al usuario que debe ajustar los criterios de búsqueda.
+ */
 function EmptyState() {
   return (
     <div
@@ -339,7 +458,11 @@ function EmptyState() {
   );
 }
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
+/**
+ * Icono SVG para representar la vista en cuadrícula.
+ *
+ * @returns Icono visual de distribución tipo grid.
+ */
 function GridIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -350,6 +473,12 @@ function GridIcon() {
     </svg>
   );
 }
+
+/**
+ * Icono SVG para representar la vista en lista.
+ *
+ * @returns Icono visual de distribución tipo lista.
+ */
 function ListIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 15 15" fill="none">

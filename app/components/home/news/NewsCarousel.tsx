@@ -1,32 +1,100 @@
+/**
+ * @module NewsCarousel
+ * Componente cliente para mostrar anuncios o noticias en formato carrusel.
+ *
+ * @remarks
+ * Este archivo implementa un carrusel visual con rotación automática,
+ * navegación manual y selectores por indicador.
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { NewsTileSquare } from "./NewsTileSquare";
 
+/**
+ * Representa una noticia o anuncio dentro del carrusel.
+ */
 interface Announcement {
+  /**
+   * Identificador único de la noticia.
+   */
   id: string;
+
+  /**
+   * Título principal del contenido.
+   */
   title: string;
+
+  /**
+   * Resumen opcional de la noticia.
+   */
   summary?: string;
+
+  /**
+   * Fecha visible asociada al contenido.
+   */
   date?: string;
+
+  /**
+   * URL opcional de la imagen destacada.
+   */
   imageUrl?: string;
 }
 
+/**
+ * Props del componente {@link NewsCarousel}.
+ */
 interface Props {
+  /**
+   * Lista de anuncios o noticias a mostrar.
+   */
   announcements: Announcement[];
 }
 
+/**
+ * Componente cliente que renderiza un carrusel de noticias.
+ *
+ * @param props Propiedades del componente.
+ * @param props.announcements Lista de noticias a visualizar.
+ * @returns Carrusel interactivo con autoplay y navegación manual.
+ *
+ * @remarks
+ * Flujo general:
+ * 1. Mantiene el índice actual del slide visible.
+ * 2. Activa rotación automática si existe más de una noticia.
+ * 3. Permite navegar manualmente hacia adelante o atrás.
+ * 4. Renderiza indicadores para saltar a una noticia específica.
+ */
 export function NewsCarousel({ announcements }: Props) {
+  /**
+   * Índice de la noticia actualmente visible.
+   */
   const [current, setCurrent] = useState(0);
+
+  /**
+   * Cantidad total de noticias en el carrusel.
+   */
   const total = announcements.length;
 
+  /**
+   * Activa la rotación automática del carrusel.
+   */
   useEffect(() => {
     if (total <= 1) return;
     const id = setInterval(() => setCurrent((p) => (p + 1) % total), 6000);
     return () => clearInterval(id);
   }, [total]);
 
+  /**
+   * Avanza al siguiente slide.
+   */
   const next = () => setCurrent((p) => (p + 1) % total);
+
+  /**
+   * Retrocede al slide anterior.
+   */
   const prev = () => setCurrent((p) => (p - 1 + total) % total);
 
   return (
@@ -47,7 +115,7 @@ export function NewsCarousel({ announcements }: Props) {
         ))}
       </div>
 
-      {/* Nav buttons */}
+      {/* Navegación */}
       {total > 1 && (
         <>
           <button
@@ -55,12 +123,13 @@ export function NewsCarousel({ announcements }: Props) {
             aria-label="Anterior"
             className="
               absolute left-3 top-1/2 -translate-y-1/2 z-30
-              flex h-9 w-9 items-center justify-center
-              rounded-full bg-white/90 backdrop-blur-sm
-              text-violet-700 shadow-md
+              flex h-9 w-9 items-center justify-center rounded-full
+              shadow-md transition-all duration-200
               opacity-0 group-hover:opacity-100
-              transition-all duration-200
-              hover:bg-white hover:scale-105
+              hover:scale-105
+
+              bg-white/90 text-violet-700 hover:bg-white backdrop-blur-sm
+              dark:bg-[#161b22]/80 dark:text-violet-400 dark:hover:bg-[#21262d]/90 dark:border dark:border-[#30363d]
             "
           >
             <ChevronLeft className="h-4 w-4" />
@@ -71,12 +140,13 @@ export function NewsCarousel({ announcements }: Props) {
             aria-label="Siguiente"
             className="
               absolute right-3 top-1/2 -translate-y-1/2 z-30
-              flex h-9 w-9 items-center justify-center
-              rounded-full bg-white/90 backdrop-blur-sm
-              text-violet-700 shadow-md
+              flex h-9 w-9 items-center justify-center rounded-full
+              shadow-md transition-all duration-200
               opacity-0 group-hover:opacity-100
-              transition-all duration-200
-              hover:bg-white hover:scale-105
+              hover:scale-105
+
+              bg-white/90 text-violet-700 hover:bg-white backdrop-blur-sm
+              dark:bg-[#161b22]/80 dark:text-violet-400 dark:hover:bg-[#21262d]/90 dark:border dark:border-[#30363d]
             "
           >
             <ChevronRight className="h-4 w-4" />
@@ -84,7 +154,7 @@ export function NewsCarousel({ announcements }: Props) {
         </>
       )}
 
-      {/* Dot indicators */}
+      {/* Indicadores */}
       {total > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-30">
           {announcements.map((_, index) => (

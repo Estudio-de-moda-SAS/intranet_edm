@@ -1,8 +1,57 @@
+/**
+ * @module CommercialSalesSection
+ * Sección de desempeño comercial del módulo de Retail.
+ *
+ * @remarks
+ * Este componente renderiza una vista resumida del desempeño del canal
+ * comercial, organizada en dos bloques principales:
+ * - ranking de vendedores destacados
+ * - distribución de ventas por canal
+ *
+ * Su objetivo es ofrecer una lectura rápida y visual del rendimiento
+ * comercial del período, permitiendo identificar:
+ * - quiénes lideran las ventas del mes
+ * - nivel de cumplimiento frente a meta individual
+ * - número de cierres por vendedor
+ * - participación de cada canal en el total facturado
+ * - tendencia relativa por canal
+ *
+ * La información mostrada es estática y funciona como mock de interfaz.
+ * En una implementación productiva, estos datos podrían provenir de:
+ * - CRM comercial
+ * - sistemas de facturación
+ * - tableros de ventas
+ * - plataformas de seguimiento de ejecutivos y canales
+ */
+
 "use client";
 
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Award, Store } from "lucide-react";
 
+/**
+ * Representa a un vendedor dentro del ranking comercial.
+ *
+ * @remarks
+ * Este tipo modela la información necesaria para renderizar
+ * el bloque de top vendedores.
+ *
+ * Incluye:
+ * - identidad resumida del vendedor
+ * - rol comercial
+ * - ventas acumuladas
+ * - meta asignada
+ * - cantidad de cierres
+ * - configuración visual del avatar
+ *
+ * @property name Nombre completo del vendedor.
+ * @property initials Iniciales usadas en el avatar visual.
+ * @property hue Tono base usado para el gradiente del avatar.
+ * @property role Cargo o rol comercial.
+ * @property sales Valor vendido en el período.
+ * @property target Meta asignada para el período.
+ * @property deals Número de cierres logrados.
+ */
 type Seller = {
   name: string;
   initials: string;
@@ -13,6 +62,19 @@ type Seller = {
   deals: number;
 };
 
+/**
+ * Representa un canal de ventas dentro del resumen comercial.
+ *
+ * @remarks
+ * Este tipo modela la información usada en el bloque
+ * de distribución de ventas por canal.
+ *
+ * @property name Nombre del canal comercial.
+ * @property amount Monto facturado por el canal.
+ * @property pct Participación porcentual dentro del total.
+ * @property color Clase visual aplicada a la barra del canal.
+ * @property trend Variación porcentual del canal frente al período de referencia.
+ */
 type Channel = {
   name: string;
   amount: number;
@@ -21,21 +83,83 @@ type Channel = {
   trend: number;
 };
 
+/**
+ * Dataset estático de vendedores destacados.
+ *
+ * @remarks
+ * Este arreglo contiene ejemplos representativos del desempeño
+ * del equipo comercial durante el período actual.
+ *
+ * Se utiliza para poblar el ranking de top vendedores,
+ * permitiendo mostrar:
+ * - posición relativa
+ * - cumplimiento frente a meta
+ * - cierres logrados
+ *
+ * Incluye distintos niveles de avance para validar la interfaz.
+ */
 const TOP_SELLERS: Seller[] = [
-  { name: "Valentina Ospina",  initials: "VO", hue: 160, role: "Key Account",    sales: 58400, target: 55000, deals: 12 },
-  { name: "Andrés Castaño",    initials: "AC", hue: 200, role: "Ejecutivo Sr.",   sales: 51200, target: 55000, deals: 9  },
-  { name: "Laura Bermúdez",    initials: "LB", hue: 280, role: "Ejecutiva",       sales: 47800, target: 45000, deals: 14 },
-  { name: "Felipe Morales",    initials: "FM", hue: 30,  role: "Ejecutivo Jr.",   sales: 39600, target: 40000, deals: 11 },
-  { name: "Sara Quintero",     initials: "SQ", hue: 340, role: "Ejecutiva",       sales: 36100, target: 40000, deals: 8  },
+  { name: "Valentina Ospina",  initials: "VO", hue: 160, role: "Key Account",   sales: 58400, target: 55000, deals: 12 },
+  { name: "Andrés Castaño",    initials: "AC", hue: 200, role: "Ejecutivo Sr.",  sales: 51200, target: 55000, deals: 9  },
+  { name: "Laura Bermúdez",    initials: "LB", hue: 280, role: "Ejecutiva",      sales: 47800, target: 45000, deals: 14 },
+  { name: "Felipe Morales",    initials: "FM", hue: 30,  role: "Ejecutivo Jr.",  sales: 39600, target: 40000, deals: 11 },
+  { name: "Sara Quintero",     initials: "SQ", hue: 340, role: "Ejecutiva",      sales: 36100, target: 40000, deals: 8  },
 ];
 
+/**
+ * Dataset estático de ventas por canal.
+ *
+ * @remarks
+ * Este arreglo resume la distribución de la facturación comercial
+ * por canal durante el período analizado.
+ *
+ * Permite visualizar:
+ * - monto por canal
+ * - participación porcentual sobre el total
+ * - variación relativa por canal
+ *
+ * Se utiliza para poblar el bloque de "Ventas por Canal".
+ */
 const CHANNELS: Channel[] = [
-  { name: "Tiendas propias",   amount: 148000, pct: 43, color: "bg-emerald-500", trend: +5  },
-  { name: "Mayoristas",        amount: 96000,  pct: 28, color: "bg-teal-500",    trend: +2  },
-  { name: "E-commerce",        amount: 69000,  pct: 20, color: "bg-cyan-500",    trend: +18 },
-  { name: "Distribuidores",    amount: 35000,  pct: 10, color: "bg-sky-400",     trend: -3  },
+  { name: "Tiendas propias", amount: 148000, pct: 43, color: "bg-emerald-500", trend: +5  },
+  { name: "Mayoristas",      amount: 96000,  pct: 28, color: "bg-teal-500",    trend: +2  },
+  { name: "E-commerce",      amount: 69000,  pct: 20, color: "bg-cyan-500",    trend: +18 },
+  { name: "Distribuidores",  amount: 35000,  pct: 10, color: "bg-sky-400",     trend: -3  },
 ];
 
+/**
+ * Sección principal de desempeño comercial.
+ *
+ * @returns Un bloque visual con ranking de vendedores y distribución de ventas por canal.
+ *
+ * @remarks
+ * Este componente organiza la información comercial en dos paneles:
+ *
+ * 1. **Top Vendedores**
+ *    - muestra un ranking de ejecutivos destacados
+ *    - calcula el porcentaje de cumplimiento frente a meta (`pct`)
+ *    - identifica si cada vendedor está en línea con su objetivo (`onTrack`)
+ *    - representa visualmente el avance mediante una barra de progreso
+ *
+ * 2. **Ventas por Canal**
+ *    - muestra el peso de cada canal dentro del total facturado
+ *    - representa su participación mediante barras animadas
+ *    - incorpora una señal de tendencia positiva o negativa
+ *
+ * Además, el componente utiliza animaciones de `framer-motion`
+ * para mejorar la percepción visual de entrada y progresión.
+ *
+ * Esta sección resulta útil para:
+ * - seguimiento rápido del rendimiento comercial
+ * - comparación entre ejecutivos
+ * - análisis de mezcla de canales
+ * - lectura ejecutiva del negocio comercial
+ *
+ * @example
+ * ```tsx
+ * <CommercialSalesSection />
+ * ```
+ */
 export default function CommercialSalesSection() {
   return (
     <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -52,8 +176,16 @@ export default function CommercialSalesSection() {
 
         <ul className="divide-y divide-slate-50">
           {TOP_SELLERS.map((seller, i) => {
-            const pct     = Math.round((seller.sales / seller.target) * 100);
+            /**
+             * Porcentaje de cumplimiento frente a la meta individual.
+             */
+            const pct = Math.round((seller.sales / seller.target) * 100);
+
+            /**
+             * Indica si el vendedor ya alcanzó o superó su meta.
+             */
             const onTrack = seller.sales >= seller.target;
+
             return (
               <motion.li
                 key={seller.name}
@@ -131,6 +263,7 @@ export default function CommercialSalesSection() {
                   </span>
                 </div>
               </div>
+
               <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <motion.div
                   className={`h-full rounded-full ${ch.color}`}
@@ -139,6 +272,7 @@ export default function CommercialSalesSection() {
                   transition={{ duration: 0.8, delay: 0.2 + i * 0.1, ease: "easeOut" }}
                 />
               </div>
+
               <div className="mt-1 text-right text-[10px] text-slate-400">{ch.pct}% del total</div>
             </div>
           ))}

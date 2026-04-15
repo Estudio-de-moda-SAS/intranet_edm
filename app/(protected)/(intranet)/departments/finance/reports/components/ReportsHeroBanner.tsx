@@ -1,17 +1,87 @@
+/**
+ * @module ReportsHeroBanner
+ * Banner principal de la sección de reportes financieros.
+ *
+ * @remarks
+ * Este componente actúa como encabezado visual y contextual
+ * de la página de reportes del módulo financiero.
+ *
+ * Incluye:
+ *
+ * - breadcrumb de navegación
+ * - título principal de la sección
+ * - referencia al mes actual del análisis
+ * - indicadores clave de ingresos, utilidad y gastos
+ * - acceso directo al generador de reportes
+ *
+ * Su propósito es ofrecer una entrada ejecutiva rápida
+ * al estado financiero consolidado del periodo actual.
+ */
+
 // ✅ SERVER COMPONENT — sin "use client"
 import Link from 'next/link';
 import { ChevronRight, BarChart2, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
 import type { StrategicAnalysis } from '@/lib/graph/departments/finance.service';
 
+/**
+ * Formatea un valor numérico como moneda COP en notación compacta.
+ *
+ * @param n Valor monetario a formatear.
+ * @returns Cadena formateada en pesos colombianos.
+ *
+ * @remarks
+ * Se utiliza para representar cifras financieras resumidas
+ * dentro de los indicadores visuales del banner.
+ */
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: 'COP',
-    maximumFractionDigits: 0, notation: 'compact',
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+    notation: 'compact',
   }).format(n);
 
-interface Props { analysis: StrategicAnalysis }
+/**
+ * Props del componente {@link ReportsHeroBanner}.
+ *
+ * @property analysis Datos de análisis estratégico usados para construir el resumen visual.
+ */
+interface Props {
+  analysis: StrategicAnalysis;
+}
 
+/**
+ * Banner principal de reportes financieros.
+ *
+ * @param props Propiedades del componente.
+ * @returns Encabezado visual con breadcrumb, contexto mensual e indicadores clave.
+ *
+ * @remarks
+ * Este componente resume información estratégica del mes actual
+ * y la presenta en un formato destacado de cabecera.
+ *
+ * Muestra tres KPIs principales:
+ * - ingresos del mes
+ * - utilidad neta
+ * - gastos del mes
+ *
+ * Además, resalta la variación mensual de ingresos
+ * y ofrece un acceso directo hacia las herramientas
+ * de generación de reportes.
+ *
+ * @example
+ * ```tsx
+ * <ReportsHeroBanner analysis={analysis} />
+ * ```
+ */
 export function ReportsHeroBanner({ analysis: a }: Props) {
+  /**
+   * Indica si la variación mensual de ingresos es positiva.
+   *
+   * @remarks
+   * Este valor define tanto el ícono como el color
+   * de la señal visual de tendencia.
+   */
   const isPositive = a.variacionMes >= 0;
 
   return (
@@ -51,9 +121,11 @@ export function ReportsHeroBanner({ analysis: a }: Props) {
           <div className="rounded-xl bg-white/15 backdrop-blur-sm px-4 py-3 min-w-[120px]">
             <p className="text-[10px] font-semibold text-rose-200 uppercase tracking-wide">Ingresos</p>
             <p className="text-[20px] font-bold text-white leading-tight mt-0.5">{fmt(a.ingresosMes)}</p>
-            <div className={`flex items-center gap-1 mt-0.5 text-[11px] font-semibold ${
-              isPositive ? 'text-emerald-300' : 'text-red-300'
-            }`}>
+            <div
+              className={`flex items-center gap-1 mt-0.5 text-[11px] font-semibold ${
+                isPositive ? 'text-emerald-300' : 'text-red-300'
+              }`}
+            >
               {isPositive
                 ? <TrendingUp className="h-3 w-3" />
                 : <TrendingDown className="h-3 w-3" />
@@ -73,7 +145,9 @@ export function ReportsHeroBanner({ analysis: a }: Props) {
           <div className="rounded-xl bg-white/15 backdrop-blur-sm px-4 py-3 min-w-[120px]">
             <p className="text-[10px] font-semibold text-rose-200 uppercase tracking-wide">Gastos</p>
             <p className="text-[20px] font-bold text-white leading-tight mt-0.5">{fmt(a.gastosMes)}</p>
-            <p className="text-[11px] text-rose-200 mt-0.5">{Math.round((a.gastosMes / a.ingresosMes) * 100)}% de ingresos</p>
+            <p className="text-[11px] text-rose-200 mt-0.5">
+              {Math.round((a.gastosMes / a.ingresosMes) * 100)}% de ingresos
+            </p>
           </div>
         </div>
       </div>

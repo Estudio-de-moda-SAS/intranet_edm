@@ -1,3 +1,17 @@
+/**
+ * @module AppsGrid
+ * Componente cliente para mostrar una grilla paginada de aplicaciones,
+ * integrada con el sistema de favoritos.
+ *
+ * @remarks
+ * Este archivo permite:
+ * - renderizar aplicaciones en formato grid,
+ * - paginarlas,
+ * - marcar o desmarcar favoritos,
+ * - abrir un modal para agregar favoritos personalizados,
+ * - reutilizar estilos por color e ícono.
+ */
+
 "use client";
 
 /**
@@ -24,33 +38,114 @@ import { AddFavoriteModal } from "@/app/components/home/AddFavoriteModal";
 
 // ─── Tipos públicos ───────────────────────────────────────────────────────────
 
+/**
+ * Colores disponibles para las cards de aplicaciones.
+ */
 export type AppColor =
   | "purple" | "teal" | "blue" | "amber"
   | "pink"   | "green" | "coral" | "indigo"
   | "rose"   | "slate";
 
+/**
+ * Representa una aplicación mostrada en la grilla.
+ */
 export type AppItem = {
+  /**
+   * Identificador opcional de la app.
+   */
   id?: string;
+
+  /**
+   * Nombre visible de la aplicación.
+   */
   label: string;
+
+  /**
+   * Ruta de navegación de la aplicación.
+   */
   href: string;
+
+  /**
+   * Ícono de la app.
+   *
+   * @remarks
+   * Puede ser un componente Lucide o una clave string
+   * que luego se resuelve en `ICON_MAP`.
+   */
   icon?: LucideIcon | string;
+
+  /**
+   * Color visual de la tarjeta.
+   */
   color?: AppColor;
+
+  /**
+   * Descripción breve opcional.
+   */
   description?: string;
 };
 
+/**
+ * Props del componente {@link AppsGrid}.
+ */
 export type AppsGridProps = {
+  /**
+   * Lista de aplicaciones a mostrar.
+   */
   apps: AppItem[];
+
+  /**
+   * Título del bloque.
+   *
+   * @defaultValue "Aplicaciones"
+   */
   title?: string;
+
+  /**
+   * Clase del fondo del ícono del header.
+   */
   headerIconBg?: string;
+
+  /**
+   * Clase del color del ícono del header.
+   */
   headerIconColor?: string;
+
+  /**
+   * Ícono principal del header.
+   */
   headerIcon?: LucideIcon;
+
+  /**
+   * Cantidad de columnas del grid.
+   *
+   * @defaultValue 3
+   */
   cols?: 2 | 3 | 4;
+
+  /**
+   * Lista opcional de hrefs favoritos.
+   *
+   * @remarks
+   * Actualmente el componente usa `useFavorites` internamente,
+   * por lo que esta prop no se utiliza en el render actual.
+   */
   favoriteHrefs?: string[];
+
+  /**
+   * Callback opcional para alternar favoritos.
+   *
+   * @remarks
+   * Actualmente la lógica se maneja internamente.
+   */
   onToggleFavorite?: (item: AppItem) => void;
 };
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 
+/**
+ * Mapa de resolución de íconos por clave string.
+ */
 const ICON_MAP: Record<string, LucideIcon> = {
   users: Users, calendarDays: CalendarDays, fileText: FileText,
   heartHandshake: HeartHandshake, award: Award, barChart3: BarChart3,
@@ -62,6 +157,12 @@ const ICON_MAP: Record<string, LucideIcon> = {
   settings: Settings, zap: Zap,
 };
 
+/**
+ * Resuelve un ícono a partir de su valor.
+ *
+ * @param icon Ícono recibido como componente o string.
+ * @returns Componente Lucide o `null` si no se pudo resolver.
+ */
 function resolveIcon(icon: unknown): LucideIcon | null {
   if (typeof icon === "function") return icon as LucideIcon;
   if (typeof icon === "string") return ICON_MAP[icon] ?? null;
@@ -70,6 +171,9 @@ function resolveIcon(icon: unknown): LucideIcon | null {
 
 // ─── Color map ────────────────────────────────────────────────────────────────
 
+/**
+ * Configuración visual por color para cada card.
+ */
 const COLOR_MAP: Record<AppColor, {
   bg: string; icon: string; border: string;
   hoverBg: string; hoverBorder: string; arrow: string;
@@ -88,13 +192,44 @@ const COLOR_MAP: Record<AppColor, {
 
 // ─── Paginación ───────────────────────────────────────────────────────────────
 
-const PAGE_SIZE = 12; // 3 cols × 4 filas
+/**
+ * Cantidad de aplicaciones por página.
+ */
+const PAGE_SIZE = 12;
+
+/**
+ * Cantidad máxima de páginas visibles.
+ */
 const MAX_PAGES = 5;
 
-function PaginationDot({ active, onClick }: { active: boolean; onClick: () => void }) {
+/**
+ * Props del componente {@link PaginationDot}.
+ */
+interface PaginationDotProps {
+  /**
+   * Indica si el dot está activo.
+   */
+  active: boolean;
+
+  /**
+   * Acción al hacer clic.
+   */
+  onClick: () => void;
+}
+
+/**
+ * Renderiza un indicador de paginación.
+ *
+ * @param props Propiedades del componente.
+ * @returns Botón visual tipo dot.
+ */
+function PaginationDot({ active, onClick }: PaginationDotProps) {
   return (
-    <button onClick={onClick} aria-label="Ir a página"
-      className={cn("h-1.5 rounded-full transition-all duration-200",
+    <button
+      onClick={onClick}
+      aria-label="Ir a página"
+      className={cn(
+        "h-1.5 rounded-full transition-all duration-200",
         active ? "w-5 bg-rose-500" : "w-1.5 bg-slate-300 hover:bg-slate-400"
       )}
     />
@@ -103,15 +238,37 @@ function PaginationDot({ active, onClick }: { active: boolean; onClick: () => vo
 
 // ─── AppCard ──────────────────────────────────────────────────────────────────
 
+/**
+ * Props del componente {@link AppCard}.
+ */
+interface AppCardProps {
+  /**
+   * Datos de la aplicación.
+   */
+  item: AppItem;
+
+  /**
+   * Indica si la app ya está en favoritos.
+   */
+  isFavorite: boolean;
+
+  /**
+   * Acción al pulsar la estrella.
+   */
+  onStarClick: (item: AppItem) => void;
+}
+
+/**
+ * Renderiza una card individual de aplicación.
+ *
+ * @param props Propiedades del componente.
+ * @returns Elemento visual de una app con enlace y control de favorito.
+ */
 function AppCard({
   item,
   isFavorite,
   onStarClick,
-}: {
-  item: AppItem;
-  isFavorite: boolean;
-  onStarClick: (item: AppItem) => void;
-}) {
+}: AppCardProps) {
   const c = COLOR_MAP[item.color ?? "purple"] ?? COLOR_MAP.purple;
   const Icon = resolveIcon(item.icon);
 
@@ -147,11 +304,21 @@ function AppCard({
           )}
         </span>
 
-        <ChevronRight size={12} className={cn("absolute right-2.5 shrink-0 transition-all duration-200 group-hover:translate-x-0.5", c.arrow)} />
+        <ChevronRight
+          size={12}
+          className={cn(
+            "absolute right-2.5 shrink-0 transition-all duration-200 group-hover:translate-x-0.5",
+            c.arrow
+          )}
+        />
 
         {/* Estrella */}
         <button
-          onClick={e => { e.preventDefault(); e.stopPropagation(); onStarClick(item); }}
+          onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            onStarClick(item);
+          }}
           title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
           className={cn(
             "absolute top-1.5 right-1.5 z-10",
@@ -177,34 +344,89 @@ function AppCard({
 
 // ─── AppsGrid ─────────────────────────────────────────────────────────────────
 
+/**
+ * Renderiza una grilla paginada de aplicaciones integrada con favoritos.
+ *
+ * @param props Propiedades del componente.
+ * @param props.apps Lista de aplicaciones.
+ * @param props.title Título del bloque.
+ * @param props.headerIconBg Fondo del ícono de cabecera.
+ * @param props.headerIconColor Color del ícono de cabecera.
+ * @param props.headerIcon Ícono del header.
+ * @param props.cols Cantidad de columnas del grid.
+ * @returns Tarjeta con aplicaciones, paginación y modal de favoritos.
+ *
+ * @remarks
+ * Flujo general:
+ * 1. Obtiene favoritos desde {@link useFavorites}.
+ * 2. Calcula la paginación de apps.
+ * 3. Renderiza las apps de la página actual.
+ * 4. Si una app ya es favorita, la estrella la elimina directamente.
+ * 5. Si no es favorita, abre {@link AddFavoriteModal} con la app preseleccionada.
+ */
 export function AppsGrid({
   apps,
   title = "Aplicaciones",
-  headerIconBg    = "bg-rose-50",
+  headerIconBg = "bg-rose-50",
   headerIconColor = "text-rose-500",
   headerIcon: HeaderIcon = LayoutGrid,
   cols = 3,
 }: AppsGridProps) {
+  /**
+   * Estado y acciones del contexto de favoritos.
+   */
   const { favoriteHrefs, addFavorite, removeFavorite, getFavoriteByHref } = useFavorites();
-  const [page, setPage]             = useState(0);
+
+  /**
+   * Página actual.
+   */
+  const [page, setPage] = useState(0);
+
+  /**
+   * App pendiente de agregarse como favorita.
+   */
   const [pendingApp, setPendingApp] = useState<AppItem | null>(null);
 
+  /**
+   * Total de páginas disponibles, limitado por `MAX_PAGES`.
+   */
   const totalPages = Math.min(Math.ceil(apps.length / PAGE_SIZE), MAX_PAGES);
 
+  /**
+   * Subconjunto de apps visibles en la página actual.
+   */
   const paginated = useMemo(() => {
     const capped = apps.slice(0, MAX_PAGES * PAGE_SIZE);
     return capped.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
   }, [apps, page]);
 
+  /**
+   * Indica si debe mostrarse el footer de paginación.
+   */
   const hasPagination = totalPages > 1;
+
+  /**
+   * Navega a una página válida dentro del rango permitido.
+   *
+   * @param p Página solicitada.
+   */
   const goTo = (p: number) => setPage(Math.max(0, Math.min(p, totalPages - 1)));
 
+  /**
+   * Maneja la acción sobre la estrella de favorito.
+   *
+   * @param item Aplicación seleccionada.
+   *
+   * @remarks
+   * - Si ya existe en favoritos, la elimina.
+   * - Si no existe, abre el modal para agregarla.
+   */
   function handleStarClick(item: AppItem) {
     const existing = getFavoriteByHref(item.href);
     if (existing) {
-      removeFavorite(existing.id);   // quitar sin modal
+      removeFavorite(existing.id);
     } else {
-      setPendingApp(item);           // abrir modal para personalizar
+      setPendingApp(item);
     }
   }
 
@@ -225,6 +447,7 @@ export function AppsGrid({
               </p>
             </div>
           </div>
+
           {hasPagination && (
             <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border", headerIconBg, headerIconColor)}>
               Pág. {page + 1} / {totalPages}
@@ -250,17 +473,25 @@ export function AppsGrid({
         {/* Footer paginación */}
         {hasPagination && (
           <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5">
-            <button onClick={() => goTo(page - 1)} disabled={page === 0}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
+            <button
+              onClick={() => goTo(page - 1)}
+              disabled={page === 0}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
               <ChevronLeft className="h-3.5 w-3.5" /> Anterior
             </button>
+
             <div className="flex items-center gap-1.5">
               {Array.from({ length: totalPages }).map((_, i) => (
                 <PaginationDot key={i} active={i === page} onClick={() => goTo(i)} />
               ))}
             </div>
-            <button onClick={() => goTo(page + 1)} disabled={page === totalPages - 1}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
+
+            <button
+              onClick={() => goTo(page + 1)}
+              disabled={page === totalPages - 1}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
               Siguiente <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>

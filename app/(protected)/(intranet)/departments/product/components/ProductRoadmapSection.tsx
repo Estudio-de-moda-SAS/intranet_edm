@@ -1,3 +1,21 @@
+/**
+ * @module ProductRoadmapSection
+ * Sección de roadmap del módulo de Producto.
+ *
+ * @remarks
+ * Este componente renderiza un resumen visual de iniciativas estratégicas
+ * del área de Producto, mostrando:
+ * - Estado actual de cada iniciativa
+ * - Squad responsable
+ * - Trimestre planificado
+ * - Progreso de ejecución
+ * - Etiquetas temáticas
+ *
+ * La información presentada es estática y funciona como mock dentro
+ * de la intranet. En un entorno productivo, estos datos podrían
+ * provenir de una fuente dinámica como un roadmap service o una API interna.
+ */
+
 // app/product/components/ProductRoadmapSection.tsx
 // CLIENT COMPONENT
 "use client";
@@ -5,6 +23,17 @@
 import { Map, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
+/**
+ * Representa una iniciativa dentro del roadmap del área de Producto.
+ *
+ * @property id Identificador único de la iniciativa.
+ * @property name Nombre descriptivo de la iniciativa.
+ * @property squad Equipo responsable de su ejecución.
+ * @property status Estado actual de la iniciativa.
+ * @property quarter Trimestre de planeación o ejecución.
+ * @property progress Porcentaje de avance de la iniciativa.
+ * @property tags Etiquetas temáticas asociadas.
+ */
 type Initiative = {
   id:       string;
   name:     string;
@@ -15,6 +44,13 @@ type Initiative = {
   tags:     string[];
 };
 
+/**
+ * Dataset estático de iniciativas del roadmap.
+ *
+ * @remarks
+ * Este arreglo contiene iniciativas representativas del área
+ * para poblar la sección de roadmap en la vista de Producto.
+ */
 const INITIATIVES: Initiative[] = [
   {
     id:       "init-1",
@@ -72,6 +108,17 @@ const INITIATIVES: Initiative[] = [
   },
 ];
 
+/**
+ * Metadatos visuales asociados a cada estado del roadmap.
+ *
+ * @remarks
+ * Centraliza la configuración de estilo utilizada para representar
+ * visualmente el estado de una iniciativa, incluyendo:
+ * - Etiqueta visible
+ * - Color del indicador
+ * - Color de la barra de progreso
+ * - Estilo del badge
+ */
 const STATUS_META = {
   "done":        { label: "Completado",   dot: "bg-emerald-400", bar: "bg-emerald-400", badge: "bg-emerald-50 text-emerald-700 border-emerald-100" },
   "in-progress": { label: "En curso",     dot: "bg-sky-400",     bar: "bg-sky-400",     badge: "bg-sky-50 text-sky-700 border-sky-100" },
@@ -79,6 +126,23 @@ const STATUS_META = {
   "blocked":     { label: "Bloqueado",    dot: "bg-rose-400",    bar: "bg-rose-400",    badge: "bg-rose-50 text-rose-700 border-rose-100" },
 };
 
+/**
+ * Sección de roadmap del módulo de Producto.
+ *
+ * @returns Un componente visual con el listado resumido de iniciativas activas.
+ *
+ * @remarks
+ * Este componente presenta iniciativas del roadmap en formato de lista,
+ * mostrando para cada una:
+ * - Nombre
+ * - Squad responsable
+ * - Trimestre asociado
+ * - Estado actual
+ * - Barra de progreso cuando aplica
+ * - Etiquetas temáticas
+ *
+ * Incluye además un acceso a la vista completa del roadmap.
+ */
 export default function ProductRoadmapSection() {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

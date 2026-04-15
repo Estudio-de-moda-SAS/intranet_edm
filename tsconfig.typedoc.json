@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitReturns": false,
+    "strict": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "types/next-auth.d.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx",
+    "types/**/*.ts",
+    "types/**/*.d.ts",
+    "config/**/*.ts",
+    "stores/**/*.ts",
+    "auth.ts",
+    "proxy.ts",
+    "providers.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}

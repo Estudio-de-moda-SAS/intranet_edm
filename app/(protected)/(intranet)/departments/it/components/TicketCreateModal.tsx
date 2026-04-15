@@ -1,8 +1,34 @@
+/**
+ * @module TicketCreateModal
+ * Modal para la creación de tickets de soporte en el módulo de TI.
+ *
+ * @remarks
+ * Este componente permite registrar una nueva solicitud de soporte técnico
+ * mediante un formulario embebido dentro de {@link Modal}.
+ *
+ * Incluye:
+ * - Título del ticket
+ * - Usuario solicitante
+ * - Área de origen
+ * - Descripción opcional
+ *
+ * Está implementado como componente cliente porque administra estado local
+ * del formulario con `useState`.
+ */
+
 "use client";
 
 import { useState } from "react";
 import { Modal } from "@/app/components/ui/Modal";
 
+/**
+ * Estructura de un ticket de soporte.
+ *
+ * @property title Título breve del incidente o requerimiento.
+ * @property user Nombre o identificador del usuario solicitante.
+ * @property area Área de origen del ticket.
+ * @property description Descripción adicional del problema o solicitud.
+ */
 type Ticket = {
   title: string;
   user: string;
@@ -10,6 +36,21 @@ type Ticket = {
   description: string;
 };
 
+/**
+ * Props del componente {@link TicketCreateModal}.
+ *
+ * @property open Indica si el modal está abierto.
+ * @property onClose Callback para cerrar el modal.
+ * @property onCreate Callback ejecutado al crear un ticket válido.
+ * @property modalTitle Título opcional del modal.
+ * @property subtitle Subtítulo opcional del modal.
+ * @property defaultArea Área predeterminada del ticket.
+ *
+ * @remarks
+ * Si `defaultArea` existe:
+ * - Se usa como valor inicial del campo `area`
+ * - El campo queda en modo solo lectura
+ */
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -20,6 +61,35 @@ interface Props {
   defaultArea?: string;
 }
 
+/**
+ * Modal de creación de tickets de soporte.
+ *
+ * @param props Propiedades del componente.
+ * @returns Formulario modal para registrar un nuevo ticket.
+ *
+ * @remarks
+ * Flujo de uso:
+ * 1. El usuario diligencia los campos requeridos
+ * 2. `handleSubmit` valida título, usuario y área
+ * 3. Se ejecuta `onCreate` con el objeto `Ticket`
+ * 4. El formulario se reinicia
+ * 5. El modal se cierra
+ *
+ * Comportamientos relevantes:
+ * - Mantiene `defaultArea` después del submit si fue definida
+ * - Impide crear tickets si faltan campos obligatorios
+ * - Reutiliza el componente base {@link Modal}
+ *
+ * @example
+ * ```tsx
+ * <TicketCreateModal
+ *   open={open}
+ *   onClose={() => setOpen(false)}
+ *   onCreate={(ticket) => console.log(ticket)}
+ *   defaultArea="Ventas"
+ * />
+ * ```
+ */
 export default function TicketCreateModal({
   open,
   onClose,
@@ -28,12 +98,26 @@ export default function TicketCreateModal({
   subtitle,
   defaultArea,
 }: Props) {
-
   const [title, setTitle] = useState("");
   const [user, setUser] = useState("");
   const [area, setArea] = useState(defaultArea || "");
   const [description, setDescription] = useState("");
 
+  /**
+   * Procesa el envío del formulario.
+   *
+   * @remarks
+   * Valida que existan los campos mínimos requeridos:
+   * - `title`
+   * - `user`
+   * - `area`
+   *
+   * Si la validación es exitosa:
+   * - Ejecuta `onCreate`
+   * - Limpia el formulario
+   * - Conserva `defaultArea` si existe
+   * - Cierra el modal
+   */
   function handleSubmit() {
     if (!title || !user || !area) return;
 
@@ -46,7 +130,7 @@ export default function TicketCreateModal({
 
     setTitle("");
     setUser("");
-    setArea(defaultArea || ""); // 🔥 mantiene el default si existe
+    setArea(defaultArea || "");
     setDescription("");
 
     onClose();
@@ -79,7 +163,6 @@ export default function TicketCreateModal({
       }
     >
       <div className="space-y-4">
-
         <div>
           <label className="text-xs text-slate-500">Título</label>
           <input
@@ -116,7 +199,6 @@ export default function TicketCreateModal({
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
         </div>
-
       </div>
     </Modal>
   );

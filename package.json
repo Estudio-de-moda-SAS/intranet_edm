@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "docs:generate": "typedoc"
   },
   "dependencies": {
     "@microsoft/microsoft-graph-client": "^3.0.7",
@@ -31,6 +32,9 @@
     "eslint-config-next": "16.1.6",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
+    "typedoc": "^0.28.18",
+    "typedoc-plugin-mdn-links": "^5.1.1",
+    "typedoc-theme-hierarchy": "^6.0.0",
     "typescript": "^5"
   }
 }

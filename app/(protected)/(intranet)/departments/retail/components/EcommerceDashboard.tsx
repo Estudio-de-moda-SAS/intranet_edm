@@ -1,3 +1,33 @@
+/**
+ * @module EcommerceDashboard
+ * Dashboard analítico del canal E-Commerce dentro del módulo de Retail.
+ *
+ * @remarks
+ * Este componente renderiza una vista analítica integral del canal digital,
+ * combinando visualizaciones históricas, métricas operativas y resúmenes
+ * ejecutivos del desempeño del e-commerce.
+ *
+ * El dashboard se estructura en cuatro bloques principales:
+ * - GMV diario, pedidos y visitantes de la semana
+ * - tendencia mensual de ventas y conversión
+ * - distribución por fuentes de tráfico, dispositivos y métodos de pago
+ * - resumen tabular de indicadores clave del mes
+ *
+ * Además, incorpora:
+ * - animaciones de entrada por sección
+ * - gráficos responsivos con Recharts
+ * - microanimaciones con Framer Motion
+ * - actividad reciente del canal
+ *
+ * La información mostrada es estática y funciona como mock de interfaz.
+ * En una implementación productiva, estos datos podrían provenir de:
+ * - plataforma de e-commerce
+ * - herramientas de analítica digital
+ * - sistemas de tráfico y adquisición
+ * - servicios de pagos
+ * - plataformas de reputación y pedidos
+ */
+
 "use client";
 
 import { motion } from "framer-motion";
@@ -13,6 +43,18 @@ import { PageEnter, AnimateItem } from "@/app/components/ui/PageTransition";
 
 // ── Mock data ─────────────────────────────────────────────────────
 
+/**
+ * Dataset de GMV diario, pedidos y visitantes de la semana.
+ *
+ * @remarks
+ * Este arreglo representa el comportamiento reciente del canal digital
+ * durante una semana, permitiendo comparar:
+ * - ingresos diarios (`gmv`)
+ * - volumen de pedidos
+ * - tráfico de visitantes
+ *
+ * Se utiliza en el primer bloque analítico del dashboard.
+ */
 const DAILY_GMV = [
   { dia: "L",   gmv: 2100, pedidos: 58,  visitors: 1420 },
   { dia: "M",   gmv: 2840, pedidos: 74,  visitors: 1680 },
@@ -23,6 +65,18 @@ const DAILY_GMV = [
   { dia: "D",   gmv: 3800, pedidos: 98,  visitors: 2210 },
 ];
 
+/**
+ * Dataset de tendencia mensual del canal digital.
+ *
+ * @remarks
+ * Este arreglo resume el comportamiento del e-commerce en los últimos
+ * seis meses, integrando:
+ * - GMV
+ * - cantidad de pedidos
+ * - tasa de conversión
+ *
+ * Se utiliza para analizar evolución y consistencia del desempeño.
+ */
 const MONTHLY_TREND = [
   { mes: "Ene", gmv: 48000, pedidos: 1280, conversion: 3.1 },
   { mes: "Feb", gmv: 52000, pedidos: 1380, conversion: 3.2 },
@@ -32,6 +86,18 @@ const MONTHLY_TREND = [
   { mes: "Jun", gmv: 69000, pedidos: 1842, conversion: 3.8 },
 ];
 
+/**
+ * Dataset de fuentes de tráfico del canal online.
+ *
+ * @remarks
+ * Este arreglo modela la distribución del tráfico digital por fuente
+ * de adquisición, incluyendo:
+ * - volumen absoluto de visitas
+ * - participación porcentual
+ * - color visual asociado
+ *
+ * Se utiliza para la tarjeta de fuentes de tráfico.
+ */
 const TRAFFIC_SOURCES = [
   { fuente: "Orgánico",   visitas: 18400, pct: 38, color: "#6366f1" },
   { fuente: "Redes soc.", visitas: 12200, pct: 25, color: "#8b5cf6" },
@@ -40,19 +106,53 @@ const TRAFFIC_SOURCES = [
   { fuente: "Directo",    visitas: 2200,  pct: 5,  color: "#ddd6fe" },
 ];
 
+/**
+ * Dataset de sesiones por dispositivo.
+ *
+ * @remarks
+ * Este arreglo permite visualizar la distribución de sesiones
+ * por tipo de dispositivo y la conversión asociada a cada uno.
+ *
+ * Es útil para identificar brechas de rendimiento entre:
+ * - mobile
+ * - desktop
+ * - tablet
+ */
 const DEVICE_BREAKDOWN = [
   { device: "Mobile",  sessions: 28400, conv: 3.2 },
   { device: "Desktop", sessions: 14200, conv: 4.8 },
   { device: "Tablet",  sessions: 5600,  conv: 3.9 },
 ];
 
+/**
+ * Dataset de distribución por método de pago.
+ *
+ * @remarks
+ * Este arreglo resume la participación porcentual de los medios
+ * de pago utilizados en el canal online.
+ *
+ * Se utiliza para mostrar la composición del checkout
+ * por método preferido por los usuarios.
+ */
 const PAYMENT_METHODS = [
-  { method: "Tarjeta crédito", pct: 44, color: "bg-indigo-500" },
-  { method: "PSE",             pct: 28, color: "bg-violet-500" },
-  { method: "Nequi / Daviplata",pct:18, color: "bg-purple-400" },
-  { method: "Contra entrega",  pct: 10, color: "bg-slate-300"  },
+  { method: "Tarjeta crédito",      pct: 44, color: "bg-indigo-500" },
+  { method: "PSE",                  pct: 28, color: "bg-violet-500" },
+  { method: "Nequi / Daviplata",    pct: 18, color: "bg-purple-400" },
+  { method: "Contra entrega",       pct: 10, color: "bg-slate-300"  },
 ];
 
+/**
+ * Dataset de actividad reciente del canal e-commerce.
+ *
+ * @remarks
+ * Este arreglo representa eventos recientes relevantes para la operación
+ * del canal digital, como:
+ * - picos de tráfico
+ * - pedidos urgentes
+ * - despliegue de campañas
+ * - normalización de servicios
+ * - alertas de abandono
+ */
 const RECENT_ACTIVITY = [
   { label: "Nuevo pico de tráfico — 320 usuarios simultáneos", time: "Hace 12m",  type: "info"    },
   { label: "Pedido #48812 marcado como urgente",               time: "Hace 25m",  type: "warning" },
@@ -62,16 +162,48 @@ const RECENT_ACTIVITY = [
   { label: "Tasa de abandono supera 70% en móvil",             time: "Hace 4h",   type: "warning" },
 ];
 
+/**
+ * Mapa de colores para el indicador de actividad reciente.
+ *
+ * @remarks
+ * Se utiliza para asignar color al punto visual según el tipo de evento.
+ */
 const ACTIVITY_DOT: Record<string, string> = {
-  ok: "bg-emerald-400", warning: "bg-amber-400", info: "bg-sky-400",
+  ok: "bg-emerald-400",
+  warning: "bg-amber-400",
+  info: "bg-sky-400",
 };
 
+/**
+ * Estilo base reutilizado para los tooltips de Recharts.
+ *
+ * @remarks
+ * Centraliza la apariencia visual de los tooltips de todos los gráficos
+ * del dashboard para mantener consistencia.
+ */
 const TOOLTIP_STYLE = {
-  background: "#fff", border: "1px solid #e2e8f0",
-  borderRadius: "10px", fontSize: "12px", color: "#1e293b",
+  background: "#fff",
+  border: "1px solid #e2e8f0",
+  borderRadius: "10px",
+  fontSize: "12px",
+  color: "#1e293b",
   boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
 };
 
+/**
+ * Encabezado visual reutilizable para secciones del dashboard.
+ *
+ * @param props Propiedades del componente.
+ * @param props.icon Ícono representativo de la sección.
+ * @param props.label Título principal de la sección.
+ * @param props.sub Subtítulo opcional descriptivo.
+ * @returns Un bloque de encabezado visual para secciones analíticas.
+ *
+ * @remarks
+ * Este subcomponente se utiliza para unificar la presentación
+ * de títulos de sección dentro del dashboard, manteniendo
+ * consistencia visual entre iconografía, título y subtítulo.
+ */
 function SectionHeading({ icon: Icon, label, sub }: { icon: React.ElementType; label: string; sub?: string }) {
   return (
     <div className="flex items-center gap-2 mb-5">
@@ -89,6 +221,42 @@ function SectionHeading({ icon: Icon, label, sub }: { icon: React.ElementType; l
 
 // ── Component ─────────────────────────────────────────────────────
 
+/**
+ * Dashboard analítico del canal E-Commerce.
+ *
+ * @returns Un conjunto de visualizaciones y resúmenes del desempeño digital.
+ *
+ * @remarks
+ * Este componente presenta una vista analítica integral del canal online,
+ * organizada en cuatro grandes bloques:
+ *
+ * 1. **GMV y pedidos semanales**
+ *    - compara ingresos, visitantes y pedidos por día
+ *
+ * 2. **Tendencia mensual y tráfico**
+ *    - muestra evolución de GMV y conversión
+ *    - resume la mezcla de fuentes de adquisición
+ *
+ * 3. **Dispositivos, pagos y actividad**
+ *    - compara sesiones y conversión por dispositivo
+ *    - resume uso de métodos de pago
+ *    - expone eventos recientes del canal
+ *
+ * 4. **Resumen tabular de indicadores**
+ *    - compara métricas del mes actual contra el anterior
+ *    - resume el estado de cada KPI con una etiqueta visual
+ *
+ * Este dashboard es útil para:
+ * - seguimiento ejecutivo del canal e-commerce
+ * - lectura de performance digital
+ * - detección de oportunidades de optimización
+ * - monitoreo de salud del embudo online
+ *
+ * @example
+ * ```tsx
+ * <EcommerceDashboard />
+ * ```
+ */
 export default function EcommerceDashboard() {
   return (
     <PageEnter className="space-y-10">
@@ -103,23 +271,54 @@ export default function EcommerceDashboard() {
                 <defs>
                   <linearGradient id="gmvGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.18} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}    />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="visGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#a78bfa" stopOpacity={0.12} />
-                    <stop offset="95%" stopColor="#a78bfa" stopOpacity={0}    />
+                    <stop offset="95%" stopColor="#a78bfa" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="dia" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false}
-                  tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis
+                  yAxisId="left"
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <Tooltip contentStyle={TOOLTIP_STYLE} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
-                <Area  yAxisId="left"  type="monotone" dataKey="gmv"      name="GMV ($)"    stroke="#6366f1" fill="url(#gmvGrad)" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
-                <Area  yAxisId="right" type="monotone" dataKey="visitors" name="Visitantes" stroke="#a78bfa" fill="url(#visGrad)" strokeWidth={2}   dot={false} activeDot={{ r: 4 }} />
-                <Bar   yAxisId="right" dataKey="pedidos" name="Pedidos" fill="#e0e7ff" radius={[3,3,0,0]} />
+                <Area
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="gmv"
+                  name="GMV ($)"
+                  stroke="#6366f1"
+                  fill="url(#gmvGrad)"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+                <Area
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="visitors"
+                  name="Visitantes"
+                  stroke="#a78bfa"
+                  fill="url(#visGrad)"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+                <Bar yAxisId="right" dataKey="pedidos" name="Pedidos" fill="#e0e7ff" radius={[3, 3, 0, 0]} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -139,10 +338,21 @@ export default function EcommerceDashboard() {
                   <LineChart data={MONTHLY_TREND}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                    <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false}
-                      tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false}
-                      tickFormatter={(v) => `${v}%`} />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => `${v}%`}
+                    />
                     <Tooltip contentStyle={TOOLTIP_STYLE} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                     <Line yAxisId="left"  type="monotone" dataKey="gmv"        name="GMV"         stroke="#6366f1" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
@@ -274,19 +484,21 @@ export default function EcommerceDashboard() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
                 {["Indicador", "Actual", "Mes anterior", "Variación", "Estado"].map((col) => (
-                  <th key={col} className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-slate-400">{col}</th>
+                  <th key={col} className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                    {col}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {[
-                { label: "GMV",                    curr: "$69k",   prev: "$62k",   var: "+11.3%", up: true,  status: "Excelente" },
-                { label: "Tasa de conversión",      curr: "3.8%",   prev: "3.4%",   var: "+0.4pts",up: true,  status: "Bueno"     },
-                { label: "Ticket promedio",          curr: "$37.5",  prev: "$35.4",  var: "+5.9%",  up: true,  status: "Bueno"     },
-                { label: "Tasa de abandono carrito", curr: "68%",    prev: "71%",    var: "-3pts",  up: true,  status: "Mejorando" },
-                { label: "Pedidos devueltos",        curr: "4.2%",   prev: "3.8%",   var: "+0.4pts",up: false, status: "Atención"  },
-                { label: "Calificación tienda",      curr: "4.7★",   prev: "4.6★",   var: "+0.1",   up: true,  status: "Excelente" },
-                { label: "Visitantes únicos",        curr: "48.2k",  prev: "43.4k",  var: "+11.1%", up: true,  status: "Excelente" },
+                { label: "GMV",                     curr: "$69k",  prev: "$62k",  var: "+11.3%",  up: true,  status: "Excelente" },
+                { label: "Tasa de conversión",     curr: "3.8%",  prev: "3.4%",  var: "+0.4pts", up: true,  status: "Bueno"     },
+                { label: "Ticket promedio",        curr: "$37.5", prev: "$35.4", var: "+5.9%",   up: true,  status: "Bueno"     },
+                { label: "Tasa de abandono carrito", curr: "68%", prev: "71%",   var: "-3pts",   up: true,  status: "Mejorando" },
+                { label: "Pedidos devueltos",      curr: "4.2%",  prev: "3.8%",  var: "+0.4pts", up: false, status: "Atención"  },
+                { label: "Calificación tienda",    curr: "4.7★",  prev: "4.6★",  var: "+0.1",    up: true,  status: "Excelente" },
+                { label: "Visitantes únicos",      curr: "48.2k", prev: "43.4k", var: "+11.1%",  up: true,  status: "Excelente" },
               ].map((row, i) => (
                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-5 py-3 text-[13px] font-medium text-slate-700">{row.label}</td>

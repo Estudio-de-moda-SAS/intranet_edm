@@ -1,13 +1,25 @@
+/**
+ * @module NewsSection
+ * Sección principal de noticias y contenido informativo en el home.
+ *
+ * @remarks
+ * Este componente combina un carrusel de noticias con tarjetas informativas
+ * y accesos rápidos, organizados en un layout responsive tipo dashboard.
+ */
+
 "use client";
 
 import { Newspaper, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { NewsCarousel }      from "./NewsCarousel";
-import { KnowUsCard }        from "@/app/components/home/KnowUsCard";
-import { PoliciesCardAside }      from "@/app/components/home/PoliciesCard";
-import { QuickLinksSection } from "@/app/components/ui/QuickLinksSection";
-import { homeQuickLinks }    from "@/app/components/home/config/homeQuickLinks";
+import { NewsCarousel }       from "./NewsCarousel";
+import { KnowUsCard }         from "@/app/components/home/KnowUsCard";
+import { PoliciesCardAside }  from "@/app/components/home/PoliciesCard";
+import { QuickLinksSection }  from "@/app/components/ui/QuickLinksSection";
+import { homeQuickLinks }     from "@/app/components/home/config/homeQuickLinks";
 
+/**
+ * Representa una noticia o comunicado.
+ */
 interface Announcement {
   id: string;
   title: string;
@@ -16,10 +28,30 @@ interface Announcement {
   imageUrl?: string;
 }
 
+/**
+ * Props del componente {@link NewsSection}.
+ */
 interface Props {
+  /**
+   * Lista de anuncios a mostrar en la sección.
+   */
   announcements: Announcement[];
 }
 
+/**
+ * Renderiza la sección de noticias del home.
+ *
+ * @param props Propiedades del componente.
+ * @param props.announcements Lista de noticias disponibles.
+ * @returns Sección con carrusel, tarjetas informativas y accesos rápidos.
+ *
+ * @remarks
+ * - Si no hay anuncios, no renderiza nada.
+ * - Incluye navegación hacia la vista completa de noticias.
+ * - Distribuye el contenido en dos columnas en desktop:
+ *   - Izquierda: carrusel de noticias.
+ *   - Derecha: tarjetas informativas y quick links.
+ */
 export function NewsSection({ announcements }: Props) {
   if (!announcements?.length) return null;
 
@@ -29,37 +61,42 @@ export function NewsSection({ announcements }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50">
-            <Newspaper className="h-3.5 w-3.5 text-violet-600" />
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg
+                           bg-violet-50 dark:bg-violet-500/[0.12]">
+            <Newspaper className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
           </span>
-          <h2 className="text-sm font-semibold text-slate-800">Noticias y Comunicados</h2>
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-[#e6edf3]">
+            Noticias y Comunicados
+          </h2>
         </div>
         <Link
           href="/noticias"
-          className="flex items-center gap-1 text-[11px] font-medium text-slate-400 transition-colors hover:text-violet-600"
+          className="flex items-center gap-1 text-[11px] font-medium transition-colors
+                     text-slate-400 hover:text-violet-600
+                     dark:text-[#545d68] dark:hover:text-violet-400"
         >
           Ver todas <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
 
-{/* Grid principal */}
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:h-[580px]">
+      {/* Grid principal */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:h-[580px]">
 
-  {/* Columna izquierda: Carousel */}
-  <div className="h-[340px] lg:h-full">
-    <NewsCarousel announcements={announcements} />
-  </div>
+        {/* Carrusel */}
+        <div className="h-[340px] lg:h-full">
+          <NewsCarousel announcements={announcements} />
+        </div>
 
-  {/* Columna derecha */}
-  <div className="grid grid-cols-2 grid-rows-2 gap-2 lg:h-full">
-    <KnowUsCard />
-    <PoliciesCardAside />
-    <div className="col-span-2 lg:h-full">
-      <QuickLinksSection quickLinks={homeQuickLinks} />
-    </div>
-  </div>
+        {/* Panel derecho */}
+        <div className="grid grid-cols-2 grid-rows-2 gap-2 lg:h-full">
+          <KnowUsCard />
+          <PoliciesCardAside />
+          <div className="col-span-2 lg:h-full">
+            <QuickLinksSection quickLinks={homeQuickLinks} />
+          </div>
+        </div>
 
-</div>
+      </div>
     </section>
   );
 }

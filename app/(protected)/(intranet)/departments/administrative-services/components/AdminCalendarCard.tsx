@@ -1,3 +1,19 @@
+/**
+ * @module AdminCalendarCard
+ * Tarjeta de calendario del módulo de Servicios Administrativos.
+ *
+ * Muestra una vista resumida de las próximas fechas clave del área,
+ * tales como nómina, vencimientos, cierres y recordatorios.
+ *
+ * @remarks
+ * Este componente consume los eventos de calendario desde {@link AdminData},
+ * específicamente desde `data.calendarEvents`, y presenta una selección
+ * ordenada de los eventos más próximos.
+ *
+ * La fuente funcional de datos corresponde al calendario administrativo
+ * sincronizado vía Microsoft Graph.
+ */
+
 // app/(protected)/(intranet)/departments/administrative/components/AdminCalendarCard.tsx
 // SERVER COMPONENT
 // Fuente de datos: Outlook Calendar vía MS Graph → getAdminData().calendarEvents
@@ -5,18 +21,45 @@
 import { CalendarDays } from "lucide-react";
 import type { AdminData, AdminCalendarEvent } from "@/lib/graph/departments/administrative.service";
 
+/**
+ * Propiedades de {@link AdminCalendarCard}.
+ *
+ * @property data Datos consolidados del módulo administrativo.
+ */
 type Props = { data: AdminData };
 
+/**
+ * Mapa de presentación para los tipos de eventos del calendario administrativo.
+ *
+ * @remarks
+ * Asocia cada tipo de evento a:
+ * - una etiqueta legible,
+ * - un color de punto indicador,
+ * - estilos de fondo, texto y borde.
+ *
+ * Esto permite representar visualmente la naturaleza de cada evento de forma
+ * consistente en la interfaz.
+ */
 const EVENT_TYPE_MAP: Record<
   AdminCalendarEvent["type"],
   { label: string; dot: string; bg: string; text: string; border: string }
 > = {
-  payroll:  { label: "Nómina",      dot: "bg-emerald-500", bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-100" },
-  deadline: { label: "Vencimiento", dot: "bg-red-500",     bg: "bg-red-50",      text: "text-red-700",     border: "border-red-100"    },
-  closure:  { label: "Cierre",      dot: "bg-orange-500",  bg: "bg-orange-50",   text: "text-orange-700",  border: "border-orange-100" },
-  reminder: { label: "Recordatorio",dot: "bg-sky-500",     bg: "bg-sky-50",      text: "text-sky-700",     border: "border-sky-100"    },
+  payroll:  { label: "Nómina",       dot: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+  deadline: { label: "Vencimiento",  dot: "bg-red-500",     bg: "bg-red-50",     text: "text-red-700",     border: "border-red-100"     },
+  closure:  { label: "Cierre",       dot: "bg-orange-500",  bg: "bg-orange-50",  text: "text-orange-700",  border: "border-orange-100"  },
+  reminder: { label: "Recordatorio", dot: "bg-sky-500",     bg: "bg-sky-50",     text: "text-sky-700",     border: "border-sky-100"     },
 };
 
+/**
+ * Formatea una fecha ISO corta para mostrarla en formato legible.
+ *
+ * @param dateStr Fecha en formato `YYYY-MM-DD`.
+ * @returns Fecha formateada en español abreviado, por ejemplo `12 ene`.
+ *
+ * @remarks
+ * Se utiliza para construir el badge visual de fecha dentro de la tarjeta
+ * de eventos.
+ */
 function formatDate(dateStr: string) {
   const date = new Date(dateStr + "T00:00:00");
   return date.toLocaleDateString("es-MX", {
@@ -25,7 +68,28 @@ function formatDate(dateStr: string) {
   });
 }
 
+/**
+ * Renderiza una tarjeta con las próximas fechas clave del calendario
+ * administrativo.
+ *
+ * @param props Propiedades del componente.
+ * @param props.data Datos administrativos requeridos para construir la tarjeta.
+ * @returns Tarjeta con listado resumido de eventos próximos.
+ *
+ * @remarks
+ * El componente:
+ * - toma los eventos desde `data.calendarEvents`,
+ * - los ordena cronológicamente,
+ * - selecciona los cinco más próximos,
+ * - y los presenta con un formato visual según su tipo.
+ */
 export default function AdminCalendarCard({ data }: Props) {
+  /**
+   * Lista de próximos eventos administrativos.
+   *
+   * @remarks
+   * Se ordena por fecha ascendente y se limita a los cinco eventos más cercanos.
+   */
   const upcoming = [...data.calendarEvents]
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5);

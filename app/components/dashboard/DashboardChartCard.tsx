@@ -1,3 +1,24 @@
+/**
+ * @module DashboardChartCard
+ * Componente cliente para visualizar métricas en formato de gráfico de línea
+ * dentro de un dashboard.
+ *
+ * @remarks
+ * Este archivo implementa una tarjeta analítica reutilizable que combina
+ * visualización de datos, animación de entrada y generación de un insight textual.
+ *
+ * Su responsabilidad incluye:
+ *
+ * - Mostrar un encabezado con título e indicador visual.
+ * - Renderizar un gráfico de línea responsivo a partir de un conjunto de datos.
+ * - Configurar ejes, cuadrícula, tooltip y línea principal del gráfico.
+ * - Calcular y mostrar un insight resumido mediante {@link calculateInsight}.
+ *
+ * Este componente está orientado a paneles de control donde se requiere una
+ * lectura rápida del comportamiento de una métrica a lo largo del tiempo
+ * o de distintas categorías.
+ */
+
 "use client";
 
 import { motion } from "framer-motion";
@@ -8,19 +29,77 @@ import {
 import { BarChart2 } from "lucide-react";
 import { calculateInsight } from "./DashboardUtilis";
 
+/**
+ * Props del componente {@link DashboardChartCard}.
+ */
 interface DashboardChartCardProps {
+  /**
+   * Título principal de la tarjeta.
+   */
   title: string;
+
+  /**
+   * Conjunto de datos que alimenta el gráfico.
+   *
+   * @remarks
+   * Cada elemento representa un punto de datos y debe contener, como mínimo,
+   * las claves utilizadas en `dataKey` y `xKey`.
+   */
   data: Record<string, unknown>[];
+
+  /**
+   * Clave del objeto que será usada como valor numérico principal
+   * en la línea del gráfico.
+   *
+   * @defaultValue "value"
+   */
   dataKey?: string;
+
+  /**
+   * Clave del objeto que será usada como referencia en el eje X.
+   *
+   * @defaultValue "name"
+   */
   xKey?: string;
 }
 
+/**
+ * Componente cliente que renderiza una tarjeta con gráfico de línea e insight.
+ *
+ * @param props Propiedades del componente.
+ * @param props.title Título mostrado en el encabezado.
+ * @param props.data Datos utilizados para construir el gráfico.
+ * @param props.dataKey Clave de los valores principales del gráfico.
+ * @param props.xKey Clave utilizada para etiquetar el eje horizontal.
+ * @returns Tarjeta analítica con gráfico responsivo e insight textual.
+ *
+ * @remarks
+ * Flujo de ejecución:
+ *
+ * 1. Recibe el conjunto de datos y la configuración del gráfico.
+ * 2. Calcula un insight textual utilizando {@link calculateInsight}.
+ * 3. Renderiza una tarjeta animada con `framer-motion`.
+ * 4. Muestra el encabezado con icono y etiqueta de análisis.
+ * 5. Construye un gráfico de línea responsivo con `recharts`.
+ * 6. Presenta un resumen interpretativo en la sección inferior.
+ *
+ * Este componente encapsula tanto la capa visual de análisis como una
+ * interpretación breve del comportamiento de los datos.
+ */
 export default function DashboardChartCard({
   title,
   data,
   dataKey = "value",
   xKey = "name",
 }: DashboardChartCardProps) {
+
+  /**
+   * Insight textual calculado a partir de los datos del gráfico.
+   *
+   * @remarks
+   * Su propósito es complementar la visualización con una interpretación
+   * breve y legible para el usuario.
+   */
   const insight = calculateInsight(data, dataKey);
 
   return (

@@ -1,3 +1,17 @@
+/**
+ * @module QuickLinksSection
+ * Sección de accesos rápidos reutilizable para la intranet.
+ *
+ * @remarks
+ * Este componente renderiza una grilla de enlaces o acciones rápidas,
+ * con soporte para:
+ * - colores temáticos por tarjeta,
+ * - enlaces deshabilitados,
+ * - acciones personalizadas,
+ * - integración con favoritos mediante `FavoritesContext`,
+ * - y apertura de `AddFavoriteModal` para guardar accesos.
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -21,6 +35,13 @@ import type { AppColor } from "@/app/components/ui/AppsGrid";
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 
+/**
+ * Mapa de íconos disponibles por clave.
+ *
+ * @remarks
+ * Permite convertir un `iconKey` en el componente visual correspondiente
+ * para cada acceso rápido.
+ */
 const ICON_MAP: Record<string, React.ElementType> = {
   FileText, LayoutDashboard, Users, Calendar,
   BarChart2, BookOpen, Wrench, MessageSquare,
@@ -33,68 +54,228 @@ const ICON_MAP: Record<string, React.ElementType> = {
   FolderOpen, Landmark, Scale, FileSignature,
 };
 
+/**
+ * Resuelve el componente de ícono a partir de una clave.
+ *
+ * @param iconKey Clave del ícono.
+ * @returns El componente de ícono asociado o `LayoutDashboard` como fallback.
+ */
 function resolveIcon(iconKey: string): React.ElementType {
   return ICON_MAP[iconKey] ?? LayoutDashboard;
 }
 
 // ─── Tipos públicos ───────────────────────────────────────────────────────────
 
+/**
+ * Colores disponibles para los quick links.
+ */
 export type QuickLinkColor =
   | "purple" | "teal" | "blue" | "amber"
   | "pink"   | "green" | "coral";
 
+/**
+ * Modelo de un acceso rápido individual.
+ */
 export type QuickLinkItem = {
-  label:        string;
-  href:         string;
-  icon:         string;
+  /**
+   * Texto principal del acceso.
+   */
+  label: string;
+
+  /**
+   * Ruta o identificador de navegación.
+   */
+  href: string;
+
+  /**
+   * Clave del ícono a mostrar.
+   */
+  icon: string;
+
+  /**
+   * Texto descriptivo secundario.
+   */
   description?: string;
-  color?:       QuickLinkColor;
-  disabled?:    boolean;
+
+  /**
+   * Color visual del item.
+   */
+  color?: QuickLinkColor;
+
+  /**
+   * Indica si el acceso está deshabilitado.
+   */
+  disabled?: boolean;
+
+  /**
+   * Mensaje de ayuda cuando el acceso está deshabilitado.
+   */
   disabledMsg?: string;
-  // ↓ Si existe, ejecuta la acción en lugar de navegar al href
-  action?:      () => void;
+
+  /**
+   * Acción personalizada opcional.
+   *
+   * @remarks
+   * Si existe, el item se renderiza como botón en lugar de enlace.
+   */
+  action?: () => void;
 };
 
+/**
+ * Props del componente {@link QuickLinksSection}.
+ */
 type QuickLinksSectionProps = {
-  quickLinks:  QuickLinkItem[];
-  title?:      string;
+  /**
+   * Lista de accesos rápidos a renderizar.
+   */
+  quickLinks: QuickLinkItem[];
+
+  /**
+   * Título visible de la sección.
+   *
+   * @defaultValue "Accesos rápidos"
+   */
+  title?: string;
+
+  /**
+   * Indica si la sección debe ocupar toda la altura disponible.
+   *
+   * @defaultValue false
+   */
   fillHeight?: boolean;
-  columns?:    2 | 3 | 4;
+
+  /**
+   * Cantidad de columnas de la grilla.
+   *
+   * @defaultValue 2
+   */
+  columns?: 2 | 3 | 4;
 };
 
 // ─── Color map ────────────────────────────────────────────────────────────────
 
+/**
+ * Mapa visual por color.
+ *
+ * @remarks
+ * Cada color define:
+ * - fondo del ícono,
+ * - color del ícono,
+ * - borde izquierdo de acento,
+ * - comportamiento hover de la tarjeta,
+ * - color de la flecha.
+ */
 const colorMap: Record<QuickLinkColor, {
-  bg: string; icon: string; border: string;
-  hoverBg: string; hoverBorder: string; arrow: string;
+  iconBg: string;
+  iconText: string;
+  border: string;
+  hoverCard: string;
+  arrow: string;
 }> = {
-  purple: { bg:"bg-[#EEEDFE]", icon:"text-[#534AB7]", border:"border-l-[#7F77DD]", hoverBg:"hover:bg-[#EEEDFE]", hoverBorder:"hover:border-l-[#534AB7]", arrow:"text-[#AFA9EC]" },
-  teal:   { bg:"bg-[#E1F5EE]", icon:"text-[#0F6E56]", border:"border-l-[#1D9E75]", hoverBg:"hover:bg-[#E1F5EE]", hoverBorder:"hover:border-l-[#0F6E56]", arrow:"text-[#9FE1CB]" },
-  blue:   { bg:"bg-[#E6F1FB]", icon:"text-[#185FA5]", border:"border-l-[#378ADD]", hoverBg:"hover:bg-[#E6F1FB]", hoverBorder:"hover:border-l-[#185FA5]", arrow:"text-[#B5D4F4]" },
-  amber:  { bg:"bg-[#FAEEDA]", icon:"text-[#854F0B]", border:"border-l-[#BA7517]", hoverBg:"hover:bg-[#FAEEDA]", hoverBorder:"hover:border-l-[#854F0B]", arrow:"text-[#FAC775]" },
-  pink:   { bg:"bg-[#FBEAF0]", icon:"text-[#993556]", border:"border-l-[#D4537E]", hoverBg:"hover:bg-[#FBEAF0]", hoverBorder:"hover:border-l-[#993556]", arrow:"text-[#F4C0D1]" },
-  green:  { bg:"bg-[#EAF3DE]", icon:"text-[#3B6D11]", border:"border-l-[#639922]", hoverBg:"hover:bg-[#EAF3DE]", hoverBorder:"hover:border-l-[#3B6D11]", arrow:"text-[#C0DD97]" },
-  coral:  { bg:"bg-[#FAECE7]", icon:"text-[#993C1D]", border:"border-l-[#D85A30]", hoverBg:"hover:bg-[#FAECE7]", hoverBorder:"hover:border-l-[#993C1D]", arrow:"text-[#F5C4B3]" },
+  purple: {
+    iconBg:    "bg-[#EEEDFE] dark:bg-violet-500/[0.15]",
+    iconText:  "text-[#534AB7] dark:text-violet-400",
+    border:    "border-l-[#7F77DD] dark:border-l-violet-500/60",
+    hoverCard: "hover:bg-violet-50 hover:border-l-[#534AB7] dark:hover:bg-violet-500/[0.08] dark:hover:border-l-violet-400",
+    arrow:     "text-[#AFA9EC] dark:text-violet-500/60",
+  },
+  teal: {
+    iconBg:    "bg-[#E1F5EE] dark:bg-teal-500/[0.15]",
+    iconText:  "text-[#0F6E56] dark:text-teal-400",
+    border:    "border-l-[#1D9E75] dark:border-l-teal-500/60",
+    hoverCard: "hover:bg-teal-50 hover:border-l-[#0F6E56] dark:hover:bg-teal-500/[0.08] dark:hover:border-l-teal-400",
+    arrow:     "text-[#9FE1CB] dark:text-teal-500/60",
+  },
+  blue: {
+    iconBg:    "bg-[#E6F1FB] dark:bg-blue-500/[0.15]",
+    iconText:  "text-[#185FA5] dark:text-blue-400",
+    border:    "border-l-[#378ADD] dark:border-l-blue-500/60",
+    hoverCard: "hover:bg-blue-50 hover:border-l-[#185FA5] dark:hover:bg-blue-500/[0.08] dark:hover:border-l-blue-400",
+    arrow:     "text-[#B5D4F4] dark:text-blue-500/60",
+  },
+  amber: {
+    iconBg:    "bg-[#FAEEDA] dark:bg-amber-500/[0.15]",
+    iconText:  "text-[#854F0B] dark:text-amber-400",
+    border:    "border-l-[#BA7517] dark:border-l-amber-500/60",
+    hoverCard: "hover:bg-amber-50 hover:border-l-[#854F0B] dark:hover:bg-amber-500/[0.08] dark:hover:border-l-amber-400",
+    arrow:     "text-[#FAC775] dark:text-amber-500/60",
+  },
+  pink: {
+    iconBg:    "bg-[#FBEAF0] dark:bg-pink-500/[0.15]",
+    iconText:  "text-[#993556] dark:text-pink-400",
+    border:    "border-l-[#D4537E] dark:border-l-pink-500/60",
+    hoverCard: "hover:bg-pink-50 hover:border-l-[#993556] dark:hover:bg-pink-500/[0.08] dark:hover:border-l-pink-400",
+    arrow:     "text-[#F4C0D1] dark:text-pink-500/60",
+  },
+  green: {
+    iconBg:    "bg-[#EAF3DE] dark:bg-green-500/[0.15]",
+    iconText:  "text-[#3B6D11] dark:text-green-400",
+    border:    "border-l-[#639922] dark:border-l-green-500/60",
+    hoverCard: "hover:bg-green-50 hover:border-l-[#3B6D11] dark:hover:bg-green-500/[0.08] dark:hover:border-l-green-400",
+    arrow:     "text-[#C0DD97] dark:text-green-500/60",
+  },
+  coral: {
+    iconBg:    "bg-[#FAECE7] dark:bg-orange-500/[0.15]",
+    iconText:  "text-[#993C1D] dark:text-orange-400",
+    border:    "border-l-[#D85A30] dark:border-l-orange-500/60",
+    hoverCard: "hover:bg-orange-50 hover:border-l-[#993C1D] dark:hover:bg-orange-500/[0.08] dark:hover:border-l-orange-400",
+    arrow:     "text-[#F5C4B3] dark:text-orange-500/60",
+  },
 };
 
+/**
+ * Configuración de color por defecto.
+ */
 const DEFAULT_COLOR = colorMap["purple"]!;
 
-// ─── Clases compartidas para el item activo ───────────────────────────────────
+// ─── Clases del item activo ───────────────────────────────────────────────────
 
+/**
+ * Construye las clases base de un acceso rápido habilitado.
+ *
+ * @param c Configuración visual del color actual.
+ * @returns Cadena de clases Tailwind combinadas.
+ *
+ * @remarks
+ * Centraliza las clases para mantener consistencia entre enlaces y botones.
+ */
 function activeItemClasses(c: typeof DEFAULT_COLOR) {
   return cn(
     "flex items-center gap-2.5 rounded-[10px] h-full w-full",
-    "border border-slate-200 border-l-[3px] bg-slate-50",
+    "border border-l-[3px]",
+    "border-slate-200 bg-slate-50",
+    "dark:border-[#30363d] dark:bg-[#1c2128]",
     "px-3 py-2 pr-8",
-    "transition-all duration-300 ease-out",
-    "group-hover:-translate-y-[3px] group-hover:scale-[1.02] group-hover:shadow-md",
-    "group-hover:bg-gradient-to-r group-hover:from-violet-100 group-hover:to-purple-200",
-    c.border, c.hoverBg, c.hoverBorder,
+    "transition-all duration-200 ease-out",
+    "group-hover:-translate-y-[2px] group-hover:scale-[1.015] group-hover:shadow-sm",
+    c.border,
+    c.hoverCard,
   );
 }
 
 // ─── QuickLinksSection ────────────────────────────────────────────────────────
 
+/**
+ * Renderiza una sección de accesos rápidos con soporte para favoritos.
+ *
+ * @param props Propiedades del componente.
+ * @param props.quickLinks Lista de accesos.
+ * @param props.title Título visible de la sección.
+ * @param props.fillHeight Define si ocupa todo el alto disponible.
+ * @param props.columns Número de columnas de la grilla.
+ * @returns Sección visual con items navegables o accionables.
+ *
+ * @remarks
+ * Este componente soporta tres tipos de item:
+ *
+ * 1. **Enlace normal**: navega usando `Link`.
+ * 2. **Acción personalizada**: ejecuta `link.action`.
+ * 3. **Item deshabilitado**: muestra estado bloqueado y no interactúa.
+ *
+ * Además, se integra con favoritos:
+ * - si el acceso ya existe en favoritos, lo elimina;
+ * - si no existe, abre `AddFavoriteModal` con el item preseleccionado.
+ */
 export function QuickLinksSection({
   quickLinks,
   title      = "Accesos rápidos",
@@ -102,8 +283,22 @@ export function QuickLinksSection({
   columns    = 2,
 }: QuickLinksSectionProps) {
   const { favoriteHrefs, addFavorite, removeFavorite, getFavoriteByHref } = useFavorites();
+
+  /**
+   * Item actualmente seleccionado para agregar a favoritos.
+   */
   const [pendingLink, setPendingLink] = useState<QuickLinkItem | null>(null);
 
+  /**
+   * Maneja el click sobre la estrella de favorito.
+   *
+   * @param link Acceso rápido seleccionado.
+   *
+   * @remarks
+   * - Si el item está deshabilitado, no hace nada.
+   * - Si ya existe en favoritos, lo elimina.
+   * - Si no existe, abre el modal para agregarlo.
+   */
   function handleStarClick(link: QuickLinkItem) {
     if (link.disabled) return;
     const existing = getFavoriteByHref(link.href);
@@ -111,29 +306,87 @@ export function QuickLinksSection({
     else setPendingLink(link);
   }
 
+  /**
+   * Cantidad de enlaces activos, excluyendo deshabilitados.
+   */
   const activeCount = quickLinks.filter((l) => !l.disabled).length;
+
+  /**
+   * Contenido visual interno de un item habilitado.
+   *
+   * @param props Propiedades internas.
+   * @returns Estructura visual del acceso rápido.
+   */
+  function ItemContent({ link, c }: { link: QuickLinkItem; c: typeof DEFAULT_COLOR }) {
+    const Icon = resolveIcon(link.icon);
+
+    return (
+      <>
+        <span className={cn(
+          "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px]",
+          "transition-transform duration-200 group-hover:scale-110",
+          c.iconBg,
+        )}>
+          <Icon size={13} className={c.iconText} />
+        </span>
+
+        <span className="flex-1 min-w-0">
+          <span className="block text-[12.5px] font-medium leading-tight truncate transition-colors duration-200
+                           text-slate-700 group-hover:text-violet-700
+                           dark:text-[#cdd9e5] dark:group-hover:text-violet-400">
+            {link.label}
+          </span>
+          {link.description && (
+            <span className="block text-[11px] leading-tight truncate mt-0.5
+                             text-slate-400 dark:text-[#545d68]">
+              {link.description}
+            </span>
+          )}
+        </span>
+
+        <ChevronRight
+          size={12}
+          className={cn(
+            "shrink-0 transition-all duration-200",
+            "group-hover:translate-x-0.5 group-hover:opacity-0",
+            c.arrow,
+          )}
+        />
+      </>
+    );
+  }
 
   return (
     <>
       <section className={cn(
-        "rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col overflow-hidden",
+        "rounded-xl border shadow-sm flex flex-col overflow-hidden",
+        "border-slate-200 bg-white",
+        "dark:border-[#30363d] dark:bg-[#161b22]",
         fillHeight && "h-full",
       )}>
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 shrink-0
+                        border-b border-slate-100 dark:border-[#21262d]">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-violet-50">
-              <Zap className="h-3.5 w-3.5 text-violet-600" />
+            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg
+                             bg-violet-50 dark:bg-violet-500/[0.12]">
+              <Zap className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
             </span>
             <div>
-              <p className="text-[13px] font-semibold text-slate-800 leading-none">{title}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5 leading-none">
+              <p className="text-[13px] font-semibold leading-none
+                            text-slate-800 dark:text-[#e6edf3]">
+                {title}
+              </p>
+              <p className="text-[11px] mt-0.5 leading-none
+                            text-slate-400 dark:text-[#545d68]">
                 Accede directamente a lo que más usas
               </p>
             </div>
           </div>
-          <span className="text-[11px] font-medium bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full">
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full
+                           bg-violet-50 text-violet-600
+                           dark:bg-violet-500/[0.12] dark:text-violet-400">
             {activeCount} enlaces
           </span>
         </div>
@@ -146,7 +399,6 @@ export function QuickLinksSection({
           columns === 4 && "grid-cols-4",
         )}>
           {quickLinks.map((link) => {
-            const Icon     = resolveIcon(link.icon);
             const c        = colorMap[link.color ?? "purple"] ?? DEFAULT_COLOR;
             const isFav    = favoriteHrefs.includes(link.href);
             const disabled = link.disabled ?? false;
@@ -161,29 +413,55 @@ export function QuickLinksSection({
                 >
                   <div className={cn(
                     "flex items-center gap-2.5 rounded-[10px] h-full",
-                    "border border-slate-100 border-l-[3px] border-l-slate-200 bg-slate-50/50",
-                    "px-3 py-2 pr-8 cursor-not-allowed opacity-50 select-none",
+                    "border border-l-[3px] border-slate-100 border-l-slate-200 bg-slate-50/50",
+                    "dark:border-[#21262d] dark:border-l-[#30363d] dark:bg-[#1c2128]/40",
+                    "px-3 py-2 pr-8 cursor-not-allowed opacity-40 select-none",
                   )}>
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-slate-100">
-                      <Icon size={13} className="text-slate-400" />
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px]
+                                     bg-slate-100 dark:bg-[#21262d]">
+                      <Lock size={11} className="text-slate-400 dark:text-[#545d68]" />
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-[12.5px] font-medium text-slate-400 leading-tight truncate">
+                      <span className="block text-[12.5px] font-medium leading-tight truncate
+                                       text-slate-400 dark:text-[#444c56]">
                         {link.label}
                       </span>
                       {link.description && (
-                        <span className="block text-[11px] text-slate-300 leading-tight truncate mt-0.5">
+                        <span className="block text-[11px] leading-tight truncate mt-0.5
+                                         text-slate-300 dark:text-[#30363d]">
                           {link.description}
                         </span>
                       )}
                     </span>
-                    <Lock size={11} className="shrink-0 text-slate-300" />
+                    <Lock size={11} className="shrink-0 text-slate-300 dark:text-[#30363d]" />
                   </div>
                 </li>
               );
             }
 
-            // ── Acción (abre modal) ────────────────────────────
+            // ── Botón estrella de favoritos ───────────────────
+            const StarButton = (
+              <button
+                onClick={() => handleStarClick(link)}
+                title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
+                className={cn(
+                  "absolute top-1.5 right-1.5 z-10",
+                  "flex h-5 w-5 items-center justify-center rounded-full",
+                  "transition-all duration-200",
+                  "group-hover:-translate-y-[2px] group-hover:scale-[1.015]",
+                  isFav
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400 dark:text-[#444c56] dark:hover:text-amber-400",
+                )}
+              >
+                <Star
+                  size={11}
+                  className={cn("transition-all", isFav ? "fill-amber-400 text-amber-400" : "fill-none")}
+                />
+              </button>
+            );
+
+            // ── Acción personalizada ──────────────────────────
             if (link.action) {
               return (
                 <li key={link.href} className="relative group min-h-0">
@@ -192,108 +470,27 @@ export function QuickLinksSection({
                     onClick={link.action}
                     className={activeItemClasses(c)}
                   >
-                    <span className={cn(
-                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px]",
-                      "transition-transform duration-300 group-hover:scale-110",
-                      c.bg,
-                    )}>
-                      <Icon size={13} className={c.icon} />
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-[12.5px] font-medium text-slate-700 leading-tight truncate transition-colors duration-300 group-hover:text-violet-700">
-                        {link.label}
-                      </span>
-                      {link.description && (
-                        <span className="block text-[11px] text-slate-400 leading-tight truncate mt-0.5">
-                          {link.description}
-                        </span>
-                      )}
-                    </span>
-                    <ChevronRight
-                      size={12}
-                      className={cn("shrink-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-0", c.arrow)}
-                    />
+                    <ItemContent link={link} c={c} />
                   </button>
-
-                  {/* Estrella — usa href como key aunque no navegue */}
-                  <button
-                    onClick={() => handleStarClick(link)}
-                    title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
-                    className={cn(
-                      "absolute top-1.5 right-1.5 z-10",
-                      "flex h-5 w-5 items-center justify-center rounded-full",
-                      "transition-all duration-300",
-                      "group-hover:-translate-y-[3px] group-hover:scale-[1.02]",
-                      isFav
-                        ? "opacity-100"
-                        : "opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400",
-                    )}
-                  >
-                    <Star
-                      size={11}
-                      className={cn("transition-all", isFav ? "fill-amber-400 text-amber-400" : "fill-none")}
-                    />
-                  </button>
+                  {StarButton}
                 </li>
               );
             }
 
-            // ── Navegación normal ──────────────────────────────
+            // ── Navegación normal ─────────────────────────────
             return (
               <li key={link.href} className="relative group min-h-0">
-                <Link
-                  href={link.href}
-                  className={activeItemClasses(c)}
-                >
-                  <span className={cn(
-                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px]",
-                    "transition-transform duration-300 group-hover:scale-110",
-                    c.bg,
-                  )}>
-                    <Icon size={13} className={c.icon} />
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-[12.5px] font-medium text-slate-700 leading-tight truncate transition-colors duration-300 group-hover:text-violet-700">
-                      {link.label}
-                    </span>
-                    {link.description && (
-                      <span className="block text-[11px] text-slate-400 leading-tight truncate mt-0.5">
-                        {link.description}
-                      </span>
-                    )}
-                  </span>
-                  <ChevronRight
-                    size={12}
-                    className={cn("shrink-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-0", c.arrow)}
-                  />
+                <Link href={link.href} className={activeItemClasses(c)}>
+                  <ItemContent link={link} c={c} />
                 </Link>
-
-                {/* Estrella */}
-                <button
-                  onClick={() => handleStarClick(link)}
-                  title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
-                  className={cn(
-                    "absolute top-1.5 right-1.5 z-10",
-                    "flex h-5 w-5 items-center justify-center rounded-full",
-                    "transition-all duration-300",
-                    "group-hover:-translate-y-[3px] group-hover:scale-[1.02]",
-                    isFav
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400",
-                  )}
-                >
-                  <Star
-                    size={11}
-                    className={cn("transition-all", isFav ? "fill-amber-400 text-amber-400" : "fill-none")}
-                  />
-                </button>
+                {StarButton}
               </li>
             );
           })}
         </ul>
       </section>
 
-      {/* Modal favoritos */}
+      {/* Modal de agregar a favoritos */}
       <AddFavoriteModal
         open={pendingLink !== null}
         onClose={() => setPendingLink(null)}

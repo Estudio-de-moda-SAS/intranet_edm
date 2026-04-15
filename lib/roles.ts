@@ -1,13 +1,29 @@
-// lib/roles.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Sistema de roles y permisos para la intranet.
-// Diseñado para escalar hacia Entra ID / Azure AD Groups.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * @module roles
+ * Define el sistema RBAC de la intranet EDM: niveles de acceso, permisos
+ * granulares y las funciones de verificación que los consumen.
+ *
+ * @remarks
+ * La resolución del nivel de acceso sigue un orden de prioridad estricto
+ * que se distribuye entre este módulo y `microsoft-graph.ts`:
+ *
+ * 1. Grupos de Azure AD (Object ID exacto) — ver `resolveAccessLevelFromGroups`
+ * 2. Nombre del grupo de Azure AD — ver `resolveAccessLevelFromGroups`
+ * 3. Departamento / cargo del perfil de Entra ID — ver `resolveAccessLevel`
+ * 4. Fallback seguro → `'employee'`
+ */
 
-// ── 1. Niveles de acceso ──────────────────────────────────────────────────────
-
+/**
+ * Niveles de acceso del sistema.
+ *
+ * Los niveles **no** son estrictamente ascendentes en todos los casos:
+ * algunos niveles departamentales (`finance`, `legal`, `it`, etc.) tienen
+ * permisos que `manager` no posee, y viceversa. La jerarquía lineal de
+ * {@link LEVEL_HIERARCHY} se usa únicamente para {@link atLeast}; la
+ * autorización granular se resuelve con {@link can} y {@link PERMISSION_MAP}.
+ */
 export type AccessLevel =
-  | 'admin'          // Superadministradores de la plataforma — todo
+  | 'admin'          // Superadministradores de la plataforma — acceso total
   | 'finance'        // Equipo de Finanzas
   | 'legal'          // Equipo Jurídico
   | 'retail'         // Equipo Retail / Comercial
@@ -15,14 +31,24 @@ export type AccessLevel =
   | 'it'             // Equipo de TI — infraestructura y sistemas
   | 'product'        // Equipo de Producto — colecciones, fichas técnicas, muestras
   | 'admin_services' // Servicios Administrativos / Recepción
-  | 'manager'        // Gerencia / Dirección — acceso de lectura cross-departamento
+  | 'manager'        // Gerencia / Dirección — lectura cross-departamento
   | 'employee';      // Resto de colaboradores
 
-// Orden jerárquico — solo aplica para permisos con minLevel.
-// Los niveles departamentales (finance, legal, it...) están por encima
-// de manager porque tienen acceso especializado en su área.
-// admin siempre gana — está al final.
-const LEVEL_HIERARCHY: AccessLevel[] = [
+/**
+ * Orden jerárquico ascendente de los niveles de acceso.
+ * La posición en el array determina el rango — mayor índice, mayor acceso.
+ *
+ * @remarks
+ * Este array es la **única fuente de verdad** para la jerarquía lineal.
+ * `microsoft-graph.ts` mantiene su propio array `HIERARCHY` con un orden
+ * distinto (usado para resolver el nivel de mayor rango ante membresías
+ * múltiples en Azure AD) — si se agregan niveles aquí, deben añadirse
+ * allá también.
+ *
+ * Agregar un nivel aquí es suficiente para que {@link levelRank},
+ * {@link atLeast} y {@link can} lo evalúen correctamente.
+ */
+ export const LEVEL_HIERARCHY: AccessLevel[] = [
   'employee',
   'manager',
   'admin_services',
@@ -35,17 +61,52 @@ const LEVEL_HIERARCHY: AccessLevel[] = [
   'admin',
 ];
 
-function levelRank(level: AccessLevel): number {
+/**
+ * Devuelve la posición de un nivel en {@link LEVEL_HIERARCHY}.
+ *
+ * @param level - Nivel de acceso a consultar.
+ * @returns Índice entero ≥ 0. Retorna `-1` si el nivel no existe en la
+ *   jerarquía (no debería ocurrir con el tipo {@link AccessLevel} correctamente
+ *   tipado).
+ *
+ * @internal
+ */
+export function levelRank(level: AccessLevel): number {
   return LEVEL_HIERARCHY.indexOf(level);
 }
 
+/**
+ * Verifica si un nivel de acceso cumple o supera un nivel requerido.
+ *
+ * @param level    - Nivel de acceso del usuario autenticado.
+ * @param required - Nivel mínimo requerido para la acción.
+ * @returns `true` si el nivel del usuario es igual o superior al requerido
+ *   según {@link LEVEL_HIERARCHY}.
+ *
+ * @example
+ * ```ts
+ * atLeast('finance', 'manager')  // true
+ * atLeast('employee', 'hr')      // false
+ * atLeast('admin', 'admin')      // true
+ * ```
+ */
 export function atLeast(level: AccessLevel, required: AccessLevel): boolean {
   return levelRank(level) >= levelRank(required);
 }
 
-// ── 2. Mapa departamento → nivel base ────────────────────────────────────────
-
-const DEPARTMENT_LEVEL_MAP: Record<string, AccessLevel> = {
+/**
+ * Mapeo de nombres de departamento de EDM a su {@link AccessLevel} base.
+ *
+ * Se usa en {@link resolveAccessLevel} cuando el usuario no pertenece a
+ * ningún grupo de Azure AD conocido.
+ *
+ * @remarks
+ * Incluye variantes de nombre para cubrir inconsistencias en los perfiles
+ * de Entra ID (ej. `"RRHH"`, `"Recursos Humanos"` y `"Talento Humano"`
+ * mapean al mismo nivel `'hr'`). La comparación es case-insensitive y por
+ * substring.
+ */
+export const DEPARTMENT_LEVEL_MAP: Record<string, AccessLevel> = {
   'Finanzas':                  'finance',
   'Jurídica':                  'legal',
   'Legal':                     'legal',
@@ -69,13 +130,44 @@ const DEPARTMENT_LEVEL_MAP: Record<string, AccessLevel> = {
   'Dirección':                 'manager',
 };
 
-const ADMIN_ROLE_KEYWORDS = [
+/**
+ * Palabras clave que identifican roles de administrador de plataforma.
+ *
+ * Si el `jobTitle` del usuario en Entra ID contiene alguna de estas cadenas
+ * (comparación case-insensitive), se asigna el nivel `'admin'` directamente,
+ * ignorando departamento y grupos de Azure AD.
+ */
+export const ADMIN_ROLE_KEYWORDS = [
   'superadmin',
   'administrador de plataforma',
   'admin intranet',
   'platform admin',
 ];
 
+/**
+ * Resuelve el {@link AccessLevel} de un usuario a partir de su departamento
+ * y cargo en Entra ID.
+ *
+ * Es el **fallback de último recurso** en la cadena de resolución de acceso.
+ * Para la resolución primaria basada en grupos de Azure AD, ver
+ * {@link resolveAccessLevelFromGroups} en `microsoft-graph.ts`.
+ *
+ * @param department - Nombre del departamento según el perfil de Entra ID.
+ * @param role       - Cargo del usuario (`jobTitle`). Si contiene alguna
+ *   cadena de {@link ADMIN_ROLE_KEYWORDS}, retorna `'admin'` directamente
+ *   sin evaluar el departamento.
+ * @returns El {@link AccessLevel} correspondiente, o `'employee'` si ninguna
+ *   regla coincide.
+ *
+ * @see {@link resolveAccessLevelFromGroups} — resolución primaria vía grupos
+ *
+ * @example
+ * ```ts
+ * resolveAccessLevel('Finanzas')                        // 'finance'
+ * resolveAccessLevel('Tecnología', 'Admin Intranet')    // 'admin'
+ * resolveAccessLevel('Área desconocida')                // 'employee'
+ * ```
+ */
 export function resolveAccessLevel(
   department?: string | null,
   role?: string | null,
@@ -93,20 +185,19 @@ export function resolveAccessLevel(
   return 'employee';
 }
 
-// ── 3. Permisos granulares ────────────────────────────────────────────────────
-//
-// Criterio para elegir entre minLevel vs allowedLevels:
-//
-//   minLevel      → el permiso es "de lectura general" y cualquier nivel
-//                   igual o superior puede tenerlo (ej: ver KPIs de su área).
-//                   Útil cuando manager/admin siempre deben ver algo.
-//
-//   allowedLevels → el permiso es sensible y SOLO los niveles listados
-//                   explícitamente pueden tenerlo. Usar cuando no queremos
-//                   que otros departamentos accedan aunque sean "superiores"
-//                   en la jerarquía (ej: facturas de finanzas no las debe
-//                   ver el equipo de IT aunque esté más arriba en el ranking).
-
+/**
+ * Permisos granulares del sistema en formato `módulo:acción`.
+ *
+ * Cada permiso está asociado a un nivel mínimo requerido o a una lista de
+ * niveles permitidos en {@link PERMISSION_MAP}.
+ *
+ * @example
+ * ```ts
+ * 'retail:view_kpis'
+ * 'finance:export'
+ * 'admin:view'
+ * ```
+ */
 export type Permission =
   // Finanzas
   | 'finance:view_kpis'
@@ -120,13 +211,13 @@ export type Permission =
   | 'finance:approve_invoices'
   | 'finance:create_invoice'
   | 'finance:create_report'
-  | 'finance:view_expenses'      // gastos operativos
-  | 'finance:approve_expenses'   // aprobar/rechazar gastos
-  | 'finance:view_budget'        // presupuesto por departamento
-  | 'finance:view_payments'      // pagos salientes
-  | 'finance:approve_payments'   // ejecutar/programar pagos
-  | 'finance:view_vendors'       // proveedores y suministradores
-  | 'finance:manage_vendors'     // crear/editar/bloquear proveedores
+  | 'finance:view_expenses'
+  | 'finance:approve_expenses'
+  | 'finance:view_budget'
+  | 'finance:view_payments'
+  | 'finance:approve_payments'
+  | 'finance:view_vendors'
+  | 'finance:manage_vendors'
   // Jurídica
   | 'legal:view_kpis'
   | 'legal:view_calendar'
@@ -174,21 +265,21 @@ export type Permission =
   | 'admin_services:view_visitors'
   | 'admin_services:view_access_cards'
   | 'admin_services:view_team'
-  // Producto — Estudio de Moda SAS
-  | 'product:view_kpis'           // KPIs de colección: referencias activas, muestras aprobadas, etc.
-  | 'product:view_collections'    // Colecciones y temporadas vigentes
-  | 'product:view_techsheets'     // Fichas técnicas de prendas
-  | 'product:view_samples'        // Estado de muestras y aprobaciones
-  | 'product:view_stores'         // Distribución por tienda
-  | 'product:view_alerts'         // Alertas: retrasos, rechazos, vencimientos
-  | 'product:view_quicklinks'     // Accesos rápidos del área
-  | 'product:view_tools'          // Herramientas del equipo (PLM, Centric, etc.)
-  | 'product:view_calendar'       // Calendario de temporadas y entregas
-  | 'product:view_dashboard'      // Panel de lanzamientos y estado de tiendas
-  | 'product:view_team'           // Equipo visible para todos
-  | 'product:create_techsheet'    // Crear / editar fichas técnicas
-  | 'product:approve_sample'      // Aprobar o rechazar muestras
-  | 'product:create_report'       // Exportar reportes de colección
+  // Producto
+  | 'product:view_kpis'
+  | 'product:view_collections'
+  | 'product:view_techsheets'
+  | 'product:view_samples'
+  | 'product:view_stores'
+  | 'product:view_alerts'
+  | 'product:view_quicklinks'
+  | 'product:view_tools'
+  | 'product:view_calendar'
+  | 'product:view_dashboard'
+  | 'product:view_team'
+  | 'product:create_techsheet'
+  | 'product:approve_sample'
+  | 'product:create_report'
   // Documentos
   | 'docs:view_statbar'
   | 'docs:view_repository'
@@ -203,12 +294,40 @@ export type Permission =
   | 'admin:manage_roles'
   | 'admin:view_audit_log';
 
-type PermissionRule =
+/**
+ * Define la forma de una regla de permiso en {@link PERMISSION_MAP}.
+ *
+ * Existen dos formas mutuamente excluyentes:
+ * - `minLevel` — el usuario debe tener al menos ese nivel según
+ *   {@link LEVEL_HIERARCHY}. Equivale a usar {@link atLeast}.
+ * - `allowedLevels` — el usuario debe pertenecer **exactamente** a uno de
+ *   los niveles listados. No aplica jerarquía.
+ *
+ * @remarks
+ * Usar `allowedLevels` cuando el permiso debe estar acotado a roles
+ * específicos sin importar la jerarquía (ej. `finance` puede ver facturas
+ * pero `it`, que es jerárquicamente superior, no debe verlas).
+ */
+export type PermissionRule =
   | { minLevel: AccessLevel }
   | { allowedLevels: AccessLevel[] };
 
-const PERMISSION_MAP: Record<Permission, PermissionRule> = {
-
+/**
+ * Mapa que asocia cada {@link Permission} con su {@link PermissionRule}.
+ *
+ * @remarks
+ * Agregar un nuevo permiso aquí es suficiente para que {@link can} lo evalúe
+ * automáticamente. No requiere cambios en los componentes consumidores.
+ *
+ * Convenciones de diseño:
+ * - `view_team` de cualquier módulo usa `minLevel: 'employee'` — el equipo
+ *   es visible para todos.
+ * - Acciones transaccionales (`approve_*`, `create_*`, `manage_*`) usan
+ *   `allowedLevels` para evitar escalada involuntaria por jerarquía.
+ * - `manager` se incluye explícitamente en `allowedLevels` cuando necesita
+ *   visibilidad de KPIs o alertas cross-departamento.
+ */
+export const PERMISSION_MAP: Record<Permission, PermissionRule> = {
   // ── Finanzas ──────────────────────────────────────────────────
   'finance:view_kpis':        { allowedLevels: ['finance', 'manager', 'admin'] },
   'finance:view_dashboard':   { allowedLevels: ['finance', 'manager', 'admin'] },
@@ -271,20 +390,20 @@ const PERMISSION_MAP: Record<Permission, PermissionRule> = {
   'it:view_server_monitor':   { allowedLevels: ['it', 'admin']                },
 
   // ── Servicios Administrativos ─────────────────────────────────
-  'admin_services:view_kpis':          { minLevel: 'employee'                               },
-  'admin_services:view_quicklinks':    { minLevel: 'employee'                               },
-  'admin_services:view_calendar':      { minLevel: 'employee'                               },
-  'admin_services:view_announcements': { minLevel: 'employee'                               },
-  'admin_services:view_requests':      { minLevel: 'employee'                               },
-  'admin_services:view_documents':     { minLevel: 'employee'                               },
-  'admin_services:view_team':          { minLevel: 'employee'                               },
-  'admin_services:view_visitors':      { allowedLevels: ['admin_services', 'admin']         },
-  'admin_services:view_access_cards':  { allowedLevels: ['admin_services', 'admin']         },
+  'admin_services:view_kpis':          { minLevel: 'employee'                       },
+  'admin_services:view_quicklinks':    { minLevel: 'employee'                       },
+  'admin_services:view_calendar':      { minLevel: 'employee'                       },
+  'admin_services:view_announcements': { minLevel: 'employee'                       },
+  'admin_services:view_requests':      { minLevel: 'employee'                       },
+  'admin_services:view_documents':     { minLevel: 'employee'                       },
+  'admin_services:view_team':          { minLevel: 'employee'                       },
+  'admin_services:view_visitors':      { allowedLevels: ['admin_services', 'admin'] },
+  'admin_services:view_access_cards':  { allowedLevels: ['admin_services', 'admin'] },
 
-  // ── Producto — Estudio de Moda SAS ────────────────────────────
+  // ── Producto ──────────────────────────────────────────────────
   //
   // Separación de responsabilidades:
-  //   view_kpis         → manager puede ver indicadores de colección (% desarrollo, muestras OK)
+  //   view_kpis         → manager puede ver indicadores de colección
   //   view_collections  → product + manager: colecciones activas y temporadas
   //   view_techsheets   → solo product + admin: fichas técnicas son IP sensible
   //   view_samples      → product + manager: estado de muestras y aprobaciones
@@ -298,55 +417,101 @@ const PERMISSION_MAP: Record<Permission, PermissionRule> = {
   //   create_techsheet  → solo product + admin: crear / editar fichas técnicas
   //   approve_sample    → solo product + admin: acción transaccional
   //   create_report     → solo product + admin: exportar reportes
-  'product:view_kpis':          { allowedLevels: ['product', 'manager', 'admin']          },
-  'product:view_collections':   { allowedLevels: ['product', 'manager', 'admin']          },
-  'product:view_techsheets':    { allowedLevels: ['product', 'admin']                     },
-  'product:view_samples':       { allowedLevels: ['product', 'manager', 'admin']          },
-  'product:view_stores':        { allowedLevels: ['product', 'retail', 'manager', 'admin']},
-  'product:view_alerts':        { allowedLevels: ['product', 'manager', 'admin']          },
-  'product:view_quicklinks':    { allowedLevels: ['product', 'manager', 'admin']          },
-  'product:view_tools':         { allowedLevels: ['product', 'admin']                     },
-  'product:view_calendar':      { allowedLevels: ['product', 'manager', 'admin']          },
-  'product:view_dashboard':     { allowedLevels: ['product', 'manager', 'admin']          },
-  'product:view_team':          { minLevel: 'employee'                                    },
-  'product:create_techsheet':   { allowedLevels: ['product', 'admin']                     },
-  'product:approve_sample':     { allowedLevels: ['product', 'admin']                     },
-  'product:create_report':      { allowedLevels: ['product', 'admin']                     },
+  'product:view_kpis':        { allowedLevels: ['product', 'manager', 'admin']           },
+  'product:view_collections': { allowedLevels: ['product', 'manager', 'admin']           },
+  'product:view_techsheets':  { allowedLevels: ['product', 'admin']                      },
+  'product:view_samples':     { allowedLevels: ['product', 'manager', 'admin']           },
+  'product:view_stores':      { allowedLevels: ['product', 'retail', 'manager', 'admin'] },
+  'product:view_alerts':      { allowedLevels: ['product', 'manager', 'admin']           },
+  'product:view_quicklinks':  { allowedLevels: ['product', 'manager', 'admin']           },
+  'product:view_tools':       { allowedLevels: ['product', 'admin']                      },
+  'product:view_calendar':    { allowedLevels: ['product', 'manager', 'admin']           },
+  'product:view_dashboard':   { allowedLevels: ['product', 'manager', 'admin']           },
+  'product:view_team':        { minLevel: 'employee'                                     },
+  'product:create_techsheet': { allowedLevels: ['product', 'admin']                      },
+  'product:approve_sample':   { allowedLevels: ['product', 'admin']                      },
+  'product:create_report':    { allowedLevels: ['product', 'admin']                      },
 
   // ── Documentos ────────────────────────────────────────────────
-  'docs:view_statbar':        { minLevel: 'employee'   },
-  'docs:view_repository':     { minLevel: 'employee'   },
-  'docs:view_recent':         { minLevel: 'employee'   },
-  'docs:view_owners':         { minLevel: 'manager'    },
-  'docs:create':              { minLevel: 'manager'    },
-  'docs:review_approvals':    { minLevel: 'manager'    },
-  'docs:upload':              { minLevel: 'it'         },
-  'docs:delete':              { allowedLevels: ['admin'] },
+  'docs:view_statbar':     { minLevel: 'employee' },
+  'docs:view_repository':  { minLevel: 'employee' },
+  'docs:view_recent':      { minLevel: 'employee' },
+  'docs:view_owners':      { minLevel: 'manager'  },
+  'docs:create':           { minLevel: 'manager'  },
+  'docs:review_approvals': { minLevel: 'manager'  },
+  'docs:upload':           { minLevel: 'it'       },
+  'docs:delete':           { allowedLevels: ['admin'] },
 
   // ── Admin ─────────────────────────────────────────────────────
-  'admin:access':             { allowedLevels: ['admin'] },
-  'admin:manage_roles':       { allowedLevels: ['admin'] },
-  'admin:view_audit_log':     { allowedLevels: ['admin'] },
+  'admin:access':        { allowedLevels: ['admin'] },
+  'admin:manage_roles':  { allowedLevels: ['admin'] },
+  'admin:view_audit_log':{ allowedLevels: ['admin'] },
 };
 
+/**
+ * Verifica si un usuario tiene permiso para ejecutar una acción específica.
+ *
+ * Evalúa la {@link PermissionRule} asociada al permiso en {@link PERMISSION_MAP}:
+ * - Si la regla es `allowedLevels`, comprueba pertenencia exacta al array.
+ * - Si la regla es `minLevel`, delega en {@link atLeast}.
+ *
+ * @remarks
+ * Los elementos sin acceso deben **ocultarse del DOM completamente** —
+ * no mostrarse deshabilitados o bloqueados visualmente.
+ *
+ * @param level      - Nivel de acceso del usuario autenticado.
+ * @param permission - Permiso requerido en formato `módulo:acción`.
+ * @returns `true` si el nivel del usuario satisface la regla del permiso.
+ *
+ * @example
+ * ```ts
+ * can('manager', 'retail:view_kpis')   // true
+ * can('employee', 'finance:export')    // false
+ * can('admin', 'admin:access')         // true
+ * can('it', 'finance:view_invoices')   // false — it es jerárquicamente
+ *                                      // superior a finance pero no está
+ *                                      // en su allowedLevels
+ * ```
+ */
 export function can(level: AccessLevel, permission: Permission): boolean {
   const rule = PERMISSION_MAP[permission];
   if ('allowedLevels' in rule) return rule.allowedLevels.includes(level);
   return atLeast(level, rule.minLevel);
 }
 
-// ── 4. AppUser ────────────────────────────────────────────────────────────────
-
+/**
+ * Representa al usuario autenticado con todos sus atributos de identidad
+ * y acceso resueltos.
+ *
+ * Se construye durante el callback `jwt` de `auth.ts` combinando los datos
+ * de la sesión de NextAuth con el perfil de Microsoft Graph.
+ *
+ * @remarks
+ * El campo `accessLevel` se resuelve una sola vez en el callback `jwt` y
+ * queda almacenado en el token, evitando consultas adicionales a Graph en
+ * cada request.
+ */
 export interface AppUser {
-  id:          string;
-  name:        string;
-  email:       string;
-  image?:      string | null;
-  role:        string;
-  department:  string;
+  /** Identificador único del usuario en Azure AD. */
+  id: string;
+  /** Nombre completo del colaborador. */
+  name: string;
+  /** Correo corporativo del colaborador. */
+  email: string;
+  /** URL de la foto de perfil obtenida desde Microsoft Graph. */
+  image?: string | null;
+  /** Cargo del colaborador según su perfil en Entra ID (`jobTitle`). */
+  role: string;
+  /** Nombre del departamento según su perfil en Entra ID. */
+  department: string;
+  /** Nivel de acceso resuelto a partir del departamento y grupos de Azure AD. */
   accessLevel: AccessLevel;
-  location?:   string;
+  /** Sede o ciudad donde trabaja el colaborador. */
+  location?: string;
+  /** Identificador del empleado en el sistema de RRHH de EDM. */
   employeeId?: string;
-  joined?:     string;
-  phone?:      string;
+  /** Fecha de ingreso a la empresa en formato legible (ej. `"marzo 2024"`). */
+  joined?: string;
+  /** Teléfono de contacto del colaborador. */
+  phone?: string;
 }

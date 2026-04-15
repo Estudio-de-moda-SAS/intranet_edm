@@ -1,21 +1,94 @@
+/**
+ * @module ServiceStatusPanel
+ * Componente cliente para visualizar el estado operativo de servicios
+ * dentro de un dashboard o panel de monitoreo.
+ *
+ * @remarks
+ * Este archivo implementa una tarjeta reutilizable que muestra una lista
+ * de servicios con su estado actual, descripción opcional y un resumen
+ * superior de servicios activos.
+ *
+ * Su responsabilidad incluye:
+ *
+ * - Mostrar un encabezado con título e indicador resumido.
+ * - Renderizar una lista de servicios con nombre y descripción opcional.
+ * - Representar visualmente el estado de cada servicio mediante un punto
+ *   animado y una etiqueta.
+ * - Calcular cuántos servicios se encuentran activos u operativos.
+ * - Aplicar una configuración visual por estado mediante `STATUS_CONFIG`.
+ *
+ * Este componente está orientado a módulos de observabilidad, monitoreo
+ * técnico y supervisión de disponibilidad de servicios.
+ */
+
 "use client";
 
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 
+/**
+ * Estados posibles de un servicio dentro del panel.
+ *
+ * @remarks
+ * Valores soportados:
+ * - `"online"`: servicio disponible.
+ * - `"operational"`: servicio funcionando con normalidad.
+ * - `"degraded"`: servicio con degradación parcial.
+ * - `"offline"`: servicio fuera de línea.
+ * - `"down"`: servicio caído.
+ */
 type ServiceStatus = "online" | "operational" | "degraded" | "offline" | "down";
 
+/**
+ * Representa un servicio individual dentro del panel.
+ */
 type Service = {
+  /**
+   * Nombre identificador del servicio.
+   */
   name: string;
+
+  /**
+   * Descripción opcional del servicio.
+   *
+   * @remarks
+   * Puede utilizarse para ampliar el contexto funcional o técnico
+   * del servicio mostrado.
+   */
   description?: string;
+
+  /**
+   * Estado operativo actual del servicio.
+   */
   status: ServiceStatus;
 };
 
+/**
+ * Props del componente {@link ServiceStatusCard}.
+ */
 type Props = {
+  /**
+   * Título principal de la tarjeta.
+   */
   title: string;
+
+  /**
+   * Colección de servicios a renderizar.
+   */
   services: Service[];
 };
 
+/**
+ * Configuración visual asociada a cada estado de servicio.
+ *
+ * @remarks
+ * Cada entrada define:
+ * - Clase del punto visual.
+ * - Si el punto debe animarse con efecto pulse.
+ * - Estilo del badge.
+ * - Color de texto.
+ * - Etiqueta legible para el usuario.
+ */
 const STATUS_CONFIG: Record<string, { dot: string; pulse: boolean; badge: string; text: string; label: string }> = {
   online:       { dot: "bg-emerald-400", pulse: true,  badge: "bg-emerald-50 border-emerald-100", text: "text-emerald-700", label: "Online"    },
   operational:  { dot: "bg-emerald-400", pulse: true,  badge: "bg-emerald-50 border-emerald-100", text: "text-emerald-700", label: "Operativo" },
@@ -24,9 +97,56 @@ const STATUS_CONFIG: Record<string, { dot: string; pulse: boolean; badge: string
   down:         { dot: "bg-rose-500",    pulse: false, badge: "bg-rose-50 border-rose-100",       text: "text-rose-700",    label: "Caído"     },
 };
 
-const FALLBACK = { dot: "bg-slate-300", pulse: false, badge: "bg-slate-50 border-slate-100", text: "text-slate-500", label: "Desconocido" };
+/**
+ * Configuración visual de respaldo para estados no reconocidos.
+ *
+ * @remarks
+ * Aunque el tipo `ServiceStatus` restringe los valores válidos,
+ * este objeto actúa como protección adicional ante datos externos
+ * inconsistentes o futuras extensiones de la fuente de datos.
+ */
+const FALLBACK = {
+  dot: "bg-slate-300",
+  pulse: false,
+  badge: "bg-slate-50 border-slate-100",
+  text: "text-slate-500",
+  label: "Desconocido",
+};
 
+/**
+ * Componente cliente que renderiza una tarjeta de estado de servicios.
+ *
+ * @param props Propiedades del componente.
+ * @param props.title Título principal del panel.
+ * @param props.services Lista de servicios a representar.
+ * @returns Tarjeta con resumen y listado de estados de servicios.
+ *
+ * @remarks
+ * Flujo de ejecución:
+ *
+ * 1. Recibe el título y la colección de servicios.
+ * 2. Calcula cuántos servicios están activos u operativos.
+ * 3. Renderiza una tarjeta animada con `framer-motion`.
+ * 4. Muestra un encabezado con:
+ *    - Icono representativo.
+ *    - Título del bloque.
+ *    - Resumen de servicios activos frente al total.
+ * 5. Recorre la lista de servicios y, para cada uno:
+ *    - Obtiene la configuración visual según su estado.
+ *    - Renderiza un punto visual, con animación si aplica.
+ *    - Muestra nombre y descripción opcional.
+ *    - Presenta un badge con la etiqueta del estado.
+ *
+ * Este componente ofrece una vista compacta y clara del estado general
+ * de disponibilidad de varios servicios.
+ */
 export default function ServiceStatusCard({ title, services }: Props) {
+  /**
+   * Cantidad de servicios considerados activos u operativos.
+   *
+   * @remarks
+   * Se contabilizan los estados `"online"` y `"operational"` como activos.
+   */
   const operational = services.filter((s) =>
     ["online", "operational"].includes(s.status)
   ).length;
@@ -54,7 +174,15 @@ export default function ServiceStatusCard({ title, services }: Props) {
       {/* Services */}
       <ul className="divide-y divide-slate-50">
         {services.map((svc, i) => {
+          /**
+           * Configuración visual correspondiente al estado del servicio actual.
+           *
+           * @remarks
+           * Si por alguna razón el estado no existe en `STATUS_CONFIG`,
+           * se utiliza la configuración de respaldo {@link FALLBACK}.
+           */
           const cfg = STATUS_CONFIG[svc.status] ?? FALLBACK;
+
           return (
             <li
               key={i}
