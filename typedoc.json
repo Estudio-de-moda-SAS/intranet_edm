@@ -1,5 +1,6 @@
 {
   "tsconfig": "./tsconfig.typedoc.json",
+  "favicon": "./public/brand/edmIcon.png",
   "entryPoints": [
     "lib/**/*.ts",
     "app/**/*.ts",
