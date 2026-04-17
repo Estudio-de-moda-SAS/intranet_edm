@@ -1,71 +1,98 @@
 /**
- * @module InvoicePageHeader
- * Encabezado principal de la sección de facturas del módulo financiero.
+ * @module ExpensesPage
+ * Página principal de gestión de gastos del módulo financiero.
  *
  * @remarks
- * Este componente presenta el contexto visual inicial
- * de la página de facturas de proveedores.
+ * Este módulo define una ruta server de Next.js encargada de
+ * renderizar la vista de gastos operativos del área financiera.
  *
- * Incluye:
+ * La página integra:
  *
- * - breadcrumb de navegación
- * - ícono representativo del módulo
- * - título principal
- * - descripción breve de la funcionalidad de la vista
+ * - encabezado principal con contexto de navegación
+ * - franja de indicadores clave de gastos
+ * - tabla interactiva de gastos operativos
  *
- * Su propósito es orientar al usuario dentro del flujo
- * de gestión de facturas del área financiera.
+ * Su objetivo es centralizar la consulta y revisión
+ * de gastos asociados a las operaciones del área financiera.
  */
 
-import Link from 'next/link';
-import { ChevronRight, FileText } from 'lucide-react';
+// ✅ SERVER COMPONENT — sin "use client"
+// Ruta: app/(protected)/(intranet)/departments/finance/expenses/page.tsx
+
+import { ExpensePageHeader } from '@/app/(protected)/(intranet)/departments/finance/expenses/components/ExpensePageHeader';
+import { ExpenseStatsStrip } from '@/app/(protected)/(intranet)/departments/finance/expenses/components/ExpenseStatsStrip';
+import { ExpenseTable } from '@/app/(protected)/(intranet)/departments/finance/expenses/components/ExpenseTable';
+import { AnimatedCard } from '@/app/components/ui/animated/AnimatedCard';
+import { getFinanceData } from '@/lib/graph/departments/finance.service';
 
 /**
- * Encabezado de página para la gestión de facturas.
- *
- * @returns Bloque visual con breadcrumb, título e información descriptiva.
+ * Metadatos de la página para SEO y configuración del documento.
  *
  * @remarks
- * Este componente funciona como introducción contextual
- * a la vista de facturas de proveedores.
+ * Define el título y la descripción usados por Next.js
+ * en la cabecera del documento HTML.
+ */
+export const metadata = {
+  title: 'Gastos · Finanzas',
+  description: 'Gestión de gastos operativos — Estudio de Moda',
+};
+
+/**
+ * Página de gastos del módulo financiero.
  *
- * Refuerza la navegación jerárquica dentro del módulo financiero
- * y resume el propósito operativo de la sección.
+ * @returns Vista completa de gastos con encabezado, métricas y tabla interactiva.
+ *
+ * @remarks
+ * Este componente:
+ * - obtiene los datos financieros mediante {@link getFinanceData}
+ * - renderiza un encabezado de página con contexto visual
+ * - muestra una franja de indicadores basada en los gastos
+ * - presenta una tabla interactiva para explorar el listado de gastos
+ *
+ * La estructura está organizada para priorizar la lectura ejecutiva
+ * mediante métricas rápidas y luego el análisis detallado en tabla.
+ *
+ * Se utiliza {@link AnimatedCard} para suavizar la aparición
+ * del bloque principal de consulta.
  *
  * @example
  * ```tsx
- * <InvoicePageHeader />
+ * // Renderizado automático por Next.js en la ruta correspondiente
  * ```
  */
-export function InvoicePageHeader() {
-  return (
-    <div className="mb-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-[12px] text-slate-400 mb-2">
-        <Link
-          href="/departments/finance"
-          className="hover:text-violet-600 transition-colors"
-        >
-          Finanzas
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-        <span className="text-violet-600 font-medium">Facturas de proveedores</span>
-      </div>
+export default async function ExpensesPage() {
+  /**
+   * Datos financieros obtenidos desde el servicio backend.
+   *
+   * @remarks
+   * En esta vista se consumen principalmente
+   * los gastos disponibles en `data.expenses`.
+   */
+  const data = await getFinanceData();
 
-      {/* Title row */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center shrink-0">
-          <FileText className="h-5 w-5 text-violet-600" />
-        </div>
-        <div>
-          <h1 className="text-[26px] font-bold tracking-tight text-slate-900 leading-tight">
-            Gestión de Facturas
-          </h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">
-            Administra, aprueba y hace seguimiento a las facturas de proveedores
-          </p>
-        </div>
+  return (
+    <main
+      className="min-h-screen w-full bg-[#f4f6f9]"
+      style={{
+        fontFamily: "'DM Sans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
+      }}
+    >
+      <div className="px-4 pb-10 pt-6 lg:px-14">
+
+        {/* ── Page header: breadcrumb + título ── */}
+        <ExpensePageHeader />
+
+        {/* ── KPI strip — recibe expenses ya resueltas ── */}
+        <ExpenseStatsStrip expenses={data.expenses} />
+
+        {/* ── Tabla interactiva — recibe expenses ya resueltas ── */}
+        <AnimatedCard delay={0.1}>
+          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm shadow-slate-100 p-5">
+            <ExpenseTable expenses={data.expenses} />
+          </div>
+        </AnimatedCard>
+
       </div>
-    </div>
+    </main>
   );
 }

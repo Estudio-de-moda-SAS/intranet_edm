@@ -73,7 +73,7 @@ export interface DeleteResult   { success: boolean; error?: string }
 /** Simula subida de archivo (mock) */
 export async function uploadFile(
   _siteRelativePath: string,
-  file: File
+  _file: File
 ): Promise<UploadResult> {
   await new Promise((r) => setTimeout(r, 900));
   return { success: true };
