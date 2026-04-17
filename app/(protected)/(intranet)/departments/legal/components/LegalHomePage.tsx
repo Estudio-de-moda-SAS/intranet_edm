@@ -1,47 +1,22 @@
 /**
  * @module LegalHomePage
- * Página principal del módulo jurídico dentro de la intranet.
+ * Página principal del módulo jurídico.
  *
- * @remarks
- * Este componente compone la vista principal del área legal,
- * organizando secciones del dashboard según el nivel de acceso del usuario.
- *
- * Incluye:
- * - Hero principal del departamento
- * - Franja de KPIs
- * - Paneles de contratos, solicitudes, litigios y documentos
- * - Sección lateral con calendario, alertas regulatorias y accesos rápidos
- * - Sección del equipo jurídico
- *
- * El contenido visible se controla mediante permisos evaluados con
- * la función {@link can}, permitiendo adaptar la experiencia según rol.
+ * SERVER COMPONENT — carga todos los datos de SharePoint en paralelo
+ * y los pasa al LegalTabsShell (Client Component).
  */
 
-// app/(protected)/(intranet)/departments/legal/components/LegalHomePage.tsx
-// SERVER COMPONENT
-
-import { QuickLinksSection } from "@/app/components/ui/QuickLinksSection";
-import LegalContractsPanel from "./LegalContractsPanel";
-import LegalRequestsCard from "./LegalRequestPanel";
-import LegalLitigationPanel from "./LegalLitigationPanel";
-import LegalRegulatoryAlerts from "./LegalRegulatoryAlerts";
-import LegalCalendarCard from "./LegalCalendarCard";
-import LegalDocumentsPanel from "./LegalDocumentsPanel";
-import LegalHeroActions from "./LegalHeroActions";
-
-import { legalQuickLinks } from "../config/legalQuickLinks";
-import { DepartmentTeamSection } from "@/app/components/team/DepartmentTeamSection";
-import { legalTeam } from "../config/legalTeam";
-import type { LegalData } from "@/lib/graph/departments/legal.service";
-
-import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHeroBanner";
-import { AnimatedCard } from "@/app/components/ui/animated/AnimatedCard";
-import { AnimatedSection } from "@/app/components/ui/animated/AnimatedSection";
-import { AnimatedViewCard } from "@/app/components/ui/animated/AnimatedViewCard";
-import { LegalKPIStrip } from "./LegalKPIStrip";
-
-import { can, type AccessLevel } from "@/lib/roles";
-import { processQuickLinks } from "@/lib/quickLinksAccess";
+import { Suspense }                        from "react";
+import { DepartmentHeroBanner }            from "@/app/components/ui/animated/DepartmentHeroBanner";
+import { DepartmentTeamSection }           from "@/app/components/team/DepartmentTeamSection";
+import { AnimatedViewCard }                from "@/app/components/ui/animated/AnimatedViewCard";
+import { legalTeam }                       from "../config/legalTeam";
+import { can, type AccessLevel }           from "@/lib/roles";
+import { LegalTabsShell }                  from "./LegalTabsShell";
+import LegalHeroActions                    from "./LegalHeroActions";
+import { getLegalFolderDocuments }         from "@/lib/graph/departments/legal.sharepoint.service";
+import { JURIDICO_FOLDERS, CUMPLIMIENTO_FOLDERS } from "../config/legalSharepointFolders";
+import type { LegalData }                  from "@/lib/graph/departments/legal.service";
 
 /**
  * Props del componente {@link LegalHomePage}.
@@ -83,129 +58,29 @@ const TEAM_ACCENT = {
   topAccent: "from-emerald-800 via-emerald-600 to-teal-500",
 } as const;
 
-/**
- * Página principal del área jurídica.
- *
- * @param props Propiedades del componente.
- * @returns Vista principal del módulo legal con renderizado condicional por permisos.
- *
- * @remarks
- * Este componente:
- * - Evalúa permisos del usuario según `accessLevel`
- * - Construye pills y acciones del hero según acceso
- * - Procesa quick links con control de permisos
- * - Determina si debe existir columna principal, aside o ambos
- * - Compone dinámicamente el layout del dashboard legal
- *
- * Reglas generales:
- * - Los KPIs solo se muestran a usuarios con `legal:view_kpis`
- * - Las acciones del hero se restringen al mismo nivel
- * - Los accesos rápidos se procesan y filtran por permisos
- * - El layout se adapta según exista contenido en columnas principales o laterales
- *
- * @example
- * ```tsx
- * <LegalHomePage data={data} accessLevel={accessLevel} />
- * ```
- */
-export default function LegalHomePage({ data, accessLevel }: Props) {
-  const showKPIs = can(accessLevel, "legal:view_kpis");
-  const showCalendar = can(accessLevel, "legal:view_calendar");
-  const showRegulatory = can(accessLevel, "legal:view_regulatory");
-  const showQuickLinks = can(accessLevel, "legal:view_quicklinks");
-  const showContracts = can(accessLevel, "legal:view_contracts");
-  const showRequests = can(accessLevel, "legal:view_requests");
-  const showLitigation = can(accessLevel, "legal:view_litigation");
+export default async function LegalHomePage({ data, accessLevel }: Props) {
+  const showKPIs      = can(accessLevel, "legal:view_kpis");
   const showDocuments = can(accessLevel, "legal:view_documents");
+  const showCompliance = can(accessLevel, "legal:view_regulatory");
 
-  /**
-   * Pills mostradas en el hero principal.
-   *
-   * @remarks
-   * Si el usuario puede ver KPIs, se muestran datos sensibles del área.
-   * En caso contrario, se presenta una pill genérica sin información operativa.
-   */
-  const heroPills = [
-    ...(showKPIs
-      ? [
-          { type: "status" as const, text: `${data.kpis.contractsActive} contratos vigentes` },
-          { type: "info" as const, text: `Compliance: ${data.kpis.complianceScore}%` },
-        ]
-      : [{ type: "info" as const, text: "Asesoría legal corporativa" }]),
-  ];
+  // Cargar datos de SharePoint en paralelo solo si el usuario tiene acceso
+  const [juridicoFolderDocs, complianceDocs] = await Promise.all([
+    showDocuments
+      ? Promise.all(JURIDICO_FOLDERS.map((f) => getLegalFolderDocuments(f.siteRelativePath)))
+      : Promise.resolve([[], [], [], []]),
+    showCompliance && CUMPLIMIENTO_FOLDERS[0]
+      ? getLegalFolderDocuments(CUMPLIMIENTO_FOLDERS[0].siteRelativePath)
+      : Promise.resolve([]),
+  ]);
 
-  /**
-   * Acciones del hero.
-   *
-   * @remarks
-   * Se renderizan únicamente para usuarios autorizados a ver KPIs,
-   * ya que incluyen accesos directos a funcionalidades sensibles del módulo.
-   */
+  const heroPills = showKPIs
+    ? [
+        { type: "status" as const, text: `${data.kpis.contractsActive} contratos vigentes` },
+        { type: "info"   as const, text: `Compliance: ${data.kpis.complianceScore}%` },
+      ]
+    : [{ type: "info" as const, text: "Gestión documental y asesoría legal corporativa" }];
+
   const heroActions = showKPIs ? <LegalHeroActions /> : undefined;
-
-  /**
-   * Accesos rápidos procesados según el nivel de acceso.
-   *
-   * @remarks
-   * El arreglo resultante puede contener enlaces visibles, deshabilitados
-   * u ocultos según la lógica de permisos definida en `processQuickLinks`.
-   */
-  const processedLinks = processQuickLinks(legalQuickLinks, accessLevel);
-
-  /**
-   * Indica si debe mostrarse la sección de quick links.
-   *
-   * @remarks
-   * Solo se muestra si el usuario tiene permiso para ver quick links
-   * y además existen enlaces procesados disponibles.
-   */
-  const showQuickLinksSection = showQuickLinks && processedLinks.length > 0;
-
-  /**
-   * Indica si existe contenido para la columna principal.
-   *
-   * @remarks
-   * La columna principal agrupa contratos, solicitudes, litigios y documentos.
-   */
-  const showMainCol = showContracts || showRequests || showLitigation || showDocuments;
-
-  /**
-   * Indica si existe contenido para el aside.
-   *
-   * @remarks
-   * El aside agrupa calendario, alertas regulatorias y accesos rápidos.
-   */
-  const showAside = showCalendar || showRegulatory || showQuickLinksSection;
-
-  /**
-   * Clase dinámica para la columna principal.
-   *
-   * @remarks
-   * Si existe contenido en el aside, la columna principal se reduce;
-   * de lo contrario, ocupa el ancho completo.
-   */
-  const mainColClass = showAside ? "lg:col-span-8" : "lg:col-span-12";
-
-  /**
-   * Clase dinámica para la columna lateral.
-   *
-   * @remarks
-   * Si existe contenido en la columna principal, el aside ocupa menos ancho;
-   * en caso contrario, puede expandirse.
-   */
-  const asideColClass = showMainCol ? "lg:col-span-4" : "lg:col-span-12";
-
-  /**
-   * Clase interna de layout del aside.
-   *
-   * @remarks
-   * Cuando no existe columna principal, el aside puede redistribuirse
-   * en orientación horizontal en pantallas grandes.
-   */
-  const asideInnerClass =
-    !showMainCol && showAside
-      ? "flex flex-col lg:flex-row gap-5"
-      : "flex flex-col gap-5";
 
   return (
     <main
@@ -214,7 +89,6 @@ export default function LegalHomePage({ data, accessLevel }: Props) {
         fontFamily: "'DM Sans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
       }}
     >
-      {/* HERO */}
       <DepartmentHeroBanner
         breadcrumb="Departamentos · Jurídico"
         title="Área Jurídica"
@@ -228,67 +102,25 @@ export default function LegalHomePage({ data, accessLevel }: Props) {
         actions={heroActions}
       />
 
-      <div className="px-4 pb-10 lg:px-14">
-        {showKPIs && <LegalKPIStrip />}
-
-        {(showMainCol || showAside) && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            {showMainCol && (
-              <div className={`${mainColClass} flex flex-col gap-6`}>
-                {showContracts && (
-                  <AnimatedCard delay={0}>
-                    <LegalContractsPanel data={data} />
-                  </AnimatedCard>
-                )}
-
-                {showRequests && (
-                  <AnimatedCard delay={0.07}>
-                    <LegalRequestsCard data={data} />
-                  </AnimatedCard>
-                )}
-
-                {showLitigation && (
-                  <AnimatedCard delay={0.12}>
-                    <LegalLitigationPanel data={data} />
-                  </AnimatedCard>
-                )}
-
-                {showDocuments && (
-                  <AnimatedCard delay={0.16}>
-                    <LegalDocumentsPanel />
-                  </AnimatedCard>
-                )}
-              </div>
-            )}
-
-            {showAside && (
-              <AnimatedSection
-                delay={0.08}
-                stagger={0.07}
-                className={`${asideColClass} ${asideInnerClass}`}
-              >
-                {showCalendar && (
-                  <AnimatedCard delay={0.04}>
-                    <LegalCalendarCard data={data} />
-                  </AnimatedCard>
-                )}
-
-                {showRegulatory && (
-                  <AnimatedCard delay={0.09}>
-                    <LegalRegulatoryAlerts data={data} />
-                  </AnimatedCard>
-                )}
-
-                {showQuickLinksSection && (
-                  <AnimatedCard delay={0.14}>
-                    <QuickLinksSection
-                      title="Accesos rápidos · Jurídico"
-                      quickLinks={processedLinks}
-                    />
-                  </AnimatedCard>
-                )}
-              </AnimatedSection>
-            )}
+      <div className="px-4 pb-12 lg:px-14">
+        {(showDocuments || showCompliance) ? (
+          <Suspense fallback={<LegalTabsSkeleton />}>
+            <LegalTabsShell
+              accessLevel={accessLevel}
+              juridicoFolderDocs={juridicoFolderDocs}
+              complianceDocs={complianceDocs}
+            />
+          </Suspense>
+        ) : (
+          <div className="mt-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Sin acceso a los repositorios documentales
+              </p>
+              <p className="text-[12px] text-slate-400">
+                Contacta al área jurídica para solicitar acceso.
+              </p>
+            </div>
           </div>
         )}
 
@@ -302,5 +134,21 @@ export default function LegalHomePage({ data, accessLevel }: Props) {
         </AnimatedViewCard>
       </div>
     </main>
+  );
+}
+
+function LegalTabsSkeleton() {
+  return (
+    <div className="mt-6 flex flex-col gap-4">
+      <div className="flex gap-2">
+        <div className="h-9 w-28 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+        <div className="h-9 w-28 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-64 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+        ))}
+      </div>
+    </div>
   );
 }
