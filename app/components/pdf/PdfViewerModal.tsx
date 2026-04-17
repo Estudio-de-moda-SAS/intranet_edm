@@ -526,7 +526,7 @@ export default function PdfViewerModal({ open, onClose, metadata }: PdfViewerMod
   const dialogContent = (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4
-                 bg-black/40 backdrop-blur-sm"
+                 bg-black/40"
       onClick={(e) => { if (e.currentTarget === e.target) onClose(); }}
     >
       <div

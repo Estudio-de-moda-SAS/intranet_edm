@@ -375,7 +375,7 @@ export default function UserMenu({ user }: Props) {
           <div className="relative overflow-hidden px-5 py-4
                           border-b border-slate-100 dark:border-[#21262d]">
             <div
-              className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-10 blur-2xl"
+              className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-10"
               style={{ background: `hsl(${hue}, 70%, 55%)` }}
             />
             <div className="flex items-center gap-3">
