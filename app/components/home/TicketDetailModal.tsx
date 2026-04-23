@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { Modal } from "@/app/components/ui/Modal";
-import { ExternalLinkIcon } from "./ticket-detail-modal/components/icons";
+import { ExternalLinkIcon } from "./ticket-detail-modal/components/Icons";
 import { TicketHeader } from "./ticket-detail-modal/components/TicketHeader";
 import { TicketTabs } from "./ticket-detail-modal/components/TicketTabs";
 import { DetailsTab } from "./ticket-detail-modal/components/tabs/DetailsTab";

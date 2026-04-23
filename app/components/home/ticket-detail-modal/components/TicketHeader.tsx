@@ -1,6 +1,6 @@
 import { Hash, Tag } from "lucide-react";
 import { STATUS_CONFIG } from "../config";
-import { CloseIcon } from "./icons";
+import { CloseIcon } from "./Icons";
 import type { TicketDetail } from "../types";
 
 /**
