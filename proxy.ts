@@ -7,56 +7,74 @@
  * Actúa como punto de control central para todas las peticiones entrantes,
  * aplicando tres capas de seguridad en orden:
  *
- * 1. **Rutas públicas** — `/login`, `/unauthorized`, `/api/auth` y assets
+ * 1. **Rutas públicas** — `/login`, `/unauthorized`, `/api` y assets
  *    estáticos pasan sin ninguna comprobación.
- * 2. **Autenticación** — cualquier ruta protegida sin sesión activa redirige
- *    a `/login` con el `callbackUrl` original para recuperar la navegación
- *    tras el login.
+ * 2. **Autenticación** — cualquier ruta protegida sin la cookie
+ *    `edm_authed` redirige a `/login` con el `callbackUrl` original.
  * 3. **Autorización** — cada ruta protegida se compara contra
  *    {@link PREFIX_PERMISSIONS} para determinar el permiso requerido.
- *    Si el `accessLevel` del colaborador no tiene ese permiso, se redirige
+ *    Si el `accessLevel` de la cookie no tiene ese permiso, se redirige
  *    a la última página visitada o a `/unauthorized`.
  *
+ * **Cambio respecto a la versión NextAuth:**
+ * Ya no se usa `auth()` de NextAuth para envolver el middleware — MSAL
+ * es 100% cliente y no puede verificar tokens en el Edge Runtime.
+ * En su lugar se usa una cookie `edm_authed` que el cliente escribe tras
+ * el login exitoso de MSAL, y una cookie `edm_access_level` que persiste
+ * el nivel de acceso resuelto desde Graph.
+ *
+ * ⚠️ **Seguridad:** Las cookies `edm_authed` y `edm_access_level` son
+ * `httpOnly: false` porque el cliente de MSAL (navegador) debe poder
+ * escribirlas. La verificación real de identidad ocurre en el cliente
+ * con MSAL — el middleware solo actúa como primera línea de defensa para
+ * la UX (evitar flashes de rutas protegidas). Las llamadas a Graph desde
+ * los services siempre requieren un access token válido de MSAL.
+ *
  * **Cookie `edm_last_page`:**
- * Se actualiza en cada navegación exitosa para implementar el patrón
- * "volver a donde estabas" cuando un colaborador intenta acceder a una
- * ruta sin permiso. La cookie es `httpOnly` con TTL de 24 horas.
+ * Sin cambios respecto a la versión anterior — se actualiza en cada
+ * navegación exitosa para el patrón "volver a donde estabas".
  *
  * **Modo bypass:**
  * Cuando `NEXT_PUBLIC_AUTH_BYPASS === "true"`, el `accessLevel` se
- * resuelve desde {@link resolveDevAccessLevel} en lugar de la sesión
- * de NextAuth, permitiendo simular cualquier nivel de acceso en
- * desarrollo local sin autenticación con Entra ID.
+ * resuelve desde {@link resolveDevAccessLevel} en lugar de la cookie,
+ * permitiendo simular cualquier nivel de acceso en desarrollo.
  *
-* @see `roles` (`lib/roles.ts`) — definición de permisos y niveles de acceso
- * @see `auth` (`auth.ts`) — configuración de NextAuth con Entra ID *
- * @example
- * ```
- * // Flujo de una petición a /departments/finance/invoices:
- * // 1. No es ruta pública → continúa
- * // 2. Tiene sesión activa → continúa
- * // 3. Coincide con prefix "/departments/finance/invoices"
- * //    → requiere permiso "finance:view_invoices"
- * // 4. accessLevel "finance" tiene ese permiso → NextResponse.next()
- * //    + actualiza cookie edm_last_page
- * ```
+ * @see `roles` (`lib/roles.ts`) — definición de permisos y niveles de acceso
  */
 
-import { auth }                  from "@/auth";
-import { NextResponse }          from "next/server";
-import { resolveDevAccessLevel } from "@/lib/devSession";
-import { can }                   from "@/lib/roles";
-import type { AccessLevel, Permission } from "@/lib/roles";
+import { NextResponse, type NextRequest } from "next/server";
+import { resolveDevAccessLevel }          from "@/lib/devSession";
+import { can }                            from "@/lib/roles";
+import type { AccessLevel, Permission }   from "@/lib/roles";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
+
+/**
+ * Cookie que el cliente escribe tras un login exitoso de MSAL.
+ * Su presencia indica que hay una sesión activa en el navegador.
+ *
+ * @remarks
+ * No es `httpOnly` porque el cliente JavaScript de MSAL debe poder
+ * escribirla. No contiene datos sensibles — solo indica si hay sesión.
+ */
+export const AUTH_COOKIE = "edm_authed";
+
+/**
+ * Cookie que persiste el `AccessLevel` resuelto desde Microsoft Graph.
+ * Se escribe junto con {@link AUTH_COOKIE} tras el login exitoso.
+ *
+ * @remarks
+ * El middleware la lee para evaluar permisos de ruta sin llamadas
+ * adicionales a Graph. Si no existe, el nivel por defecto es `'employee'`.
+ */
+export const ACCESS_LEVEL_COOKIE = "edm_access_level";
 
 /**
  * Nombre de la cookie que persiste la última ruta visitada con éxito.
  *
  * @remarks
  * Se usa como fallback de navegación cuando un colaborador intenta
- * acceder a una ruta sin permiso — en lugar de mostrar directamente
- * `/unauthorized`, se le redirige a su última página accesible.
+ * acceder a una ruta sin permiso.
  */
 export const LAST_PAGE_COOKIE = "edm_last_page";
 
@@ -64,19 +82,11 @@ export const LAST_PAGE_COOKIE = "edm_last_page";
  * Mapa de prefijos de ruta a permisos requeridos para acceder a ellas.
  *
  * @remarks
- * El orden de las entradas es crítico — el middleware selecciona el
- * **primer prefijo que coincida** con `pathname.startsWith()`. Por ello,
- * las rutas más específicas deben preceder a las más generales dentro
- * de cada sección. Por ejemplo, `/departments/finance/invoices/nueva`
- * debe ir antes que `/departments/finance/invoices`.
+ * El orden es crítico — se selecciona el **primer prefijo que coincida**.
+ * Las rutas más específicas deben preceder a las más generales.
  *
- * Rutas sin entrada en este array se consideran de acceso libre para
- * cualquier colaborador autenticado (ej. `/home`, `/profile`,
- * `/directory`).
- *
- * Para agregar una nueva ruta protegida, añadir una entrada con el
- * prefijo más específico posible y el permiso correspondiente definido
- * en `roles.ts`.
+ * Rutas sin entrada se consideran de acceso libre para cualquier
+ * colaborador autenticado.
  */
 export const PREFIX_PERMISSIONS: { prefix: string; permission: Permission }[] = [
   // ── Finanzas ────────────────────────────────────────────────────────────
@@ -104,11 +114,11 @@ export const PREFIX_PERMISSIONS: { prefix: string; permission: Permission }[] = 
   { prefix: "/retail",            permission: "retail:view_kpis"       },
 
   // ── RRHH ────────────────────────────────────────────────────────────────
-  { prefix: "/rrhh/empleados/nuevo",                          permission: "hr:view_recruitment" },
-  { prefix: "/departments/human-resources/employees",         permission: "hr:view_headcount"   },
-  { prefix: "/rrhh/nomina",                                   permission: "hr:view_requests"    },
-  { prefix: "/rrhh/configuracion",                            permission: "hr:view_requests"    },
-  { prefix: "/rrhh",                                          permission: "hr:view_kpis"        },
+  { prefix: "/rrhh/empleados/nuevo",                  permission: "hr:view_recruitment" },
+  { prefix: "/departments/human-resources/employees", permission: "hr:view_headcount"   },
+  { prefix: "/rrhh/nomina",                           permission: "hr:view_requests"    },
+  { prefix: "/rrhh/configuracion",                    permission: "hr:view_requests"    },
+  { prefix: "/rrhh",                                  permission: "hr:view_kpis"        },
 
   // ── TI ──────────────────────────────────────────────────────────────────
   { prefix: "/it/activos", permission: "it:view_dashboard"      },
@@ -130,13 +140,7 @@ export const PREFIX_PERMISSIONS: { prefix: string; permission: Permission }[] = 
 ];
 
 /**
- * Prefijos de ruta que nunca deben guardarse en la cookie
- * {@link LAST_PAGE_COOKIE}.
- *
- * @remarks
- * Evita que páginas de error, autenticación o internas de Next.js
- * queden como "última página visitada" y se usen como destino de
- * redirección tras un acceso denegado.
+ * Prefijos que nunca deben guardarse en {@link LAST_PAGE_COOKIE}.
  */
 export const SKIP_LAST_PAGE = [
   "/unauthorized",
@@ -145,97 +149,101 @@ export const SKIP_LAST_PAGE = [
   "/_next",
 ];
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Escribe la cookie `edm_last_page` en la respuesta dada.
+ * @internal
+ */
+function setLastPageCookie(res: NextResponse, pathname: string): void {
+  if (SKIP_LAST_PAGE.some((p) => pathname.startsWith(p))) return;
+  res.cookies.set(LAST_PAGE_COOKIE, pathname, {
+    httpOnly: true,
+    sameSite: "lax",
+    path:     "/",
+    maxAge:   60 * 60 * 24,
+  });
+}
+
 // ── Middleware ────────────────────────────────────────────────────────────────
 
 /**
- * Función principal del middleware de Next.js, envuelta con `auth` de
- * NextAuth para tener acceso a la sesión en el contexto del Edge Runtime.
+ * Función principal del middleware de Next.js.
  *
  * @remarks
- * El middleware se ejecuta en el **Edge Runtime** de Next.js — no tiene
- * acceso a Node.js APIs ni a las funciones de servidor. Por ello, la
- * resolución del `accessLevel` se lee directamente desde la sesión de
- * NextAuth (ya calculada en el callback `jwt` de `auth.ts`) en lugar
- * de recalcularse aquí.
+ * A diferencia de la versión anterior con NextAuth, esta función ya no
+ * está envuelta con `auth()` — MSAL corre exclusivamente en el cliente
+ * y no puede verificar tokens en el Edge Runtime.
+ *
+ * La verificación de sesión se basa en la cookie {@link AUTH_COOKIE} que
+ * el cliente escribe tras un login exitoso de MSAL. La autorización usa
+ * la cookie {@link ACCESS_LEVEL_COOKIE} para evitar llamadas a Graph.
  *
  * **Orden de evaluación:**
- * 1. Si la ruta es pública → `NextResponse.next()` sin comprobaciones.
- * 2. Si no hay sesión y no hay bypass → redirige a `/login?callbackUrl=...`.
+ * 1. Si la ruta es pública → `NextResponse.next()`.
+ * 2. Si no hay `edm_authed` y no hay bypass → redirige a `/login`.
  * 3. Busca el prefijo más específico en {@link PREFIX_PERMISSIONS}.
- * 4. Si no hay prefijo → ruta libre, actualiza cookie y deja pasar.
- * 5. Si hay prefijo → evalúa `can(accessLevel, permission)`.
- * 6. Con permiso → actualiza cookie y deja pasar.
+ * 4. Sin restricción → deja pasar y actualiza cookie.
+ * 5. Con restricción → evalúa `can(accessLevel, permission)`.
+ * 6. Con permiso → deja pasar y actualiza cookie.
  * 7. Sin permiso → redirige a última página conocida o `/unauthorized`.
  *
- * @param req - Request de Next.js enriquecida por `auth` con la sesión
- *   del colaborador en `req.auth`.
+ * @param req - Request de Next.js.
  */
-export default auth(function proxy(req) {
+export default function proxy(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl;
 
-  // ── 1. Rutas públicas ────────────────────────────────────────────────────
+  // ── 1. Rutas públicas ──────────────────────────────────────────────────
   const isPublic =
     pathname.startsWith("/login")        ||
     pathname.startsWith("/unauthorized") ||
-    pathname.startsWith("/api/auth")     ||
+    pathname.startsWith("/api")          ||
     pathname.startsWith("/_next")        ||
     pathname.includes(".");
 
   if (isPublic) return NextResponse.next();
 
-  // ── 2. Sin sesión → redirigir a login ────────────────────────────────────
-  if (
-    process.env.NEXT_PUBLIC_AUTH_BYPASS !== "true" &&
-    !(req as any).auth?.user
-  ) {
+  // ── 2. Sin sesión → redirigir a login ─────────────────────────────────
+  const isAuthenticated =
+    process.env.NEXT_PUBLIC_AUTH_BYPASS === "true" ||
+    req.cookies.get(AUTH_COOKIE)?.value === "1";
+
+  if (!isAuthenticated) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // ── 3. Buscar prefijo más específico ─────────────────────────────────────
+  // ── 3. Buscar prefijo más específico ──────────────────────────────────
   const route = PREFIX_PERMISSIONS.find((r) => pathname.startsWith(r.prefix));
 
-  // ── 4. Sin restricción → dejar pasar y actualizar cookie ─────────────────
+  // ── 4. Sin restricción → dejar pasar ──────────────────────────────────
   if (!route) {
     const res = NextResponse.next();
-    if (!SKIP_LAST_PAGE.some((p) => pathname.startsWith(p))) {
-      res.cookies.set(LAST_PAGE_COOKIE, pathname, {
-        httpOnly: true,
-        sameSite: "lax",
-        path:     "/",
-        maxAge:   60 * 60 * 24,
-      });
-    }
+    setLastPageCookie(res, pathname);
     return res;
   }
 
-  // ── 5. Resolver accessLevel ───────────────────────────────────────────────
+  // ── 5. Resolver accessLevel ───────────────────────────────────────────
   let accessLevel: AccessLevel;
 
   if (process.env.NEXT_PUBLIC_AUTH_BYPASS === "true") {
     accessLevel = resolveDevAccessLevel();
   } else {
-    accessLevel = ((req as any).auth?.user?.accessLevel as AccessLevel) ?? "employee";
+    const cookieLevel = req.cookies.get(ACCESS_LEVEL_COOKIE)?.value;
+    accessLevel = (cookieLevel as AccessLevel | undefined) ?? "employee";
   }
 
-  // ── 6. Con permiso → dejar pasar y actualizar cookie ─────────────────────
+  // ── 6. Con permiso → dejar pasar ──────────────────────────────────────
   if (can(accessLevel, route.permission)) {
     const res = NextResponse.next();
-    if (!SKIP_LAST_PAGE.some((p) => pathname.startsWith(p))) {
-      res.cookies.set(LAST_PAGE_COOKIE, pathname, {
-        httpOnly: true,
-        sameSite: "lax",
-        path:     "/",
-        maxAge:   60 * 60 * 24,
-      });
-    }
+    setLastPageCookie(res, pathname);
     return res;
   }
 
-  // ── 7. Sin permiso → última página conocida o /unauthorized ──────────────
+  // ── 7. Sin permiso → última página conocida o /unauthorized ───────────
   const lastPage = req.cookies.get(LAST_PAGE_COOKIE)?.value;
-  const fallback = new URL("/unauthorized", req.url);
+  const fallback  = new URL("/unauthorized", req.url);
   fallback.searchParams.set("from", pathname);
 
   if (lastPage && !SKIP_LAST_PAGE.some((p) => lastPage.startsWith(p))) {
@@ -243,21 +251,13 @@ export default auth(function proxy(req) {
   }
 
   return NextResponse.redirect(fallback);
-});
+}
 
 // ── Configuración del matcher ─────────────────────────────────────────────────
 
 /**
- * Configuración del matcher de Next.js para el middleware.
- *
- * @remarks
- * Excluye archivos estáticos (`_next/static`, `_next/image`,
- * `favicon.ico`) para evitar que el middleware se ejecute en peticiones
- * de assets que no necesitan control de acceso, optimizando el
- * rendimiento en el Edge Runtime.
- *
- * El patrón `/((?!_next/static|_next/image|favicon.ico).*)` cubre
- * todas las rutas de la aplicación excepto los assets mencionados.
+ * Excluye assets estáticos para no ejecutar el middleware en cada imagen
+ * o chunk de JS, optimizando el rendimiento en el Edge Runtime.
  */
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],

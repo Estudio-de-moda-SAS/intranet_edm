@@ -23,7 +23,7 @@
 // ✅ SERVER COMPONENT — sin "use client"
 
 import type { Metadata }    from "next";
-import { auth }             from "@/auth";
+import { cookies }          from "next/headers";
 import { DEV_SESSION }      from "@/lib/devSession";
 import type { AccessLevel } from "@/lib/roles";
 import { getHRData }        from "@/lib/graph/departments/hr.service";
@@ -61,7 +61,7 @@ const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
  *
  * 1. Determina el nivel de acceso del usuario:
  *    - En desarrollo: usa {@link DEV_SESSION}.
- *    - En producción: usa {@link auth}.
+ *    - En producción: usa {@link cookies}.
  * 2. Obtiene los datos del módulo mediante {@link getHRData}.
  * 3. Renderiza el contenido principal con {@link HRPageContent}.
  */
@@ -72,8 +72,8 @@ export default async function HRHomePage() {
   if (isBypass) {
     accessLevel = DEV_SESSION.user.accessLevel;
   } else {
-    const session = await auth();
-    accessLevel   = session?.user?.accessLevel ?? "employee";
+    const cookieStore = await cookies();
+    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";
   }
 
   const data = await getHRData();

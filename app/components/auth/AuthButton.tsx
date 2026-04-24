@@ -1,84 +1,53 @@
 /**
  * @module AuthButton
- * Componente cliente encargado de gestionar la autenticación del usuario
- * mediante NextAuth.
+ * Component responsible for managing user authentication via MSAL.
  *
  * @remarks
- * Este archivo implementa un botón de autenticación condicional que cambia
- * su comportamiento según el estado de sesión del usuario.
+ * Implements a conditional authentication button that changes its
+ * behavior based on the user's session state.
  *
- * Su responsabilidad incluye:
+ * Responsibilities:
  *
- * - Consultar la sesión activa mediante {@link useSession}.
- * - Mostrar un mensaje de bienvenida cuando el usuario ha iniciado sesión.
- * - Permitir el cierre de sesión mediante {@link signOut}.
- * - Permitir el inicio de sesión corporativo mediante {@link signIn}.
- *
- * Actualmente utiliza el proveedor `"azure-ad"` para el proceso de login,
- * por lo que está orientado a autenticación corporativa.
+ * - Check the active session via {@link useMsal}.
+ * - Show a welcome message when the user is signed in.
+ * - Allow sign-out via {@link logout}.
+ * - Allow corporate sign-in via {@link ensureLogin}.
  */
 
 "use client";
 
-import { signIn, signOut, useSession } from "next-auth/react";
+import { useMsal }              from "@azure/msal-react";
+import { logout, ensureLogin }  from "@/app/api/auth/msal";
 
 /**
- * Componente cliente que renderiza un botón de autenticación dinámico.
+ * Client component that renders a dynamic authentication button.
  *
- * @returns Interfaz de autenticación según el estado actual de la sesión.
+ * @returns Authentication UI based on the current session state.
  *
  * @remarks
- * Flujo de ejecución:
+ * Execution flow:
  *
- * 1. Consulta la sesión actual con {@link useSession}.
- * 2. Si existe una sesión activa, muestra un saludo personalizado
- *    con el nombre del usuario y un botón de cierre de sesión.
- * 3. Si no existe sesión, muestra un botón para iniciar sesión
- *    con el proveedor corporativo `"azure-ad"`.
- *
- * Este componente funciona como un punto de entrada simple para la
- * autenticación del usuario dentro de la interfaz.
+ * 1. Reads the active accounts from {@link useMsal}.
+ * 2. If an account exists, shows a personalized greeting and a sign-out button.
+ * 3. If no account exists, shows a button to start the corporate login flow.
  */
 export default function AuthButton() {
-  /**
-   * Sesión actual del usuario autenticado.
-   *
-   * @remarks
-   * Se obtiene mediante el hook {@link useSession}, que permite conocer
-   * si existe una sesión activa y acceder a la información básica del usuario.
-   */
-  const { data: session } = useSession();
+  const { accounts } = useMsal();
+  const account      = accounts[0];
 
-  /**
-   * Renderizado condicional para usuarios autenticados.
-   *
-   * @remarks
-   * Cuando la sesión existe:
-   *
-   * - Se muestra un mensaje de bienvenida.
-   * - Se intenta mostrar el nombre del usuario autenticado.
-   * - Se habilita un botón para cerrar sesión mediante {@link signOut}.
-   */
-  if (session) {
+  if (account) {
     return (
       <>
-        <p>Bienvenido {session.user?.name}</p>
-        <button onClick={() => signOut()}>
+        <p>Bienvenido {account.name}</p>
+        <button onClick={() => logout()}>
           Logout
         </button>
       </>
     );
   }
 
-  /**
-   * Renderizado para usuarios no autenticados.
-   *
-   * @remarks
-   * Cuando no existe una sesión activa, se muestra un botón que inicia
-   * el flujo de autenticación corporativa usando el proveedor `"azure-ad"`.
-   */
   return (
-    <button onClick={() => signIn("azure-ad")}>
+    <button onClick={() => ensureLogin("redirect")}>
       Login corporativo
     </button>
   );

@@ -1,72 +1,55 @@
 /**
  * @module HomePage
- * Página principal de la intranet (Home).
+ * Pagina principal de la intranet (Home).
  *
  * @remarks
- * Este archivo define un **Server Component puro** que actúa como punto
- * de entrada para la vista principal de la aplicación.
+ * Server Component puro que actua como punto de entrada para la vista
+ * principal de la aplicacion.
  *
- * Responsabilidades principales:
+ * **Modo bypass:**
+ * Llama a `getHomeData()` directamente — retorna mock data sin token.
  *
- * 1. Obtener los datos necesarios desde el servidor mediante {@link getHomeData}.
- * 2. Pasar dichos datos al componente de presentación {@link HomePageContent}.
- * 3. Envolver la página en {@link PageTransition} para manejar animaciones
- *    de entrada entre rutas.
+ * **Modo produccion:**
+ * Renderiza `HomeClient` que obtiene el token con MSAL y llama a
+ * `/api/home` con el header `Authorization: Bearer {token}`.
+ * El Route Handler reenvía el token a Graph y retorna los datos.
  *
- * @architecture
- * Este componente forma parte de la capa de **orquestación del servidor**:
- *
- * - No contiene estado cliente.
- * - No utiliza hooks de React.
- * - Reduce la cantidad de JavaScript enviado al navegador.
- *
- * Además, al delegar la lógica visual en `HomePageContent` (también Server Component),
- * se optimiza el rendimiento general de la página.
- *
- * @example
- * ```tsx
- * export default async function HomePage() {
- *   const data = await getHomeData();
- *
- *   return (
- *     <PageTransition>
- *       <HomePageContent data={data} />
- *     </PageTransition>
- *   );
- * }
- * ```
+ * Este patron garantiza que el token de MSAL nunca se necesita en el
+ * servidor durante el render inicial — fluye del cliente al Route Handler.
  */
 
-// ✅ SERVER COMPONENT — sin cambios estructurales.
-//
-// Este archivo ya estaba bien. Es un Server Component puro que:
-//   1. Fetcha datos en servidor con getHomeData()
-//   2. Pasa los datos a HomePageContent como props
-//   3. Envuelve en PageTransition para la animación de entrada de página
-//
-// El único cambio es que ahora HomePageContent también es Server Component,
-// así que el árbol de servidor es más profundo y se envía menos JS al cliente.
+import { getHomeData }       from "@/lib/graph/home.service";
+import { HomePageContent }   from "./components/HomePageContent";
+import { HomeClient }        from "./components/HomeClient";
+import { PageTransition }    from "@/app/components/ui/PageTransition";
+import type { HomeData }     from "@/types/home";
 
-import { getHomeData } from "@/lib/graph/home.service";
-import { HomePageContent } from "./components/HomePageContent";
-import { PageTransition } from "@/app/components/ui/PageTransition";
+const IS_BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
 /**
- * Componente principal de la página Home.
+ * Componente principal de la pagina Home.
  *
- * @returns Página renderizada con datos obtenidos en servidor.
- *
- * @remarks
- * - Ejecuta `getHomeData()` en el servidor.
- * - No hidrata lógica innecesaria en el cliente.
- * - Mantiene separación clara entre datos y presentación.
+ * @returns Pagina renderizada con datos obtenidos en servidor (bypass)
+ *   o delegada al cliente para obtener el token (produccion).
  */
 export default async function HomePage() {
-  const data = await getHomeData();
 
+  // En bypass: datos mock disponibles directamente en servidor
+  if (IS_BYPASS) {
+    const data: HomeData = await getHomeData();
+    return (
+      <PageTransition>
+        <HomePageContent data={data} />
+      </PageTransition>
+    );
+  }
+
+  // En produccion: HomeClient obtiene el token con MSAL,
+  // llama a /api/home con Authorization header y renderiza
+  // HomePageContent cuando los datos llegan.
   return (
     <PageTransition>
-      <HomePageContent data={data} />
+      <HomeClient />
     </PageTransition>
   );
 }

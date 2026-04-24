@@ -1,46 +1,66 @@
 /**
  * @module LoginPage
- * Página de inicio de sesión de la intranet corporativa.
+ * Pagina de inicio de sesion de la intranet corporativa.
  *
  * @remarks
- * Este componente representa la experiencia de acceso principal
- * para los usuarios de la plataforma, utilizando autenticación
- * corporativa con Microsoft 365 mediante NextAuth.
+ * Utiliza autenticacion corporativa con Microsoft 365 mediante MSAL Browser.
+ * El flujo es identico desde la perspectiva del usuario:
+ * pulsa el boton -> redirect a Microsoft -> vuelve autenticado.
  *
- * La vista se divide en dos paneles principales:
- *
- * - panel izquierdo: branding e identidad corporativa
- * - panel derecho: tarjeta de autenticación
- *
- * Es un **Client Component** porque:
- *
- * - maneja estado local de carga
- * - utiliza `useSearchParams`
- * - ejecuta `signIn` en cliente
- * - incorpora animaciones con `framer-motion`
+ * **Flujo completo:**
+ * 1. Usuario pulsa "Continuar con Microsoft".
+ * 2. `ensureLogin("redirect")` redirige a Azure AD.
+ * 3. Azure redirige de vuelta a esta misma URL con el hash de autenticacion.
+ * 4. `MsalProvider` llama a `handleRedirectPromise` y establece la cuenta.
+ * 5. El `useEffect` detecta la cuenta activa en `accounts`.
+ * 6. Obtiene el access token, consulta Graph, resuelve el `accessLevel`.
+ * 7. Escribe las cookies `edm_authed`, `edm_access_level` y `edm_user_email`.
+ * 8. Espera 150ms para garantizar que las cookies estan escritas.
+ * 9. Navega con `window.location.href` — fuerza request nuevo al servidor
+ *    para que el middleware lea las cookies correctamente.
  */
 
 "use client";
 
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
-import { motion } from "framer-motion";
-import { Shield, ArrowRight } from "lucide-react";
-import Image from "next/image";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams }             from "next/navigation";
+import { useMsal }                     from "@azure/msal-react";
+import { motion }                      from "framer-motion";
+import { Shield, ArrowRight }          from "lucide-react";
+import Image                           from "next/image";
+import {
+  ensureLogin,
+  getAccessToken,
+  initMSAL,
+}                                      from "@/app/api/auth/msal";
+import {
+  getMicrosoftGraphProfile,
+  getMicrosoftGraphGroups,
+  resolveAccessLevelFromGroups,
+}                                      from "@/lib/microsoft-graph";
 
-// ── Microsoft logo SVG ────────────────────────────────────────────
+// -- Constantes de cookies ----------------------------------------------------
+
+/** TTL de las cookies de sesion: 24 horas en segundos. */
+const COOKIE_MAX_AGE = 60 * 60 * 24;
 
 /**
- * Logo simplificado de Microsoft en formato SVG.
+ * Escribe las cookies que `proxy.ts` y los Server Actions necesitan.
+ * Se llama tras un login exitoso de MSAL.
  *
- * @param props Propiedades del componente.
- * @param props.size Tamaño del ícono en píxeles.
- * @returns SVG del logotipo de Microsoft.
- *
- * @remarks
- * Se utiliza como elemento visual dentro del botón de acceso SSO.
+ * @param accessLevel - Nivel de acceso resuelto desde los grupos de Graph.
+ * @param email       - Email corporativo del colaborador (username de MSAL).
+ * @internal
  */
+function writeSessionCookies(accessLevel: string, email: string): void {
+  const base = `path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+  document.cookie = `edm_authed=1; ${base}`;
+  document.cookie = `edm_access_level=${accessLevel}; ${base}`;
+  document.cookie = `edm_user_email=${email}; ${base}`;
+}
+
+// -- Microsoft logo SVG -------------------------------------------------------
+
 function MicrosoftLogo({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -52,21 +72,8 @@ function MicrosoftLogo({ size = 18 }: { size?: number }) {
   );
 }
 
-// ── Background blobs ──────────────────────────────────────────────
+// -- Background blobs ---------------------------------------------------------
 
-/**
- * Fondo decorativo animado para la página de login.
- *
- * @returns Elementos visuales de fondo con blobs y patrón de puntos.
- *
- * @remarks
- * Este componente no tiene funcionalidad interactiva.
- * Su objetivo es enriquecer la estética del login mediante:
- *
- * - blobs animados
- * - degradados suaves
- * - patrón de puntos decorativo
- */
 function BackgroundBlobs() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
@@ -97,84 +104,95 @@ function BackgroundBlobs() {
   );
 }
 
-// ── Department pills ──────────────────────────────────────────────
+// -- Department pills ---------------------------------------------------------
 
-/**
- * Lista de áreas o módulos destacados de la plataforma.
- *
- * @remarks
- * Se utiliza en el panel izquierdo como refuerzo visual del alcance
- * funcional de la intranet.
- */
 const FEATURES = [
   { label: "Recursos Humanos",  delay: 0    },
   { label: "Finanzas",          delay: 0.12 },
-  { label: "Área Comercial",    delay: 0.24 },
+  { label: "Area Comercial",    delay: 0.24 },
   { label: "E-Commerce",        delay: 0.36 },
-  { label: "Tecnología",        delay: 0.48 },
+  { label: "Tecnologia",        delay: 0.48 },
   { label: "Operaciones",       delay: 0.60 },
 ];
 
-// ── Page ──────────────────────────────────────────────────────────
+// -- Page ---------------------------------------------------------------------
 
-/**
- * Página principal de inicio de sesión.
- *
- * @returns Interfaz de login con branding corporativo y autenticación Microsoft.
- *
- * @remarks
- * Flujo principal:
- *
- * 1. El usuario pulsa el botón de acceso.
- * 2. Se activa el estado local `loading`.
- * 3. Se lee `callbackUrl` desde query params.
- * 4. Se valida que la ruta sea interna para evitar open redirects.
- * 5. Se inicia autenticación con `signIn("microsoft-entra-id")`.
- *
- * Este componente combina:
- *
- * - branding corporativo
- * - navegación segura hacia SSO
- * - animaciones de entrada y microinteracciones
- *
- * @example
- * ```tsx
- * <LoginPage />
- * ```
- */
 export default function LoginPage() {
-  /**
-   * Estado de carga del proceso de autenticación.
-   */
   const [loading, setLoading] = useState(false);
+  const [status,  setStatus]  = useState<string>("");
+  const searchParams          = useSearchParams();
+  const { accounts }          = useMsal();
+  const handledRef            = useRef(false);
 
-  /**
-   * Parámetros de búsqueda de la URL actual.
-   *
-   * @remarks
-   * Se utiliza para leer `callbackUrl` enviado por middleware o rutas protegidas.
-   */
-  const searchParams = useSearchParams();
+  // Detectar retorno del redirect de Microsoft
+  useEffect(() => {
+    if (handledRef.current)    return;
+    if (accounts.length === 0) return;
 
-  /**
-   * Inicia el flujo de autenticación con Microsoft Entra ID.
-   *
-   * @remarks
-   * - Lee `callbackUrl` del query string.
-   * - Valida que la URL sea interna.
-   * - Redirige al proveedor configurado en NextAuth.
-   */
+  const alreadyAuthed = document.cookie.includes("edm_authed=1");
+  if (alreadyAuthed) {
+    const raw = searchParams.get("callbackUrl") ?? "/";
+    const callbackUrl = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
+    window.location.href = callbackUrl;
+    return;
+  }
+
+    handledRef.current = true;
+    setLoading(true);
+    setStatus("Verificando permisos...");
+
+    (async () => {
+      try {
+        await initMSAL();
+
+        const accessToken = await getAccessToken({ forceSilent: true });
+
+        const [profile, groups] = await Promise.all([
+          getMicrosoftGraphProfile(accessToken),
+          getMicrosoftGraphGroups(accessToken),
+        ]);
+
+        const accessLevel = resolveAccessLevelFromGroups(
+          groups,
+          profile?.department ?? null,
+          profile?.jobTitle   ?? null,
+        );
+
+        writeSessionCookies(accessLevel, accounts[0]?.username ?? "");
+
+        const raw         = searchParams.get("callbackUrl") ?? "/";
+        const callbackUrl = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
+
+        setStatus("Acceso concedido. Redirigiendo...");
+
+        // Esperar a que el navegador confirme las cookies antes de navegar.
+        // window.location.href fuerza un request nuevo al servidor para que
+        // el middleware lea las cookies — router.replace es navegacion cliente
+        // y el middleware puede no verlas aun.
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        window.location.href = callbackUrl;
+
+      } catch (err) {
+        console.error("[Login] Error al resolver sesion post-redirect:", err);
+        setLoading(false);
+        setStatus("Error al verificar permisos. Intenta de nuevo.");
+      }
+    })();
+  }, [accounts, searchParams]);
+
   const handleLogin = async () => {
     setLoading(true);
-
-    // Leer callbackUrl del query param que mandó el middleware
-    // Validar que sea ruta interna para evitar open redirect
-    const raw = searchParams.get("callbackUrl") ?? "/dashboard";
-    const callbackUrl =
-      raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
-
-    await signIn("microsoft-entra-id", { callbackUrl });
+    setStatus("Redirigiendo a Microsoft...");
+    try {
+      await ensureLogin("redirect");
+    } catch (err) {
+      console.error("[Login] ensureLogin error:", err);
+      setLoading(false);
+      setStatus("");
+    }
   };
+
+  const buttonLabel = status || "Continuar con Microsoft";
 
   return (
     <div
@@ -183,10 +201,9 @@ export default function LoginPage() {
     >
       <BackgroundBlobs />
 
-      {/* ── Left panel — branding ─────────────────────────────── */}
+      {/* Left panel — branding */}
       <div className="relative hidden lg:flex lg:w-[58%] flex-col justify-between px-16 py-14">
 
-        {/* Logo */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -207,7 +224,6 @@ export default function LoginPage() {
           </div>
         </motion.div>
 
-        {/* Hero copy */}
         <div>
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -227,11 +243,10 @@ export default function LoginPage() {
             </h1>
 
             <p className="mt-5 max-w-md text-[16px] leading-relaxed text-slate-500">
-              Accede a todas las herramientas, reportes y recursos de cada área desde un solo lugar seguro y conectado.
+              Accede a todas las herramientas, reportes y recursos de cada area desde un solo lugar seguro y conectado.
             </p>
           </motion.div>
 
-          {/* Department pills */}
           <div className="mt-10 flex flex-wrap gap-2">
             {FEATURES.map((f) => (
               <motion.span
@@ -247,7 +262,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Footer note */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -255,14 +269,14 @@ export default function LoginPage() {
           className="flex items-center gap-2 text-[12px] text-slate-400"
         >
           <Shield className="h-3.5 w-3.5" />
-          Acceso protegido con autenticación Microsoft 365 · SSO Corporativo
+          Acceso protegido con autenticacion Microsoft 365 · SSO Corporativo
         </motion.div>
       </div>
 
       {/* Vertical divider */}
       <div className="hidden lg:block absolute left-[58%] inset-y-0 w-px bg-gradient-to-b from-transparent via-slate-200 to-transparent" />
 
-      {/* ── Right panel — login card ──────────────────────────── */}
+      {/* Right panel — login card */}
       <div className="relative flex w-full lg:w-[42%] items-center justify-center px-6 py-12 bg-white/50 backdrop-blur-sm">
 
         <motion.div
@@ -271,11 +285,8 @@ export default function LoginPage() {
           transition={{ duration: 0.55, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
           className="w-full max-w-[400px]"
         >
-
-          {/* Card */}
           <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/80">
 
-            {/* Welcome */}
             <div className="mb-8">
               <h2 className="text-[21px] font-bold text-slate-900 leading-tight">
                 Bienvenido a la Intranet
@@ -285,7 +296,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Divider */}
             <div className="relative mb-5">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-100" />
@@ -297,7 +307,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Microsoft button — single CTA */}
             <motion.button
               onClick={handleLogin}
               disabled={loading}
@@ -315,7 +324,7 @@ export default function LoginPage() {
                   : <MicrosoftLogo size={18} />
                 }
                 <span className="text-[14px] font-semibold text-slate-800">
-                  {loading ? "Redirigiendo a Microsoft..." : "Continuar con Microsoft"}
+                  {buttonLabel}
                 </span>
                 {!loading && (
                   <ArrowRight className="ml-auto h-4 w-4 text-slate-300 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-violet-500" />
@@ -323,18 +332,16 @@ export default function LoginPage() {
               </div>
             </motion.button>
 
-            {/* Security note */}
             <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
               <Shield className="mt-px h-3.5 w-3.5 shrink-0 text-violet-500" />
               <p className="text-[11px] text-slate-500 leading-snug">
-                Tu sesión estará protegida por autenticación multifactor de Microsoft. Solo personal autorizado puede acceder.
+                Tu sesion estara protegida por autenticacion multifactor de Microsoft. Solo personal autorizado puede acceder.
               </p>
             </div>
           </div>
 
-          {/* Footer */}
           <p className="mt-5 text-center text-[11px] text-slate-400">
-            ¿Problemas para ingresar?{" "}
+            Problemas para ingresar?{" "}
             <a
               href="mailto:soporte@estudiomoda.com"
               className="font-semibold text-violet-600 hover:text-violet-700 transition-colors"
