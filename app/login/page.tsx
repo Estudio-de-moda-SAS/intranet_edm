@@ -4,27 +4,24 @@
  *
  * @remarks
  * Utiliza autenticacion corporativa con Microsoft 365 mediante MSAL Browser.
- * El flujo es identico desde la perspectiva del usuario:
- * pulsa el boton -> redirect a Microsoft -> vuelve autenticado.
  *
  * **Flujo completo:**
  * 1. Usuario pulsa "Continuar con Microsoft".
  * 2. `ensureLogin("redirect")` redirige a Azure AD.
- * 3. Azure redirige de vuelta a esta misma URL con el hash de autenticacion.
- * 4. `MsalProvider` llama a `handleRedirectPromise` y establece la cuenta.
- * 5. El `useEffect` detecta la cuenta activa en `accounts`.
- * 6. Obtiene el access token, consulta Graph, resuelve el `accessLevel`.
- * 7. Escribe las cookies `edm_authed`, `edm_access_level` y `edm_user_email`.
- * 8. Espera 150ms para garantizar que las cookies estan escritas.
- * 9. Navega con `window.location.href` — fuerza request nuevo al servidor
- *    para que el middleware lea las cookies correctamente.
+ * 3. Azure redirige de vuelta con el hash de autenticacion.
+ * 4. `MsalProvider` procesa el hash — `inProgress` pasa a `"none"`.
+ * 5. El `useEffect` espera `inProgress === "none"` y cuenta activa.
+ * 6. Si las cookies ya existen redirige de inmediato.
+ * 7. Si no, consulta Graph, escribe cookies y redirige.
+ * 8. `window.location.href` fuerza request nuevo al servidor.
  */
 
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams }             from "next/navigation";
-import { useMsal }                     from "@azure/msal-react";
+import { useMsal, useIsAuthenticated } from "@azure/msal-react";
+import { InteractionStatus }           from "@azure/msal-browser";
 import { motion }                      from "framer-motion";
 import { Shield, ArrowRight }          from "lucide-react";
 import Image                           from "next/image";
@@ -39,19 +36,10 @@ import {
   resolveAccessLevelFromGroups,
 }                                      from "@/lib/microsoft-graph";
 
-// -- Constantes de cookies ----------------------------------------------------
+// -- Constantes ---------------------------------------------------------------
 
-/** TTL de las cookies de sesion: 24 horas en segundos. */
 const COOKIE_MAX_AGE = 60 * 60 * 24;
 
-/**
- * Escribe las cookies que `proxy.ts` y los Server Actions necesitan.
- * Se llama tras un login exitoso de MSAL.
- *
- * @param accessLevel - Nivel de acceso resuelto desde los grupos de Graph.
- * @param email       - Email corporativo del colaborador (username de MSAL).
- * @internal
- */
 function writeSessionCookies(accessLevel: string, email: string): void {
   const base = `path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
   document.cookie = `edm_authed=1; ${base}`;
@@ -59,7 +47,12 @@ function writeSessionCookies(accessLevel: string, email: string): void {
   document.cookie = `edm_user_email=${email}; ${base}`;
 }
 
-// -- Microsoft logo SVG -------------------------------------------------------
+function resolveCallbackUrl(searchParams: ReturnType<typeof useSearchParams>): string {
+  const raw = searchParams.get("callbackUrl") ?? "/";
+  return raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
+}
+
+// -- Componentes visuales -----------------------------------------------------
 
 function MicrosoftLogo({ size = 18 }: { size?: number }) {
   return (
@@ -71,8 +64,6 @@ function MicrosoftLogo({ size = 18 }: { size?: number }) {
     </svg>
   );
 }
-
-// -- Background blobs ---------------------------------------------------------
 
 function BackgroundBlobs() {
   return (
@@ -104,8 +95,6 @@ function BackgroundBlobs() {
   );
 }
 
-// -- Department pills ---------------------------------------------------------
-
 const FEATURES = [
   { label: "Recursos Humanos",  delay: 0    },
   { label: "Finanzas",          delay: 0.12 },
@@ -118,26 +107,31 @@ const FEATURES = [
 // -- Page ---------------------------------------------------------------------
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const [status,  setStatus]  = useState<string>("");
-  const searchParams          = useSearchParams();
-  const { accounts }          = useMsal();
-  const handledRef            = useRef(false);
+  const [loading, setLoading]    = useState(false);
+  const [status,  setStatus]     = useState<string>("");
+  const searchParams              = useSearchParams();
+  const { accounts, inProgress }  = useMsal();
+  const isAuthenticated           = useIsAuthenticated();
+  const handledRef                = useRef(false);
 
-  // Detectar retorno del redirect de Microsoft
+  // Esperar a que MSAL termine de procesar el redirect (inProgress === "none")
+  // antes de actuar. Esto evita el error interaction_in_progress.
   useEffect(() => {
-    if (handledRef.current)    return;
-    if (accounts.length === 0) return;
-
-  const alreadyAuthed = document.cookie.includes("edm_authed=1");
-  if (alreadyAuthed) {
-    const raw = searchParams.get("callbackUrl") ?? "/";
-    const callbackUrl = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
-    window.location.href = callbackUrl;
-    return;
-  }
+    if (inProgress !== InteractionStatus.None) return;
+    if (!isAuthenticated) return;
+    if (handledRef.current) return;
 
     handledRef.current = true;
+
+    const callbackUrl = resolveCallbackUrl(searchParams);
+
+    // Si las cookies ya existen (sesion previa), redirigir de inmediato
+    if (document.cookie.includes("edm_authed=1")) {
+      window.location.href = callbackUrl;
+      return;
+    }
+
+    // Primera vez post-login: consultar Graph, escribir cookies, redirigir
     setLoading(true);
     setStatus("Verificando permisos...");
 
@@ -145,7 +139,7 @@ export default function LoginPage() {
       try {
         await initMSAL();
 
-        const accessToken = await getAccessToken({ forceSilent: true });
+        const accessToken = await getAccessToken({ interactionMode: "redirect" });
 
         const [profile, groups] = await Promise.all([
           getMicrosoftGraphProfile(accessToken),
@@ -160,27 +154,30 @@ export default function LoginPage() {
 
         writeSessionCookies(accessLevel, accounts[0]?.username ?? "");
 
-        const raw         = searchParams.get("callbackUrl") ?? "/";
-        const callbackUrl = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
+        // Retry hasta confirmar que la cookie esta escrita
+        let retries = 0;
+        while (!document.cookie.includes("edm_authed=1") && retries < 10) {
+          await new Promise((r) => setTimeout(r, 50));
+          retries++;
+        }
 
-        setStatus("Acceso concedido. Redirigiendo...");
-
-        // Esperar a que el navegador confirme las cookies antes de navegar.
-        // window.location.href fuerza un request nuevo al servidor para que
-        // el middleware lea las cookies — router.replace es navegacion cliente
-        // y el middleware puede no verlas aun.
-        await new Promise((resolve) => setTimeout(resolve, 150));
         window.location.href = callbackUrl;
 
       } catch (err) {
-        console.error("[Login] Error al resolver sesion post-redirect:", err);
+        console.error("[Login] Error post-redirect:", err);
+        handledRef.current = false;
         setLoading(false);
         setStatus("Error al verificar permisos. Intenta de nuevo.");
       }
     })();
-  }, [accounts, searchParams]);
+  }, [inProgress, isAuthenticated, accounts, searchParams]);
+
+  // Bloquear el boton si MSAL esta procesando una interaccion
+  const msalBusy = inProgress !== InteractionStatus.None;
 
   const handleLogin = async () => {
+    // No iniciar otra interaccion si MSAL ya tiene una en progreso
+    if (msalBusy) return;
     setLoading(true);
     setStatus("Redirigiendo a Microsoft...");
     try {
@@ -192,6 +189,7 @@ export default function LoginPage() {
     }
   };
 
+  const isDisabled  = loading || msalBusy;
   const buttonLabel = status || "Continuar con Microsoft";
 
   return (
@@ -201,23 +199,15 @@ export default function LoginPage() {
     >
       <BackgroundBlobs />
 
-      {/* Left panel — branding */}
+      {/* Left panel */}
       <div className="relative hidden lg:flex lg:w-[58%] flex-col justify-between px-16 py-14">
-
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="flex items-center gap-3"
         >
-          <Image
-            src="/brand/edmIcon.png"
-            alt="Estudio de Moda"
-            width={44}
-            height={44}
-            className="rounded-full"
-            priority
-          />
+          <Image src="/brand/edmIcon.png" alt="Estudio de Moda" width={44} height={44} className="rounded-full" priority />
           <div>
             <p className="text-[13px] font-bold text-violet-900 leading-none tracking-tight">Estudio de Moda</p>
             <p className="text-[10px] text-slate-400 font-semibold tracking-widest uppercase mt-0.5">S.A.S.</p>
@@ -225,23 +215,17 @@ export default function LoginPage() {
         </motion.div>
 
         <div>
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-violet-600 mb-6">
               <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
               Intranet Corporativa
             </span>
-
             <h1 className="text-[52px] font-bold leading-[1.08] tracking-tight text-slate-900">
               Tu espacio de<br />
               <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-indigo-600 bg-clip-text text-transparent">
                 trabajo digital
               </span>
             </h1>
-
             <p className="mt-5 max-w-md text-[16px] leading-relaxed text-slate-500">
               Accede a todas las herramientas, reportes y recursos de cada area desde un solo lugar seguro y conectado.
             </p>
@@ -262,23 +246,16 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.7 }}
-          className="flex items-center gap-2 text-[12px] text-slate-400"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.7 }} className="flex items-center gap-2 text-[12px] text-slate-400">
           <Shield className="h-3.5 w-3.5" />
           Acceso protegido con autenticacion Microsoft 365 · SSO Corporativo
         </motion.div>
       </div>
 
-      {/* Vertical divider */}
       <div className="hidden lg:block absolute left-[58%] inset-y-0 w-px bg-gradient-to-b from-transparent via-slate-200 to-transparent" />
 
-      {/* Right panel — login card */}
+      {/* Right panel */}
       <div className="relative flex w-full lg:w-[42%] items-center justify-center px-6 py-12 bg-white/50 backdrop-blur-sm">
-
         <motion.div
           initial={{ opacity: 0, y: 28, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -286,11 +263,8 @@ export default function LoginPage() {
           className="w-full max-w-[400px]"
         >
           <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/80">
-
             <div className="mb-8">
-              <h2 className="text-[21px] font-bold text-slate-900 leading-tight">
-                Bienvenido a la Intranet
-              </h2>
+              <h2 className="text-[21px] font-bold text-slate-900 leading-tight">Bienvenido a la Intranet</h2>
               <p className="mt-2 text-[13px] text-slate-500 leading-relaxed">
                 Usa tu cuenta corporativa de Microsoft para acceder de forma segura.
               </p>
@@ -309,24 +283,22 @@ export default function LoginPage() {
 
             <motion.button
               onClick={handleLogin}
-              disabled={loading}
-              whileHover={{ scale: loading ? 1 : 1.015 }}
-              whileTap={{ scale: loading ? 1 : 0.985 }}
+              disabled={isDisabled}
+              whileHover={{ scale: isDisabled ? 1 : 1.015 }}
+              whileTap={{ scale: isDisabled ? 1 : 0.985 }}
               className="group relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white px-5 py-3.5 shadow-sm transition-all duration-200 hover:border-violet-200 hover:shadow-md hover:shadow-violet-100/60 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-violet-50/70 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
               <div className="relative flex items-center justify-center gap-3">
-                {loading
+                {isDisabled
                   ? <svg className="h-4 w-4 animate-spin text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
                   : <MicrosoftLogo size={18} />
                 }
-                <span className="text-[14px] font-semibold text-slate-800">
-                  {buttonLabel}
-                </span>
-                {!loading && (
+                <span className="text-[14px] font-semibold text-slate-800">{buttonLabel}</span>
+                {!isDisabled && (
                   <ArrowRight className="ml-auto h-4 w-4 text-slate-300 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-violet-500" />
                 )}
               </div>
@@ -342,14 +314,10 @@ export default function LoginPage() {
 
           <p className="mt-5 text-center text-[11px] text-slate-400">
             Problemas para ingresar?{" "}
-            <a
-              href="mailto:soporte@estudiomoda.com"
-              className="font-semibold text-violet-600 hover:text-violet-700 transition-colors"
-            >
+            <a href="mailto:soporte@estudiomoda.com" className="font-semibold text-violet-600 hover:text-violet-700 transition-colors">
               Contacta a TI
             </a>
           </p>
-
         </motion.div>
       </div>
     </div>
