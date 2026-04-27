@@ -344,7 +344,7 @@ export default function CommercialDashboard() {
                       tickLine={false}
                       width={80}
                     />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number | undefined) => [`$${(v ?? 0).toLocaleString()}`, ""]} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [`$${typeof v === "number" ? v.toLocaleString() : "0"}`, ""]} />
                     <Bar dataKey="ventas" name="Ventas" fill="#10b981" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

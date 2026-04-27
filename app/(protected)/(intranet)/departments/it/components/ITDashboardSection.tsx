@@ -408,8 +408,10 @@ function TabTickets() {
               <YAxis domain={[88, 100]} tick={{ fontSize: 9, fill: "#94a3b8" }} />
               <Tooltip
                 contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0" }}
-                formatter={(v: number | undefined) => [v != null ? `${v}%` : "—", "SLA"]}
-              />
+formatter={(v) => {
+  const num = typeof v === "number" ? v : undefined;
+  return [num != null ? `${num}%` : "—", "SLA"];
+}}              />
               <Line
                 type="monotone"
                 dataKey="cumplimiento"

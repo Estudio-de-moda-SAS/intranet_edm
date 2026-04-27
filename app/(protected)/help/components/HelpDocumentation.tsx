@@ -21,9 +21,8 @@
 
 import { useState } from "react";
 import { Download } from "lucide-react";
-import PdfViewerModal, {
-  PdfMetadata,
-} from "@/app/components/pdf/PdfViewerModal";
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+import type { PdfMetadata } from "@/app/components/pdf/types";
 
 /* -------------------------------------------------------------------------- */
 /* Tipos                                                                      */

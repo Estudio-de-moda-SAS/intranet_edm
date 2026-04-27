@@ -25,8 +25,8 @@ import {
   FileText, FileSpreadsheet, FileCode2, BookOpen, Eye,
 } from "lucide-react";
 import type { AdminDocument, AdminDocumentCategory } from "@/lib/graph/departments/administrative.service";
-import PdfViewerModal, { type PdfMetadata } from "@/app/components/pdf/PdfViewerModal";
-
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+import type { PdfMetadata } from "@/app/components/pdf/types";
 // ── Category map ──────────────────────────────────────────────────────────────
 
 /**

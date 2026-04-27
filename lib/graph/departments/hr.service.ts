@@ -213,12 +213,11 @@ export const MOCK_DATA = {
 export async function getHRData() {
   const shared = await getSharedData();
 
-  if (IS_BYPASS) {
+  if (IS_BYPASS || true) {
     return { ...shared, ...MOCK_DATA };
   }
 
   const token = await getToken();
-
   const [usersRes, birthdaysRes] = await Promise.all([
     callGraph<GraphPage<GraphHRUser>>(
       "/users?$select=id,displayName,jobTitle,department,mail&$top=100&$filter=accountEnabled eq true",

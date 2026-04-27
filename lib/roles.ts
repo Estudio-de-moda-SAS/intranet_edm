@@ -227,6 +227,7 @@ export type Permission =
   | 'legal:view_requests'
   | 'legal:view_litigation'
   | 'legal:view_documents'
+  | 'legal:manage_documents'
   | 'legal:view_team'
   // Retail
   | 'retail:view_kpis'
@@ -357,6 +358,7 @@ export const PERMISSION_MAP: Record<Permission, PermissionRule> = {
   'legal:view_requests':      { allowedLevels: ['legal', 'admin']             },
   'legal:view_litigation':    { allowedLevels: ['legal', 'admin']             },
   'legal:view_documents':     { allowedLevels: ['legal', 'admin']             },
+  'legal:manage_documents':   { allowedLevels: ['legal', 'admin']             },
   'legal:view_team':          { minLevel: 'employee'                          },
 
   // ── Retail ────────────────────────────────────────────────────

@@ -197,7 +197,7 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? "modal-title" : undefined}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 px-4 py-6"
       onClick={disableBackdropClose ? undefined : (e) => {
         if (e.target === e.currentTarget) onClose();
       }}

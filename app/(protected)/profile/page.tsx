@@ -3,143 +3,110 @@
  * Página principal del perfil de usuario dentro de la intranet.
  *
  * @remarks
- * Este archivo define la ruta de perfil y actúa como capa de preparación
- * de datos antes de delegar la renderización al componente cliente
+ * This file defines the profile route and acts as a data preparation
+ * layer before delegating rendering to the client component
  * {@link ProfilePageClient}.
  *
- * Soporta dos flujos de carga:
+ * Supports two loading flows:
  *
- * - **modo desarrollo**: utiliza datos simulados desde {@link DEV_SESSION}
- * - **modo producción**: obtiene datos autenticados desde {@link auth}
+ * - **bypass mode**: uses simulated data from {@link DEV_SESSION}
+ * - **production mode**: passes an empty profile — {@link ProfilePageClient}
+ *   enriches it from {@link useGraphProfile} once MSAL resolves the account
  *
- * Su responsabilidad principal es construir un objeto {@link ProfileData}
- * consistente para el cliente, independientemente de la fuente de datos.
+ * Its main responsibility is to build a consistent {@link ProfileData}
+ * object for the client, regardless of the data source.
  */
 
-// app/(protected)/perfil/page.tsx
+// app/(protected)/profile/page.tsx
 
-import type { Metadata } from "next";
-import { auth } from "@/auth";
-import { ProfilePageClient } from "./components/ProfilePageContent";
-import { DEV_SESSION } from "@/lib/devSession";
-import type { ProfileData } from "@/types/profile";
+import type { Metadata }         from "next";
+import { ProfilePageClient }     from "./components/ProfilePageContent";
+import { DEV_SESSION }           from "@/lib/devSession";
+import type { ProfileData }      from "@/types/profile";
 
 /* -------------------------------------------------------------------------- */
-/* Metadata                                                                   */
+/* Metadata                                                                    */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Metadata de la página de perfil.
- *
- * @remarks
- * Define el título mostrado en el navegador para la sección de perfil.
- */
 export const metadata: Metadata = {
   title: "Mi perfil — Intranet",
 };
 
 /* -------------------------------------------------------------------------- */
-/* Componente principal                                                        */
+/* Component                                                                   */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Página de perfil del usuario.
- *
- * @returns Componente cliente de perfil con datos iniciales preparados.
+ * Profile page entry point.
  *
  * @remarks
- * Flujo general:
+ * **Bypass mode** (`NEXT_PUBLIC_AUTH_BYPASS === "true"`):
+ * Builds the profile from {@link DEV_SESSION} and passes it as
+ * `initialProfile` to {@link ProfilePageClient}. The client renders
+ * immediately without any Graph calls.
  *
- * 1. Verifica si la aplicación está en modo bypass de autenticación
- * 2. Si está en modo desarrollo:
- *    - construye el perfil usando {@link DEV_SESSION}
- * 3. Si está en modo producción:
- *    - obtiene la sesión autenticada mediante {@link auth}
- *    - construye el perfil a partir de los datos del usuario
- * 4. Renderiza {@link ProfilePageClient} con `initialProfile`
+ * **Production mode:**
+ * Passes an empty profile as `initialProfile`. {@link ProfilePageClient}
+ * detects the empty `id` and uses {@link useGraphProfile} to fetch the
+ * real profile from Microsoft Graph, showing a skeleton while loading.
  *
- * Este patrón permite:
+ * This pattern ensures:
+ * - No unnecessary cookies with profile data
+ * - No duplication between server and client
+ * - Profile always fresh from Graph (cached 15 min by TanStack Query)
+ * - Smooth development experience with bypass
  *
- * - desacoplar la fuente de datos del componente cliente
- * - facilitar pruebas locales sin autenticación real
- * - mantener una estructura uniforme de `ProfileData`
- *
- * @example
- * ```tsx
- * <PerfilPage />
- * ```
+ * @returns {@link ProfilePageClient} with the initial profile for the active mode.
  */
 export default async function PerfilPage() {
+
   /* ------------------------------------------------------------------------ */
-  /* Modo desarrollo                                                           */
+  /* Bypass mode                                                               */
   /* ------------------------------------------------------------------------ */
 
-  /**
-   * En modo bypass, el perfil se construye a partir de la sesión simulada.
-   */
   if (process.env.NEXT_PUBLIC_AUTH_BYPASS === "true") {
     const user = DEV_SESSION.user;
 
     const profile: ProfileData = {
-      id: user.id,
-      name: user.name,
-      image: user.image ?? null,
-      role: user.role,
-      email: user.email,
+      id:         user.id,
+      name:       user.name,
+      image:      user.image ?? null,
+      role:       user.role,
+      email:      user.email,
       department: user.department,
-      timezone: "",
-      language: "",
-      ...(user.location !== undefined && { location: user.location }),
-      ...(user.employeeId !== undefined && { employeeId: user.employeeId }),
-      ...(user.joined !== undefined && { joined: user.joined }),
-      ...(user.phone !== undefined && { phone: user.phone }),
+      timezone:   "",
+      language:   "",
+      ...(user.location   && { location:   user.location   }),
+      ...(user.employeeId && { employeeId: user.employeeId }),
+      ...(user.joined     && { joined:     user.joined     }),
+      ...(user.phone      && { phone:      user.phone      }),
     };
 
     return <ProfilePageClient initialProfile={profile} />;
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Modo producción                                                           */
+  /* Production mode                                                           */
   /* ------------------------------------------------------------------------ */
 
   /**
-   * Sesión autenticada obtenida desde el proveedor de auth.
-   */
-  const session = await auth();
-
-  /**
-   * Perfil base construido a partir de la sesión del usuario.
+   * Empty profile — {@link ProfilePageClient} enriches it from
+   * {@link useGraphProfile} on the client once MSAL has an active
+   * account and Graph responds.
    *
-   * @remarks
-   * Se inicializan valores vacíos o por defecto cuando la sesión
-   * no contiene alguno de los campos esperados.
+   * `id: ""` signals the client that it must fetch the profile
+   * from Graph instead of using this object.
    */
-  const profile: ProfileData = {
-    id: session?.user?.id ?? "",
-    name: session?.user?.name ?? "Usuario",
-    image: session?.user?.image ?? null,
-    role: session?.user?.role ?? "",
-    email: session?.user?.email ?? "",
-    department: session?.user?.department ?? "",
-    timezone: "",
-    language: "",
+  const emptyProfile: ProfileData = {
+    id:         "",
+    name:       "",
+    image:      null,
+    role:       "",
+    email:      "",
+    department: "",
+    timezone:   "",
+    language:   "",
   };
 
-  /**
-   * Campos opcionales adicionales provenientes de la sesión.
-   */
-  const employeeId = session?.user?.employeeId || undefined;
-  const joined = session?.user?.joined || undefined;
-  const phone = session?.user?.phone || undefined;
-  const location = session?.user?.location || undefined;
-
-  /**
-   * Enriquecimiento condicional del perfil con campos opcionales.
-   */
-  if (employeeId) profile.employeeId = employeeId;
-  if (joined) profile.joined = joined;
-  if (phone) profile.phone = phone;
-  if (location) profile.location = location;
-
-  return <ProfilePageClient initialProfile={profile} />;
+  return <ProfilePageClient initialProfile={emptyProfile} />;
 }
