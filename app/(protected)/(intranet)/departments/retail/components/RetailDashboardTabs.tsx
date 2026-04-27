@@ -1,3 +1,27 @@
+/**
+ * @module RetailDashboardTabs
+ * Navegación por tabs para dashboards analíticos del módulo de Retail.
+ *
+ * @remarks
+ * Este componente renderiza una barra de pestañas para alternar
+ * entre los dashboards analíticos de los distintos canales del área
+ * de Retail:
+ * - Comercial
+ * - E-Commerce
+ * - Tiendas
+ *
+ * Su función principal es gestionar el estado local del canal activo
+ * y renderizar exclusivamente el dashboard correspondiente.
+ *
+ * A nivel de experiencia de usuario, este componente permite:
+ * - cambiar de contexto analítico sin salir de la vista actual
+ * - mantener una navegación simple y directa por canal
+ * - reutilizar una misma estructura contenedora para distintos dashboards
+ *
+ * Este componente se ejecuta en cliente porque utiliza `useState`
+ * para controlar la pestaña activa.
+ */
+
 "use client";
 
 // RetailDashboardTabs.tsx
@@ -17,9 +41,45 @@ import TiendasDashboard    from "./StoreDashboard";
 
 // ── Types ─────────────────────────────────────────────────────────
 
+/**
+ * Identificadores válidos de los tabs del dashboard Retail.
+ *
+ * @remarks
+ * Este tipo restringe los canales disponibles en la navegación
+ * y garantiza consistencia entre:
+ * - estado local del componente
+ * - configuración de tabs
+ * - render condicional del panel activo
+ */
 type Tab = "comercial" | "ecommerce" | "tiendas";
 
-const TABS: { id: Tab; label: string; icon: React.ElementType; color: string; activeColor: string; activeBg: string }[] = [
+/**
+ * Configuración visual y funcional de los tabs del dashboard.
+ *
+ * @remarks
+ * Este arreglo define las opciones disponibles en la barra de navegación
+ * del componente.
+ *
+ * Cada elemento contiene:
+ * - identificador interno del canal
+ * - etiqueta visible
+ * - ícono representativo
+ * - estilos visuales para estado normal
+ * - estilos visuales para estado activo
+ *
+ * Centralizar esta configuración permite:
+ * - evitar repetición en el render
+ * - facilitar mantenimiento de la barra
+ * - mantener consistencia visual entre tabs
+ */
+const TABS: {
+  id: Tab;
+  label: string;
+  icon: React.ElementType;
+  color: string;
+  activeColor: string;
+  activeBg: string;
+}[] = [
   {
     id:          "comercial",
     label:       "Comercial",
@@ -48,7 +108,45 @@ const TABS: { id: Tab; label: string; icon: React.ElementType; color: string; ac
 
 // ── Component ─────────────────────────────────────────────────────
 
+/**
+ * Componente de tabs para navegación entre dashboards de Retail.
+ *
+ * @returns Una interfaz con barra de tabs y el dashboard del canal seleccionado.
+ *
+ * @remarks
+ * Este componente mantiene el estado local del tab activo
+ * y utiliza renderizado condicional para mostrar únicamente
+ * el dashboard correspondiente al canal seleccionado.
+ *
+ * Flujo general:
+ *
+ * 1. Inicializa el canal activo en `comercial`
+ * 2. Renderiza la barra de navegación a partir de {@link TABS}
+ * 3. Permite cambiar el tab activo mediante interacción del usuario
+ * 4. Muestra el dashboard asociado al canal seleccionado
+ *
+ * La estructura se divide en dos bloques:
+ * - **Tab bar**: navegación visual entre canales
+ * - **Panel activo**: contenedor del dashboard actualmente visible
+ *
+ * Esta aproximación resulta útil para:
+ * - dashboards analíticos multicanal
+ * - comparación por canal dentro de una misma vista
+ * - navegación ligera sin routing adicional
+ *
+ * @example
+ * ```tsx
+ * <RetailDashboardTabs />
+ * ```
+ */
 export function RetailDashboardTabs() {
+  /**
+   * Tab actualmente activo en la navegación del dashboard.
+   *
+   * @remarks
+   * Controla qué panel analítico se renderiza dentro del contenedor principal.
+   * El valor inicial corresponde al canal comercial.
+   */
   const [active, setActive] = useState<Tab>("comercial");
 
   return (

@@ -1,3 +1,27 @@
+/**
+ * @module FormPrimitives
+ * Primitivos de formulario reutilizables para el módulo de Servicios
+ * Administrativos.
+ *
+ * Este archivo centraliza componentes base de entrada y presentación para
+ * formularios y flujos guiados, manteniendo una estética consistente con
+ * el sistema visual del área administrativa.
+ *
+ * Incluye:
+ * - envoltorios de campo con label, hint y errores,
+ * - inputs y textareas reutilizables,
+ * - selects configurables,
+ * - grupos de checkbox y radio,
+ * - indicador de pasos,
+ * - botón de envío,
+ * - banner de confirmación exitosa.
+ *
+ * @remarks
+ * Estos componentes están diseñados para ser reutilizados en modales,
+ * formularios internos y procesos tipo wizard, como solicitudes, reservas
+ * y flujos administrativos guiados.
+ */
+
 // app/(protected)/(intranet)/departments/administrative/components/forms/FormPrimitives.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 // Primitivos de formulario reutilizables para los modales administrativos.
@@ -10,6 +34,16 @@ import { AlertCircle, ChevronDown, Check } from "lucide-react";
 
 // ── FieldWrapper ──────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades de {@link FieldWrapper}.
+ *
+ * @property label Etiqueta visible del campo.
+ * @property hint Texto de ayuda mostrado cuando no hay error.
+ * @property error Mensaje de error asociado al campo.
+ * @property required Indica si el campo es obligatorio.
+ * @property children Elemento o control de formulario renderizado dentro del wrapper.
+ * @property className Clases adicionales para personalización del contenedor.
+ */
 interface FieldWrapperProps {
   label:      string;
   hint?:      string;
@@ -19,6 +53,16 @@ interface FieldWrapperProps {
   className?: string;
 }
 
+/**
+ * Contenedor reutilizable para campos de formulario.
+ *
+ * @param props Propiedades del componente.
+ * @returns Campo estructurado con etiqueta, contenido, hint y estado de error.
+ *
+ * @remarks
+ * Este wrapper estandariza la presentación de campos en formularios del
+ * módulo administrativo, asegurando consistencia visual y semántica.
+ */
 export function FieldWrapper({
   label, hint, error, required, children, className = "",
 }: FieldWrapperProps) {
@@ -43,11 +87,27 @@ export function FieldWrapper({
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link Input}.
+ *
+ * Extiende los atributos nativos de `input` agregando estados visuales
+ * adicionales para error e ícono decorativo.
+ *
+ * @property error Indica si el campo debe mostrarse en estado de error.
+ * @property icon Ícono opcional renderizado dentro del campo.
+ */
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;
   icon?:  React.ReactNode;
 }
 
+/**
+ * Campo de entrada reutilizable con soporte para ícono y estado de error.
+ *
+ * @remarks
+ * Usa `forwardRef` para permitir acceso directo al elemento nativo `input`
+ * desde componentes padres, formularios controlados o bibliotecas externas.
+ */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ error, icon, className = "", ...props }, ref) => (
     <div className="relative">
@@ -79,10 +139,25 @@ Input.displayName = "Input";
 
 // ── Textarea ──────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link Textarea}.
+ *
+ * Extiende los atributos nativos de `textarea` agregando soporte visual
+ * para estado de error.
+ *
+ * @property error Indica si el campo debe mostrarse en estado de error.
+ */
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: boolean;
 }
 
+/**
+ * Campo de texto multilínea reutilizable.
+ *
+ * @remarks
+ * Está pensado para capturar observaciones, notas u otro contenido de texto
+ * extendido dentro de formularios administrativos.
+ */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ error, className = "", ...props }, ref) => (
     <textarea
@@ -107,12 +182,31 @@ Textarea.displayName = "Textarea";
 
 // ── Select ────────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link Select}.
+ *
+ * Extiende los atributos nativos de `select` y agrega soporte para:
+ * - estado de error,
+ * - placeholder visual,
+ * - listado de opciones tipadas.
+ *
+ * @property error Indica si el campo debe mostrarse en estado de error.
+ * @property placeholder Texto inicial mostrado como opción deshabilitada.
+ * @property options Conjunto de opciones renderizadas en el selector.
+ */
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   error?:       boolean;
   placeholder?: string;
   options:      { value: string; label: string }[];
 }
 
+/**
+ * Selector reutilizable con estilos consistentes y dropdown visual customizado.
+ *
+ * @remarks
+ * Usa `forwardRef` para mantener compatibilidad con formularios controlados
+ * y facilitar el acceso directo al elemento `select`.
+ */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ error, placeholder, options, className = "", ...props }, ref) => (
     <div className="relative">
@@ -149,6 +243,15 @@ Select.displayName = "Select";
 
 // ── CheckboxGroup ─────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link CheckboxGroup}.
+ *
+ * @property options Opciones disponibles en el grupo.
+ * @property value Valores actualmente seleccionados.
+ * @property onChange Función que actualiza la selección.
+ * @property error Mensaje de error asociado al grupo.
+ * @property cols Número de columnas del layout visual.
+ */
 interface CheckboxGroupProps {
   options:  { value: string; label: string; description?: string }[];
   value:    string[];
@@ -157,9 +260,24 @@ interface CheckboxGroupProps {
   cols?:    1 | 2;
 }
 
+/**
+ * Grupo de selección múltiple con tarjetas visuales.
+ *
+ * @param props Propiedades del componente.
+ * @returns Grupo de opciones seleccionables de forma múltiple.
+ *
+ * @remarks
+ * Este componente encapsula la lógica de agregar o remover valores del array
+ * seleccionado y presenta cada opción como una tarjeta interactiva.
+ */
 export function CheckboxGroup({
   options, value, onChange, error, cols = 2,
 }: CheckboxGroupProps) {
+  /**
+   * Alterna la selección de un valor dentro del grupo.
+   *
+   * @param v Valor a agregar o remover.
+   */
   const toggle = (v: string) =>
     onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
 
@@ -211,6 +329,15 @@ export function CheckboxGroup({
 
 // ── RadioGroup ────────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link RadioGroup}.
+ *
+ * @property options Opciones disponibles en el grupo.
+ * @property value Valor actualmente seleccionado.
+ * @property onChange Función que actualiza la selección.
+ * @property error Mensaje de error asociado al grupo.
+ * @property cols Número de columnas del layout visual.
+ */
 interface RadioGroupProps {
   options:  { value: string; label: string; description?: string; icon?: React.ReactNode }[];
   value:    string;
@@ -219,6 +346,16 @@ interface RadioGroupProps {
   cols?:    1 | 2 | 3;
 }
 
+/**
+ * Grupo de selección única con tarjetas visuales.
+ *
+ * @param props Propiedades del componente.
+ * @returns Grupo de opciones seleccionables de manera exclusiva.
+ *
+ * @remarks
+ * Está orientado a flujos donde el usuario debe elegir una única alternativa
+ * visible y claramente diferenciada.
+ */
 export function RadioGroup({
   options, value, onChange, error, cols = 2,
 }: RadioGroupProps) {
@@ -267,11 +404,23 @@ export function RadioGroup({
 
 // ── StepIndicator ─────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link StepIndicator}.
+ *
+ * @property steps Lista ordenada de pasos del flujo.
+ * @property current Índice del paso actual, comenzando en 0.
+ */
 interface StepIndicatorProps {
   steps:   string[];
   current: number;       // 0-indexed
 }
 
+/**
+ * Indicador visual reutilizable para procesos multietapa.
+ *
+ * @param props Propiedades del componente.
+ * @returns Barra visual que muestra avance, paso actual y pasos completados.
+ */
 export function StepIndicator({ steps, current }: StepIndicatorProps) {
   return (
     <div className="flex items-center gap-0">
@@ -313,6 +462,16 @@ export function StepIndicator({ steps, current }: StepIndicatorProps) {
 
 // ── SubmitButton ──────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link SubmitButton}.
+ *
+ * @property loading Indica si el botón está en estado de carga.
+ * @property label Texto principal del botón.
+ * @property loadingLabel Texto mostrado durante la carga.
+ * @property onClick Acción opcional al hacer clic.
+ * @property disabled Indica si el botón está deshabilitado.
+ * @property variant Variante visual del botón.
+ */
 interface SubmitButtonProps {
   loading:   boolean;
   label:     string;
@@ -322,6 +481,17 @@ interface SubmitButtonProps {
   variant?:  "primary" | "ghost";
 }
 
+/**
+ * Botón reutilizable para acciones de envío o confirmación.
+ *
+ * @param props Propiedades del componente.
+ * @returns Botón principal o secundario según la variante seleccionada.
+ *
+ * @remarks
+ * Soporta dos variantes:
+ * - `primary`: botón principal con alto énfasis visual.
+ * - `ghost`: botón secundario más discreto.
+ */
 export function SubmitButton({
   loading, label, loadingLabel, onClick, disabled, variant = "primary",
 }: SubmitButtonProps) {
@@ -358,6 +528,15 @@ export function SubmitButton({
 
 // ── SuccessBanner ─────────────────────────────────────────────────────────────
 
+/**
+ * Propiedades del componente {@link SuccessBanner}.
+ *
+ * @property title Título principal del mensaje de éxito.
+ * @property message Mensaje descriptivo mostrado al usuario.
+ * @property id Identificador opcional asociado al resultado exitoso.
+ * @property onClose Acción ejecutada al cerrar el banner.
+ * @property extra Contenido adicional opcional, como resúmenes o detalles.
+ */
 interface SuccessBannerProps {
   title:    string;
   message:  string;
@@ -366,6 +545,16 @@ interface SuccessBannerProps {
   extra?:   React.ReactNode;
 }
 
+/**
+ * Banner reutilizable para confirmaciones exitosas.
+ *
+ * @param props Propiedades del componente.
+ * @returns Vista de confirmación con iconografía, mensaje y acción de cierre.
+ *
+ * @remarks
+ * Se utiliza al finalizar procesos exitosos como envíos, reservas o registros,
+ * permitiendo además mostrar un identificador o información complementaria.
+ */
 export function SuccessBanner({ title, message, id, onClose, extra }: SuccessBannerProps) {
   return (
     <div className="flex flex-col items-center gap-4 py-4 text-center">

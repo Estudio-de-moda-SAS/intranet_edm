@@ -1,3 +1,12 @@
+/**
+ * @module LeadersSection
+ * Componentes para mostrar la sección de líderes de la organización.
+ *
+ * @remarks
+ * Este archivo renderiza una grilla de perfiles con avatar, cargo,
+ * descripción y acceso opcional a perfil externo.
+ */
+
 "use client";
 
 import Image from "next/image";
@@ -5,29 +14,82 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
+/**
+ * Representa la información de un líder.
+ */
 type Leader = {
+  /**
+   * Identificador único.
+   */
   id: string;
+
+  /**
+   * Nombre completo.
+   */
   name: string;
+
+  /**
+   * Cargo o rol del líder.
+   */
   role: string;
+
+  /**
+   * URL opcional de imagen de perfil.
+   */
   image?: string | null;
+
+  /**
+   * Descripción breve del perfil.
+   */
   description?: string;
+
+  /**
+   * Enlace opcional al perfil de LinkedIn.
+   */
   linkedin?: string;
 };
 
-type LeadersSectionProps = {
+/**
+ * Props del componente {@link LeadersSection}.
+ */
+interface LeadersSectionProps {
+  /**
+   * Lista de líderes a mostrar.
+   */
   leaders: Leader[];
-};
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 }
 
-function LeaderAvatar({ leader }: { leader: Leader }) {
+/**
+ * Genera iniciales a partir del nombre.
+ *
+ * @param name Nombre completo.
+ * @returns Iniciales en mayúscula.
+ */
+function getInitials(name: string) {
+  return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+}
+
+/**
+ * Props del componente {@link LeaderAvatar}.
+ */
+interface LeaderAvatarProps {
+  /**
+   * Información del líder.
+   */
+  leader: Leader;
+}
+
+/**
+ * Renderiza el avatar del líder.
+ *
+ * @param props Propiedades del componente.
+ * @param props.leader Datos del líder.
+ * @returns Imagen de perfil o avatar fallback con iniciales.
+ *
+ * @remarks
+ * Si la imagen falla o no existe, muestra un avatar generado con iniciales.
+ */
+function LeaderAvatar({ leader }: LeaderAvatarProps) {
   const [imgError, setImgError] = useState(false);
   const hasImage = leader.image && leader.image.trim() !== "" && !imgError;
 
@@ -39,37 +101,53 @@ function LeaderAvatar({ leader }: { leader: Leader }) {
         width={96}
         height={96}
         onError={() => setImgError(true)}
-        className="rounded-full object-cover ring-4 ring-slate-100 transition-all duration-300 group-hover:ring-violet-200 group-hover:scale-105"
+        className="rounded-full object-cover ring-4 transition-all duration-300
+                   ring-slate-100 group-hover:ring-violet-200 group-hover:scale-105
+                   dark:ring-[#21262d] dark:group-hover:ring-violet-500/30"
       />
     );
   }
 
   return (
-    <div className="flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white text-xl font-semibold ring-4 ring-violet-100 transition-all duration-300 group-hover:ring-violet-200 group-hover:scale-105 shadow-md shadow-violet-200">
+    <div className="flex items-center justify-center w-24 h-24 rounded-full text-white text-xl font-semibold ring-4 transition-all duration-300 shadow-md
+                    bg-gradient-to-br from-violet-500 to-purple-600
+                    ring-violet-100 group-hover:ring-violet-200 group-hover:scale-105 shadow-violet-200
+                    dark:ring-violet-500/20 dark:group-hover:ring-violet-500/40 dark:shadow-violet-900/30">
       {getInitials(leader.name)}
     </div>
   );
 }
 
+/**
+ * Renderiza la sección de líderes.
+ *
+ * @param props Propiedades del componente.
+ * @param props.leaders Lista de líderes.
+ * @returns Sección con encabezado, tarjetas de líderes y enlace al directorio.
+ *
+ * @remarks
+ * - Muestra animación de entrada por tarjeta.
+ * - Cada tarjeta incluye avatar, nombre, rol y descripción.
+ * - Si existe `linkedin`, muestra un enlace externo.
+ */
 export function LeadersSection({ leaders }: LeadersSectionProps) {
   return (
     <section className="space-y-10 py-6">
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto">
         <div className="flex items-center justify-center gap-3 mb-2">
-          <span className="h-px w-10 rounded-full bg-violet-200" />
-          <h2 className="text-2xl font-semibold text-slate-900">
+          <span className="h-px w-10 rounded-full bg-violet-200 dark:bg-violet-500/30" />
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-[#e6edf3]">
             Conoce a nuestros líderes
           </h2>
-          <span className="h-px w-10 rounded-full bg-violet-200" />
+          <span className="h-px w-10 rounded-full bg-violet-200 dark:bg-violet-500/30" />
         </div>
-
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-slate-400 dark:text-[#545d68]">
           Personas que impulsan nuestra visión, estrategia y crecimiento.
         </p>
       </div>
 
-      {/* Grid + botón esquina inferior derecha */}
+      {/* Grid */}
       <div className="relative">
         <div className="flex flex-wrap justify-center gap-6">
           {leaders.map((leader, index) => (
@@ -80,61 +158,68 @@ export function LeadersSection({ leaders }: LeadersSectionProps) {
               transition={{ duration: 0.4, delay: index * 0.1 }}
               viewport={{ once: true }}
               whileHover={{ y: -6 }}
-              className="group relative rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-lg hover:border-violet-200 w-[calc(25%-18px)] min-w-[220px]"
+              className="group relative rounded-xl border p-6 shadow-sm transition-shadow w-[calc(25%-18px)] min-w-[220px]
+                         border-slate-200 bg-white hover:shadow-lg hover:border-violet-200
+                         dark:border-[#30363d] dark:bg-[#161b22] dark:hover:shadow-[0_4px_20px_rgb(0_0_0/0.4)] dark:hover:border-violet-500/30"
             >
               <div className="flex flex-col items-center text-center gap-4">
-                {/* Avatar */}
                 <div className="relative">
                   <LeaderAvatar leader={leader} />
-                  <div className="pointer-events-none absolute inset-0 rounded-full bg-violet-500/0 blur-xl transition-all duration-300 group-hover:bg-violet-400/15" />
+                  <div className="pointer-events-none absolute inset-0 rounded-full blur-xl transition-all duration-300
+                                  bg-violet-500/0 group-hover:bg-violet-400/15
+                                  dark:group-hover:bg-violet-500/10" />
                 </div>
 
-                {/* Info */}
                 <div>
-                  <h3 className="font-semibold text-slate-900">
+                  <h3 className="font-semibold text-slate-900 dark:text-[#e6edf3]">
                     {leader.name}
                   </h3>
-
-                  <p className="text-sm font-medium text-violet-600">
+                  <p className="text-sm font-medium text-violet-600 dark:text-violet-400">
                     {leader.role}
                   </p>
-
-                  <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+                  <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-[#768390]">
                     {leader.description}
                   </p>
                 </div>
 
-                {/* LinkedIn */}
                 {leader.linkedin && (
                   <a
                     href={leader.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 text-sm font-medium text-violet-600 hover:text-violet-800 transition-colors"
+                    className="mt-1 text-sm font-medium transition-colors
+                               text-violet-600 hover:text-violet-800
+                               dark:text-violet-400 dark:hover:text-violet-300"
                   >
                     Ver perfil →
                   </a>
                 )}
               </div>
 
-              {/* Animated bottom bar */}
-              <div className="absolute bottom-0 left-0 h-[3px] w-0 bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-300 group-hover:w-full rounded-b-xl" />
+              {/* Accent bar */}
+              <div className="absolute bottom-0 left-0 h-[3px] w-0 rounded-b-xl transition-all duration-300 group-hover:w-full
+                              bg-gradient-to-r from-violet-500 to-purple-500" />
             </motion.div>
           ))}
         </div>
 
-        {/* Botón Ver directorio — esquina inferior derecha, pegado al grid */}
         <div className="flex justify-end mt-4">
           <Link
             href="/directory"
-            className="group inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-violet-700 transition-colors duration-200"
+            className="group inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200
+                       text-slate-600 hover:text-violet-700
+                       dark:text-[#768390] dark:hover:text-violet-400"
           >
-            <span className="border-b border-slate-300 group-hover:border-violet-500 transition-colors duration-200">
+            <span className="border-b transition-colors duration-200
+                             border-slate-300 group-hover:border-violet-500
+                             dark:border-[#30363d] dark:group-hover:border-violet-500/50">
               Ver directorio completo
             </span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="w-4 h-4 text-slate-400 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all duration-200"
+              className="w-4 h-4 transition-all duration-200
+                        text-slate-400 group-hover:text-violet-500 group-hover:translate-x-0.5
+                        dark:text-[#545d68] dark:group-hover:text-violet-400"
               viewBox="0 0 20 20"
               fill="currentColor"
             >

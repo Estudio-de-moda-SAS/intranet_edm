@@ -1,3 +1,20 @@
+/**
+ * @module TicketDetailRoute
+ * Endpoint API para obtener el detalle completo de un ticket por ID.
+ *
+ * @remarks
+ * Este archivo implementa la ruta:
+ *
+ * `GET /api/tickets/:id`
+ *
+ * Su responsabilidad es recuperar el detalle completo de un ticket,
+ * incluyendo toda la información necesaria para la vista de detalle.
+ *
+ * Actualmente utiliza una fuente de datos mock mediante {@link getTicketById},
+ * pero está preparado para evolucionar a una consulta real con base de datos
+ * o ORM, como Prisma.
+ */
+
 // app/api/tickets/[id]/route.ts
 // GET /api/tickets/:id  → devuelve el detalle completo de un ticket
 
@@ -27,6 +44,30 @@ import { getTicketById } from "@/app/(protected)/(intranet)/requests/data/ticket
 
     // Mock temporal
 
+/**
+ * Handler `GET` para recuperar el detalle de un ticket.
+ *
+ * @param _req Request HTTP entrante.
+ * @param context Contexto de la ruta con parámetros dinámicos.
+ * @returns Respuesta JSON con el ticket encontrado o un error.
+ *
+ * @remarks
+ * Flujo de ejecución:
+ *
+ * 1. Extrae el parámetro `id` desde la ruta dinámica.
+ * 2. Busca el ticket utilizando {@link getTicketById}.
+ * 3. Si no existe, responde con `404`.
+ * 4. Si existe, responde con el detalle completo en formato JSON.
+ * 5. Si ocurre un error inesperado, responde con `500`.
+ *
+ * Esta implementación es temporal y usa datos mock.
+ * En producción debería reemplazarse por una consulta real a base de datos.
+ *
+ * @example
+ * ```http
+ * GET /api/tickets/ti-1
+ * ```
+ */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

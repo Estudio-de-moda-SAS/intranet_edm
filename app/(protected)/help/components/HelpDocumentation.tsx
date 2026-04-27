@@ -1,16 +1,79 @@
+/**
+ * @module HelpDocumentation
+ * Tarjeta de documentación técnica del Help Center.
+ *
+ * @remarks
+ * Este componente presenta un listado resumido de documentos técnicos
+ * y guías relevantes para el usuario dentro del módulo de ayuda.
+ *
+ * Funcionalidades principales:
+ *
+ * - listar documentos disponibles
+ * - clasificar visualmente cada documento por tipo
+ * - abrir un visor de PDF o documento cuando exista `previewUrl`
+ * - mostrar metadata básica como fecha y tamaño
+ *
+ * Es un **Client Component** porque maneja estado local para controlar
+ * la apertura del visor documental.
+ */
+
 "use client";
 
 import { useState } from "react";
 import { Download } from "lucide-react";
-import PdfViewerModal, { PdfMetadata } from "@/app/components/pdf/PdfViewerModal";
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+import type { PdfMetadata } from "@/app/components/pdf/types";
 
-function getExt(title: string) {
+/* -------------------------------------------------------------------------- */
+/* Tipos                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Extensiones visuales soportadas para los documentos.
+ *
+ * @remarks
+ * Estas extensiones no representan necesariamente el tipo MIME real,
+ * sino una categoría visual simplificada para la interfaz.
+ */
+type DocumentExt = "PDF" | "DOC" | "VID";
+
+/* -------------------------------------------------------------------------- */
+/* Utilidades                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Determina la extensión visual de un documento a partir de su título.
+ *
+ * @param title Título del documento.
+ * @returns Tipo visual resumido del archivo.
+ *
+ * @remarks
+ * La lógica actual es heurística y se basa en palabras clave del título:
+ *
+ * - si contiene `vpn` → `VID`
+ * - si contiene `manual` → `DOC`
+ * - en los demás casos → `PDF`
+ *
+ * En una futura mejora, esta información debería derivarse desde
+ * metadata explícita del documento en lugar de inferirse.
+ */
+function getExt(title: string): DocumentExt {
   if (title.toLowerCase().includes("vpn")) return "VID";
   if (title.toLowerCase().includes("manual")) return "DOC";
   return "PDF";
 }
 
-function getExtStyles(ext: string) {
+/**
+ * Devuelve las clases visuales asociadas a una extensión de documento.
+ *
+ * @param ext Extensión visual del documento.
+ * @returns Clases CSS de color para el badge del archivo.
+ *
+ * @remarks
+ * Permite mantener consistencia en la identificación visual de tipos
+ * documentales dentro de la tarjeta.
+ */
+function getExtStyles(ext: DocumentExt): string {
   switch (ext) {
     case "PDF":
       return "bg-rose-50 text-rose-700";
@@ -23,6 +86,24 @@ function getExtStyles(ext: string) {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* Datos                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Catálogo de documentos técnicos disponibles.
+ *
+ * @remarks
+ * Actualmente esta lista es estática y utiliza {@link PdfMetadata}
+ * como contrato base para compatibilidad con el visor documental.
+ *
+ * Algunos elementos incluyen:
+ *
+ * - `previewUrl` para vista previa
+ * - `downloadUrl` para descarga
+ *
+ * Otros pueden actuar como placeholders hasta contar con el recurso final.
+ */
 const docs: PdfMetadata[] = [
   {
     id: "DOC-001",
@@ -68,18 +149,54 @@ const docs: PdfMetadata[] = [
   },
 ];
 
+/* -------------------------------------------------------------------------- */
+/* Componente principal                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Tarjeta de documentación técnica del módulo de ayuda.
+ *
+ * @returns Listado interactivo de documentos con visor modal.
+ *
+ * @remarks
+ * Flujo de interacción:
+ *
+ * 1. El usuario selecciona un documento del listado
+ * 2. El documento pasa a `selectedDoc`
+ * 3. Se abre el {@link PdfViewerModal}
+ * 4. El usuario puede cerrar el visor y volver al listado
+ *
+ * Este componente desacopla:
+ *
+ * - el catálogo visible de documentos
+ * - la visualización detallada del archivo
+ *
+ * @example
+ * ```tsx
+ * <HelpDocumentation />
+ * ```
+ */
 export default function HelpDocumentation() {
+  /**
+   * Documento actualmente seleccionado para visualización.
+   */
   const [selectedDoc, setSelectedDoc] = useState<PdfMetadata | null>(null);
+
+  /**
+   * Estado de visibilidad del visor documental.
+   */
   const [open, setOpen] = useState(false);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+      {/* Header */}
       <div className="px-5 py-4 border-b border-slate-100">
         <h3 className="text-sm font-semibold text-slate-800">
           Documentación técnica
         </h3>
       </div>
 
+      {/* Listado */}
       <ul className="divide-y divide-slate-100">
         {docs.map((doc) => {
           const ext = getExt(doc.title);
@@ -116,7 +233,7 @@ export default function HelpDocumentation() {
         })}
       </ul>
 
-      {/* 🔥 MODAL */}
+      {/* Modal visor */}
       <PdfViewerModal
         open={open}
         onClose={() => setOpen(false)}

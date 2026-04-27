@@ -1,15 +1,39 @@
-"use client"
+/**
+ * @module UserGreetingWrapper
+ * Wrapper que resuelve el usuario a mostrar en el saludo de la interfaz.
+ *
+ * @remarks
+ * Usa {@link useAppSession} en lugar de {@link useDevSession} para funcionar
+ * correctamente tanto en modo bypass como en produccion con MSAL.
+ */
 
-import { useDevSession } from "@/lib/useDevSession"
-import { GreetingCard } from "../home/GreetingCard"
+"use client";
 
-export default function UserGreetingWrapper({ fallbackUser }: any) {
-  const devSession = useDevSession()
+import { useAppSession } from "@/lib/useAppSession";
+import { GreetingCard }  from "../home/GreetingCard";
 
-  // Lee la variable en cada render, no como constante de módulo
-  if (devSession) {
-    return <GreetingCard user={devSession.user ?? fallbackUser} />
-  }
+interface Props {
+  /**
+   * Usuario de respaldo que se usa mientras la sesion carga o
+   * si no hay datos disponibles aun.
+   */
+  fallbackUser: any;
+}
 
-  return <GreetingCard user={fallbackUser} />
+/**
+ * Componente cliente que provee el usuario correcto a {@link GreetingCard}.
+ *
+ * @remarks
+ * En modo bypass retorna el usuario de {@link DEV_SESSION} inmediatamente.
+ * En produccion espera a que {@link useGraphProfile} resuelva el perfil
+ * desde Microsoft Graph. Mientras carga, usa `fallbackUser` para evitar
+ * un flash de contenido vacio.
+ */
+export default function UserGreetingWrapper({ fallbackUser }: Props) {
+  const { user, isLoading } = useAppSession();
+
+  // Mientras Graph resuelve el perfil, usar fallbackUser para evitar flash
+  const resolvedUser = (!isLoading && user) ? user : fallbackUser;
+
+  return <GreetingCard user={resolvedUser} />;
 }

@@ -1,9 +1,60 @@
+/**
+ * @module ProductCollectionsSection
+ * Sección de colecciones del módulo de Producto.
+ *
+ * @remarks
+ * Este componente renderiza una vista resumida de las colecciones activas
+ * del área de Producto, mostrando para cada una:
+ * - estado general de temporada
+ * - porcentaje de avance por referencias aprobadas
+ * - listado de referencias destacadas
+ * - estado individual de cada referencia
+ * - acceso a fichas técnicas según permisos
+ *
+ * Su propósito es ofrecer una lectura operativa del avance de las colecciones
+ * en curso, permitiendo identificar rápidamente:
+ * - qué colecciones están activas o en desarrollo
+ * - cuántas referencias han sido aprobadas
+ * - qué referencias requieren seguimiento
+ * - si existe o no ficha técnica asociada
+ *
+ * La información mostrada es estática y funciona como mock dentro de la intranet.
+ * En una implementación productiva, estos datos podrían provenir de:
+ * - sistemas PLM
+ * - servicios de desarrollo de producto
+ * - módulos de fichas técnicas
+ * - fuentes internas de planeación de colecciones
+ */
+
 // app/product/components/ProductCollectionsSection.tsx
 "use client";
 
 import { Shirt, ChevronRight, FileText, Lock } from "lucide-react";
 import Link from "next/link";
 
+/**
+ * Representa una referencia individual dentro de una colección.
+ *
+ * @remarks
+ * Este tipo modela una unidad de producto o referencia específica
+ * perteneciente a una colección.
+ *
+ * Cada referencia incluye:
+ * - código identificador
+ * - nombre comercial o descriptivo
+ * - categoría funcional
+ * - estado actual dentro del flujo de desarrollo
+ * - indicador de existencia de ficha técnica
+ *
+ * El campo `hasFiche` permite condicionar la navegación o creación
+ * de documentación técnica asociada a la referencia.
+ *
+ * @property code Código único de la referencia.
+ * @property name Nombre descriptivo de la referencia.
+ * @property category Categoría comercial o funcional del producto.
+ * @property status Estado actual de desarrollo de la referencia.
+ * @property hasFiche Indica si la referencia ya tiene ficha técnica asociada.
+ */
 type Reference = {
   code:     string;
   name:     string;
@@ -12,6 +63,32 @@ type Reference = {
   hasFiche: boolean;
 };
 
+/**
+ * Representa una colección del área de Producto.
+ *
+ * @remarks
+ * Este tipo modela una colección completa dentro del calendario
+ * de temporadas del negocio.
+ *
+ * Cada colección contiene:
+ * - información de identificación
+ * - datos de temporada
+ * - estado general
+ * - métricas agregadas de avance
+ * - listado resumido de referencias
+ *
+ * El campo `approved` permite calcular el porcentaje de avance
+ * respecto al total planificado de referencias (`total`).
+ *
+ * @property id Identificador único de la colección.
+ * @property name Nombre visible de la colección.
+ * @property season Código o abreviatura de temporada.
+ * @property year Año comercial de la colección.
+ * @property status Estado general de la colección.
+ * @property total Total de referencias planificadas.
+ * @property approved Cantidad de referencias aprobadas.
+ * @property refs Listado resumido de referencias asociadas.
+ */
 type Collection = {
   id:       string;
   name:     string;
@@ -23,6 +100,26 @@ type Collection = {
   refs:     Reference[];
 };
 
+/**
+ * Dataset estático de colecciones del módulo de Producto.
+ *
+ * @remarks
+ * Este arreglo contiene colecciones representativas utilizadas
+ * para poblar la sección de colecciones activas del dashboard.
+ *
+ * Incluye distintos escenarios operativos:
+ * - colecciones activas en ejecución
+ * - colecciones en desarrollo
+ * - colecciones cerradas
+ *
+ * También incorpora referencias internas para ilustrar:
+ * - distintos estados de producto
+ * - disponibilidad de ficha técnica
+ * - variedad de categorías
+ *
+ * Este dataset sirve como mock de interfaz y validación visual
+ * del comportamiento del componente.
+ */
 const COLLECTIONS: Collection[] = [
   {
     id:       "ss25-principal",
@@ -66,6 +163,21 @@ const COLLECTIONS: Collection[] = [
   },
 ];
 
+/**
+ * Metadatos visuales asociados al estado de una referencia.
+ *
+ * @remarks
+ * Este objeto centraliza la configuración visual de cada estado
+ * del flujo de desarrollo de referencia.
+ *
+ * Para cada estado se define:
+ * - una etiqueta legible para el usuario
+ * - un color de indicador puntual
+ * - clases CSS del badge correspondiente
+ *
+ * Esto permite mantener consistencia visual entre referencias
+ * y simplifica el renderizado condicional dentro del listado.
+ */
 const STATUS_META = {
   development: { label: "En desarrollo",   dot: "bg-amber-400",   badge: "bg-amber-50   text-amber-700  border-amber-200"  },
   sample_sent: { label: "Muestra enviada", dot: "bg-sky-400",     badge: "bg-sky-50     text-sky-700    border-sky-200"    },
@@ -74,16 +186,107 @@ const STATUS_META = {
   launched:    { label: "Lanzada",         dot: "bg-slate-400",   badge: "bg-slate-50   text-slate-600  border-slate-200"  },
 };
 
+/**
+ * Metadatos visuales asociados al estado general de una colección.
+ *
+ * @remarks
+ * A diferencia de {@link STATUS_META}, este objeto describe
+ * el estado global de la colección como unidad de negocio,
+ * no el estado individual de sus referencias.
+ *
+ * Se utiliza en el encabezado de cada bloque de colección
+ * para indicar si la temporada está:
+ * - activa
+ * - en desarrollo
+ * - cerrada
+ */
 const SEASON_STATUS = {
   active:      { label: "Activa",      cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   development: { label: "Desarrollo",  cls: "bg-amber-50   text-amber-700   border-amber-200"   },
   closed:      { label: "Cerrada",     cls: "bg-slate-50   text-slate-500   border-slate-200"   },
 };
 
+/**
+ * Propiedades del componente {@link ProductCollectionsSection}.
+ *
+ * @property showTechSheets Indica si el usuario puede acceder a la funcionalidad de fichas técnicas.
+ *
+ * @remarks
+ * Este permiso no oculta la sección completa, pero sí condiciona
+ * la interacción disponible sobre cada referencia:
+ * - visualizar ficha existente
+ * - crear ficha nueva
+ * - o mostrar restricción visual de acceso
+ */
 type Props = { showTechSheets: boolean };
 
+/**
+ * Sección de colecciones activas del módulo de Producto.
+ *
+ * @param props Propiedades del componente.
+ * @param props.showTechSheets Indica si se deben habilitar acciones relacionadas con fichas técnicas.
+ * @returns Un bloque visual con colecciones activas, progreso y referencias.
+ *
+ * @remarks
+ * Este componente organiza la información de colecciones en curso
+ * y presenta para cada una un resumen operativo del estado de avance.
+ *
+ * Su comportamiento puede resumirse en los siguientes pasos:
+ *
+ * 1. **Clasificación de colecciones**
+ *    Se separan las colecciones activas o en desarrollo
+ *    de aquellas que ya fueron cerradas.
+ *
+ * 2. **Cálculo de avance**
+ *    Para cada colección visible, se calcula el porcentaje
+ *    de referencias aprobadas con base en `approved / total`.
+ *
+ * 3. **Render del encabezado de colección**
+ *    Se muestra nombre, estado global, resumen cuantitativo
+ *    y porcentaje de avance.
+ *
+ * 4. **Render del listado de referencias**
+ *    Se muestra cada referencia con:
+ *    - código
+ *    - nombre
+ *    - categoría
+ *    - estado operativo
+ *    - acceso o restricción a ficha técnica
+ *
+ * 5. **Control de permisos sobre fichas técnicas**
+ *    El comportamiento del ícono final depende de `showTechSheets`:
+ *    - si el usuario tiene acceso y existe ficha, puede verla
+ *    - si tiene acceso pero no existe ficha, puede crearla
+ *    - si no tiene acceso, se muestra un ícono de bloqueo
+ *
+ * Este componente es especialmente útil para:
+ * - monitorear el avance de las colecciones
+ * - detectar referencias sin ficha técnica
+ * - revisar el estado de desarrollo por producto
+ * - ofrecer acceso contextual a documentación técnica
+ *
+ * @example
+ * ```tsx
+ * <ProductCollectionsSection showTechSheets={true} />
+ * ```
+ */
 export default function ProductCollectionsSection({ showTechSheets }: Props) {
+  /**
+   * Colecciones visibles que aún no se consideran cerradas.
+   *
+   * @remarks
+   * Incluye colecciones activas y en desarrollo, que son
+   * las que se muestran en la sección principal del componente.
+   */
   const activeCols = COLLECTIONS.filter((c) => c.status !== "closed");
+
+  /**
+   * Colecciones ya cerradas.
+   *
+   * @remarks
+   * No se renderizan como bloques principales dentro de la lista,
+   * pero sí se tienen en cuenta para el resumen superior del encabezado.
+   */
   const closedCols = COLLECTIONS.filter((c) => c.status === "closed");
 
   return (
@@ -166,6 +369,7 @@ export default function ProductCollectionsSection({ showTechSheets }: Props) {
                         <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${sm.badge}`}>
                           {sm.label}
                         </span>
+
                         {/* Ficha técnica */}
                         {showTechSheets ? (
                           ref.hasFiche ? (

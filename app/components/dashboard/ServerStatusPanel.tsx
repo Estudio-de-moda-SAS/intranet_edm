@@ -1,33 +1,128 @@
+/**
+ * @module ServerStatusPanel
+ * Componente cliente para visualizar el estado operativo de servidores
+ * dentro de un panel o dashboard.
+ *
+ * @remarks
+ * Este archivo implementa una tarjeta reutilizable que presenta una lista
+ * de servidores con su nivel de uso y estado actual.
+ *
+ * Su responsabilidad incluye:
+ *
+ * - Mostrar un encabezado con título e icono.
+ * - Renderizar una fila por cada servidor recibido.
+ * - Mostrar una barra de progreso animada según el porcentaje de uso.
+ * - Representar visualmente el estado de cada servidor mediante badges
+ *   y colores asociados.
+ *
+ * Este componente está orientado a paneles de monitoreo técnico,
+ * infraestructura o supervisión operativa.
+ */
+
 "use client";
 
 import { motion } from "framer-motion";
 import { Server } from "lucide-react";
 
+/**
+ * Estados posibles de un servidor dentro del panel.
+ *
+ * @remarks
+ * Valores soportados:
+ * - `"ok"`: funcionamiento normal.
+ * - `"warning"`: condición de advertencia.
+ * - `"error"`: estado crítico o de fallo.
+ */
 type ServerStatus = "ok" | "warning" | "error";
 
+/**
+ * Representa un elemento individual de servidor.
+ */
 type ServerItem = {
+  /**
+   * Nombre identificador del servidor.
+   */
   name: string;
+
+  /**
+   * Porcentaje de uso actual del servidor.
+   *
+   * @remarks
+   * Se utiliza para renderizar la barra de progreso horizontal.
+   */
   usage: number;
+
+  /**
+   * Estado general del servidor.
+   */
   status: ServerStatus;
 };
 
+/**
+ * Props del componente {@link ServerStatusPanel}.
+ */
 type Props = {
+  /**
+   * Título principal de la tarjeta.
+   */
   title: string;
+
+  /**
+   * Colección de servidores a mostrar en el panel.
+   */
   servers: ServerItem[];
 };
 
+/**
+ * Mapa de colores para la barra de progreso según el estado del servidor.
+ *
+ * @remarks
+ * Cada estado define un gradiente visual utilizado en la barra de uso.
+ */
 const BAR_COLOR: Record<ServerStatus, string> = {
   ok:      "from-violet-500 to-violet-400",
   warning: "from-amber-500 to-amber-400",
   error:   "from-rose-500 to-rose-400",
 };
 
+/**
+ * Configuración visual del badge de estado por tipo de servidor.
+ *
+ * @remarks
+ * Cada estado define:
+ * - Color de fondo y borde.
+ * - Color de texto.
+ * - Etiqueta visible para el usuario.
+ */
 const BADGE: Record<ServerStatus, { bg: string; text: string; label: string }> = {
   ok:      { bg: "bg-emerald-50 border-emerald-100", text: "text-emerald-700", label: "Normal"   },
   warning: { bg: "bg-amber-50 border-amber-100",     text: "text-amber-700",   label: "Atención" },
   error:   { bg: "bg-rose-50 border-rose-100",       text: "text-rose-700",    label: "Crítico"  },
 };
 
+/**
+ * Componente cliente que renderiza un panel de estado de servidores.
+ *
+ * @param props Propiedades del componente.
+ * @param props.title Título principal del panel.
+ * @param props.servers Lista de servidores a representar.
+ * @returns Tarjeta con el estado y uso de los servidores.
+ *
+ * @remarks
+ * Flujo de ejecución:
+ *
+ * 1. Renderiza una tarjeta animada con `framer-motion`.
+ * 2. Muestra un encabezado con icono y título.
+ * 3. Recorre la colección `servers` para construir una fila por elemento.
+ * 4. Para cada servidor:
+ *    - Obtiene la configuración visual del badge según su estado.
+ *    - Muestra el nombre del servidor.
+ *    - Muestra una etiqueta de estado y el porcentaje de uso.
+ *    - Renderiza una barra de progreso animada con color dependiente del estado.
+ *
+ * Este componente concentra información resumida de capacidad y salud
+ * operativa por servidor en una sola vista compacta.
+ */
 export default function ServerStatusPanel({ title, servers }: Props) {
   return (
     <motion.div
@@ -47,11 +142,15 @@ export default function ServerStatusPanel({ title, servers }: Props) {
       {/* Server rows */}
       <ul className="divide-y divide-slate-50">
         {servers.map((server, i) => {
+          /**
+           * Configuración visual del badge según el estado del servidor actual.
+           */
           const badge = BADGE[server.status];
+
           return (
             <li key={i} className="group px-5 py-4 transition-colors hover:bg-slate-50/50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] font-medium text-slate-700 group-hover:text-violet-700 transition-colors">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[13px] font-medium text-slate-700 transition-colors group-hover:text-violet-700">
                   {server.name}
                 </span>
                 <div className="flex items-center gap-2">

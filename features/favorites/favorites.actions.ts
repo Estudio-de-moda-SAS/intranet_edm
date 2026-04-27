@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth"; // ← NextAuth v5: exportas `auth` directamente
+import { cookies }        from "next/headers";
 import type {
   Favorite,
   CreateFavoriteInput,
@@ -11,16 +11,25 @@ import type {
 
 // ─── Helper de autenticación ──────────────────────────────────────────────────
 
+/**
+ * Obtiene el email del colaborador autenticado desde la cookie `edm_user_email`
+ * que `LoginPage` escribe tras el login exitoso de MSAL.
+ *
+ * @remarks
+ * Se usa como `userId` estable hasta tener una tabla `users` en DB.
+ * Cuando exista, reemplazar por el Object ID de Azure AD.
+ *
+ * @throws Si la cookie no existe — el colaborador no está autenticado.
+ */
 async function getCurrentUserId(): Promise<string> {
-  const session = await auth();
+  const cookieStore = await cookies();
+  const email       = cookieStore.get("edm_user_email")?.value;
 
-  if (!session?.user?.email) {
+  if (!email) {
     throw new Error("No autenticado");
   }
 
-  // Email como userId estable hasta tener DB con id propio.
-  // Cuando tengas tabla users, cámbialo por session.user.id
-  return session.user.email;
+  return email;
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -96,7 +105,6 @@ export async function deleteFavoriteAction(
   }
 }
 
-// ✅ Fix: agregado favoriteId como primer argumento separado
 export async function updateFavoriteAction(
   favoriteId: string,
   input: UpdateFavoriteInput,

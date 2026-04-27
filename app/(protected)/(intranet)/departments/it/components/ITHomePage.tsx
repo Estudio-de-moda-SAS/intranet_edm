@@ -1,3 +1,26 @@
+/**
+ * @module ITHomePage
+ * Página principal del módulo de Tecnología de la Información.
+ *
+ * @remarks
+ * Este módulo compone la vista principal del área de TI, organizando
+ * secciones del dashboard según el nivel de acceso del usuario.
+ *
+ * Incluye:
+ * - Hero principal del departamento
+ * - Acciones rápidas para creación de tickets
+ * - Franja de KPIs
+ * - Dashboard operativo
+ * - Estado de servicios
+ * - Tarjeta de tickets
+ * - Monitor de servidores
+ * - Sección del equipo de TI
+ *
+ * El contenido visible se controla mediante permisos evaluados con
+ * la función {@link can}, permitiendo una renderización condicional
+ * por rol o nivel de acceso.
+ */
+
 // app/it/components/ITHomePage.tsx
 // SERVER COMPONENT
 //
@@ -7,77 +30,142 @@
 //   Dashboard + Estado Servicios   → it + admin   (it:view_dashboard)
 //   Monitor de Servidores          → it + admin   (it:view_server_monitor)
 
-import { QuickLinksSection }  from "@/app/components/ui/QuickLinksSection";
-import ITDashboardSection      from "./ITDashboardSection";
-import ServiceStatusCard       from "./ServiceStatusCard";
-import ServerMonitorPanel      from "./ServerMonitorPanel";
-import ITTicketsCard           from "./ITTicketsCard";
-import ITTicketController      from "./ITTicketController";
+import { QuickLinksSection } from "@/app/components/ui/QuickLinksSection";
+import { ITDashboardSection } from "./dashboard-section/ITDashboardSection";
+import ServiceStatusCard from "./ServiceStatusCard";
+import ServerMonitorPanel from "./ServerMonitorPanel";
+import ITTicketsCard from "./ITTicketsCard";
+import ITTicketController from "./ITTicketController";
 
-import { itQuickLinks }        from "../config/itQuickLinks";
-import { processQuickLinks }   from "@/lib/quickLinksAccess";
+import { itQuickLinks } from "../config/itQuickLinks";
+import { processQuickLinks } from "@/lib/quickLinksAccess";
 import { DepartmentTeamSection } from "@/app/components/team/DepartmentTeamSection";
-import { itTeam }              from "../config/itTeam";
-import type { ITData }         from "@/lib/graph/departments/it.service";
+import { itTeam } from "../config/itTeam";
+import type { ITData } from "@/lib/graph/departments/it.service";
 
 import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHeroBanner";
-import { AnimatedCard }         from "@/app/components/ui/animated/AnimatedCard";
-import { AnimatedSection }      from "@/app/components/ui/animated/AnimatedSection";
-import { AnimatedViewCard }     from "@/app/components/ui/animated/AnimatedViewCard";
-import { ITKPIStrip }           from "./ITKPIStrip";
+import { AnimatedCard } from "@/app/components/ui/animated/AnimatedCard";
+import { AnimatedSection } from "@/app/components/ui/animated/AnimatedSection";
+import { AnimatedViewCard } from "@/app/components/ui/animated/AnimatedViewCard";
+import { ITKPIStrip } from "./ITKPIStrip";
 
 import { can, type AccessLevel } from "@/lib/roles";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Props del componente {@link ITPageContent}.
+ *
+ * @property data Datos consolidados del módulo de TI.
+ * @property accessLevel Nivel de acceso actual del usuario.
+ */
 type Props = {
-  data:        ITData;
+  data: ITData;
   accessLevel: AccessLevel;
 };
 
 // ── Team accent ───────────────────────────────────────────────────────────────
 
+/**
+ * Configuración visual de acento para la sección del equipo de TI.
+ *
+ * @remarks
+ * Este objeto centraliza colores, gradientes, bordes y estilos decorativos
+ * aplicados al bloque del equipo, permitiendo mantener consistencia visual
+ * con la identidad del departamento.
+ */
 const TEAM_ACCENT = {
-  sectionBg:       "bg-white",
-  sectionBorder:   "border-indigo-100",
-  iconBg:          "bg-indigo-50",
-  iconColor:       "text-indigo-600",
-  iconBorder:      "border-indigo-100",
-  barGradient:     "from-slate-700 to-indigo-600",
-  pillBg:          "bg-indigo-50",
-  pillBorder:      "border-indigo-100",
-  pillText:        "text-indigo-600",
-  hoverBorder:     "hover:border-indigo-200",
-  dividerHover:    "group-hover:bg-indigo-100",
-  avatarFrom:      "from-slate-700",
-  avatarTo:        "to-indigo-700",
-  avatarRing:      "ring-indigo-100",
+  sectionBg: "bg-white",
+  sectionBorder: "border-indigo-100",
+  iconBg: "bg-indigo-50",
+  iconColor: "text-indigo-600",
+  iconBorder: "border-indigo-100",
+  barGradient: "from-slate-700 to-indigo-600",
+  pillBg: "bg-indigo-50",
+  pillBorder: "border-indigo-100",
+  pillText: "text-indigo-600",
+  hoverBorder: "hover:border-indigo-200",
+  dividerHover: "group-hover:bg-indigo-100",
+  avatarFrom: "from-slate-700",
+  avatarTo: "to-indigo-700",
+  avatarRing: "ring-indigo-100",
   avatarRingHover: "group-hover:ring-indigo-200",
-  lineColor:       "bg-indigo-200",
-  titleColor:      "text-slate-900",
-  subtitleColor:   "text-slate-400",
-  topAccent:       "from-slate-600 via-indigo-500 to-sky-500",
+  lineColor: "bg-indigo-200",
+  titleColor: "text-slate-900",
+  subtitleColor: "text-slate-400",
+  topAccent: "from-slate-600 via-indigo-500 to-sky-500",
 } as const;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+/**
+ * Contenido principal de la página inicial del área de TI.
+ *
+ * @param props Propiedades del componente.
+ * @returns Vista principal del dashboard de TI con renderizado condicional por permisos.
+ *
+ * @remarks
+ * Este componente coordina toda la composición de la home del módulo de TI.
+ *
+ * Responsabilidades principales:
+ * - Evaluar permisos según el nivel de acceso
+ * - Determinar qué secciones deben mostrarse
+ * - Construir un layout dinámico de columnas
+ * - Integrar componentes animados del dashboard
+ * - Pasar datos a subsecciones como tickets y estado de servicios
+ *
+ * Reglas de visibilidad:
+ * - Hero y equipo: visibles para todos
+ * - KPI strip y tickets: visibles para perfiles manager+
+ * - Dashboard y estado de servicios: visibles para perfiles IT y admin
+ * - Monitor de servidores: visible para perfiles IT y admin
+ *
+ * @example
+ * ```tsx
+ * <ITPageContent data={data} accessLevel={accessLevel} />
+ * ```
+ */
 export default function ITPageContent({ data, accessLevel }: Props) {
+  const showKPIs = can(accessLevel, "it:view_kpis");
+  const showTickets = can(accessLevel, "it:view_tickets");
+  const showDashboard = can(accessLevel, "it:view_dashboard");
+  const showServiceStatus = can(accessLevel, "it:view_service_status");
+  const processedITLinks = processQuickLinks(itQuickLinks, accessLevel);
+  const showQuickLinks = processedITLinks.length > 0;
+  const showServerMonitor = can(accessLevel, "it:view_server_monitor");
 
-  const showKPIs          = can(accessLevel, 'it:view_kpis');
-  const showTickets       = can(accessLevel, 'it:view_tickets');
-  const showDashboard     = can(accessLevel, 'it:view_dashboard');
-  const showServiceStatus = can(accessLevel, 'it:view_service_status');
-  const processedITLinks  = processQuickLinks(itQuickLinks, accessLevel);
-  const showQuickLinks         = processedITLinks.length > 0;
-  const showServerMonitor = can(accessLevel, 'it:view_server_monitor');
-
-  // ¿Hay contenido en la columna principal?
+  /**
+   * Indica si existe contenido para la columna principal.
+   *
+   * @remarks
+   * La columna principal agrupa dashboard operativo y estado de servicios.
+   */
   const showMainCol = showDashboard || showServiceStatus;
-  // ¿Hay contenido en el aside?
-  const showAside   = showTickets;
-  // Layout dinámico
-  const mainColClass    = showAside   ? "lg:col-span-8" : "lg:col-span-12";
-  const asideColClass   = showMainCol ? "lg:col-span-4" : "lg:col-span-12";
+
+  /**
+   * Indica si existe contenido para la columna lateral.
+   *
+   * @remarks
+   * El aside contiene accesos rápidos y tarjeta de tickets.
+   */
+  const showAside = showTickets;
+
+  /**
+   * Clase dinámica de la columna principal.
+   *
+   * @remarks
+   * Si existe aside, la columna principal ocupa menos espacio.
+   * En caso contrario, se expande al ancho completo.
+   */
+  const mainColClass = showAside ? "lg:col-span-8" : "lg:col-span-12";
+
+  /**
+   * Clase dinámica de la columna lateral.
+   *
+   * @remarks
+   * Si no existe contenido en la columna principal, el aside se expande.
+   */
+  const asideColClass = showMainCol ? "lg:col-span-4" : "lg:col-span-12";
 
   return (
     <main
@@ -98,20 +186,18 @@ export default function ITPageContent({ data, accessLevel }: Props) {
         dotPatternId="it-dots"
         pills={[
           { type: "status", text: "Todos los sistemas operativos" },
-          { type: "info",   text: "Última actualización: hace 2 min" },
+          { type: "info", text: "Última actualización: hace 2 min" },
         ]}
         actions={<ITTicketController />}
       />
 
       <div className="px-4 pb-10 lg:px-14">
-
         {/* ── KPI STRIP — manager+ ──────────────────────────────────── */}
         {showKPIs && <ITKPIStrip />}
 
         {/* ── GRID — it + admin (main) / manager+ (aside) ───────────── */}
         {(showMainCol || showAside) && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-
             {/* Columna principal — it + admin */}
             {showMainCol && (
               <div className={`${mainColClass} flex flex-col gap-6`}>
@@ -120,6 +206,7 @@ export default function ITPageContent({ data, accessLevel }: Props) {
                     <ITDashboardSection />
                   </AnimatedCard>
                 )}
+
                 {showServiceStatus && (
                   <AnimatedCard delay={0.08}>
                     <ServiceStatusCard services={data.services} />
@@ -143,12 +230,12 @@ export default function ITPageContent({ data, accessLevel }: Props) {
                     />
                   </AnimatedCard>
                 )}
+
                 <AnimatedCard delay={0.05}>
                   <ITTicketsCard data={data} />
                 </AnimatedCard>
               </AnimatedSection>
             )}
-
           </div>
         )}
 
@@ -168,7 +255,6 @@ export default function ITPageContent({ data, accessLevel }: Props) {
             accent={TEAM_ACCENT}
           />
         </AnimatedViewCard>
-
       </div>
     </main>
   );

@@ -1,5 +1,27 @@
 'use client';
 
+/**
+ * @module ExpenseTable
+ * Tabla interactiva para la gestión de gastos del módulo financiero.
+ *
+ * @remarks
+ * Este componente permite consultar, filtrar y gestionar
+ * los gastos registrados por diferentes áreas de la organización.
+ *
+ * Incluye funcionalidades como:
+ *
+ * - búsqueda por múltiples campos
+ * - filtrado por estado
+ * - ordenamiento por columnas
+ * - paginación
+ * - panel de detalle del gasto
+ * - panel lateral para registro de nuevos gastos
+ * - visualización de soportes mediante visor PDF
+ *
+ * Además, incorpora lógica de negocio relacionada con
+ * el nivel de aprobación requerido según el monto.
+ */
+
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,88 +32,263 @@ import {
   X, FileText, Send, User, Info, FileEdit,
 } from 'lucide-react';
 import type { Expense, ExpenseStatus, ExpenseCategory, ExpenseDepartment } from '@/lib/graph/departments/finance.service';
-import PdfViewerModal, { type PdfMetadata } from '@/app/components/pdf/PdfViewerModal';
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+import type { PdfMetadata } from "@/app/components/pdf/types";
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Configuración                                                               */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Claves disponibles para ordenar la tabla de gastos.
+ */
 type SortKey = 'date' | 'amount' | 'number' | 'department';
+
+/**
+ * Dirección del ordenamiento aplicado.
+ */
 type SortDir = 'asc' | 'desc';
+
+/**
+ * Número máximo de gastos mostrados por página.
+ */
 const PAGE_SIZE = 8;
 
+/**
+ * Umbrales de aprobación según el monto del gasto.
+ *
+ * @remarks
+ * Estos valores determinan automáticamente
+ * el nivel de aprobación requerido:
+ *
+ * - `AUTO`: aprobación automática
+ * - `MANAGER`: aprobación por gerente de área
+ * - superior al anterior: aprobación por Finanzas / Gerencia
+ */
 const APPROVAL_THRESHOLDS = { AUTO: 500_000, MANAGER: 5_000_000 };
 
+/**
+ * Configuración visual por estado del gasto.
+ *
+ * @remarks
+ * Este mapa traduce el estado funcional del gasto
+ * a una representación visual consistente en badges.
+ *
+ * Incluye:
+ * - etiqueta legible
+ * - color del punto
+ * - fondo del badge
+ * - color del texto
+ * - ícono asociado
+ */
 const STATUS_CFG: Record<ExpenseStatus, {
-  label: string; dotColor: string; badgeBg: string; badgeText: string; icon: React.ElementType;
+  label: string;
+  dotColor: string;
+  badgeBg: string;
+  badgeText: string;
+  icon: React.ElementType;
 }> = {
-  'Borrador':    { label: 'Borrador',    dotColor: 'bg-slate-400',   badgeBg: 'bg-slate-50 border-slate-200',     badgeText: 'text-slate-600',   icon: FileEdit     },
-  'Enviado':     { label: 'Enviado',     dotColor: 'bg-blue-400',    badgeBg: 'bg-blue-50 border-blue-200',       badgeText: 'text-blue-700',    icon: Send         },
-  'En revisión': { label: 'En revisión', dotColor: 'bg-amber-400',   badgeBg: 'bg-amber-50 border-amber-200',     badgeText: 'text-amber-700',   icon: Clock        },
-  'Aprobado':    { label: 'Aprobado',    dotColor: 'bg-emerald-400', badgeBg: 'bg-emerald-50 border-emerald-200', badgeText: 'text-emerald-700', icon: CheckCircle2 },
-  'Rechazado':   { label: 'Rechazado',   dotColor: 'bg-red-400',     badgeBg: 'bg-red-50 border-red-200',         badgeText: 'text-red-700',     icon: XCircle      },
-  'Pagado':      { label: 'Pagado',      dotColor: 'bg-teal-400',    badgeBg: 'bg-teal-50 border-teal-200',       badgeText: 'text-teal-700',    icon: Banknote     },
+  'Borrador': {
+    label: 'Borrador',
+    dotColor: 'bg-slate-400',
+    badgeBg: 'bg-slate-50 border-slate-200',
+    badgeText: 'text-slate-600',
+    icon: FileEdit,
+  },
+  'Enviado': {
+    label: 'Enviado',
+    dotColor: 'bg-blue-400',
+    badgeBg: 'bg-blue-50 border-blue-200',
+    badgeText: 'text-blue-700',
+    icon: Send,
+  },
+  'En revisión': {
+    label: 'En revisión',
+    dotColor: 'bg-amber-400',
+    badgeBg: 'bg-amber-50 border-amber-200',
+    badgeText: 'text-amber-700',
+    icon: Clock,
+  },
+  'Aprobado': {
+    label: 'Aprobado',
+    dotColor: 'bg-emerald-400',
+    badgeBg: 'bg-emerald-50 border-emerald-200',
+    badgeText: 'text-emerald-700',
+    icon: CheckCircle2,
+  },
+  'Rechazado': {
+    label: 'Rechazado',
+    dotColor: 'bg-red-400',
+    badgeBg: 'bg-red-50 border-red-200',
+    badgeText: 'text-red-700',
+    icon: XCircle,
+  },
+  'Pagado': {
+    label: 'Pagado',
+    dotColor: 'bg-teal-400',
+    badgeBg: 'bg-teal-50 border-teal-200',
+    badgeText: 'text-teal-700',
+    icon: Banknote,
+  },
 };
 
-// Chip de nivel de aprobación
+/**
+ * Configuración visual por nivel de aprobación.
+ *
+ * @remarks
+ * Este chip representa el flujo de aprobación requerido
+ * según el valor del gasto.
+ */
 const APPROVAL_CFG = {
-  auto:    { label: 'Auto',       bg: 'bg-teal-50',    text: 'text-teal-600',   border: 'border-teal-200'   },
-  manager: { label: 'Gte. área',  bg: 'bg-amber-50',   text: 'text-amber-600',  border: 'border-amber-200'  },
-  finance: { label: 'Finanzas',   bg: 'bg-violet-50',  text: 'text-violet-600', border: 'border-violet-200' },
+  auto: {
+    label: 'Auto',
+    bg: 'bg-teal-50',
+    text: 'text-teal-600',
+    border: 'border-teal-200',
+  },
+  manager: {
+    label: 'Gte. área',
+    bg: 'bg-amber-50',
+    text: 'text-amber-600',
+    border: 'border-amber-200',
+  },
+  finance: {
+    label: 'Finanzas',
+    bg: 'bg-violet-50',
+    text: 'text-violet-600',
+    border: 'border-violet-200',
+  },
 };
 
+/**
+ * Estados disponibles para el filtrado rápido.
+ *
+ * @remarks
+ * Incluye la opción especial `all` para representar
+ * la vista completa sin restricción por estado.
+ */
 const ALL_STATUSES: Array<ExpenseStatus | 'all'> = [
   'all', 'Borrador', 'Enviado', 'En revisión', 'Aprobado', 'Rechazado', 'Pagado',
 ];
 
+/**
+ * Categorías disponibles para el registro de gastos.
+ */
 const CATEGORIES: ExpenseCategory[] = [
-  'Viáticos','Transporte','Alojamiento','Alimentación','Tecnología',
-  'Papelería','Servicios','Mantenimiento','Marketing','Capacitación','Otros',
+  'Viáticos', 'Transporte', 'Alojamiento', 'Alimentación', 'Tecnología',
+  'Papelería', 'Servicios', 'Mantenimiento', 'Marketing', 'Capacitación', 'Otros',
 ];
 
+/**
+ * Departamentos disponibles para asociar un gasto.
+ */
 const DEPARTMENTS: ExpenseDepartment[] = [
-  'Finanzas','Logística','Marketing','Recursos Humanos',
-  'Tecnología','Comercial','Jurídica','Gerencia',
+  'Finanzas', 'Logística', 'Marketing', 'Recursos Humanos',
+  'Tecnología', 'Comercial', 'Jurídica', 'Gerencia',
 ];
 
-// ─── Formatters ───────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Formateadores y adaptadores                                                 */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Formatea un valor numérico como moneda COP.
+ *
+ * @param n Valor monetario a formatear.
+ * @returns Cadena formateada en pesos colombianos.
+ */
 const fmtCOP = (n: number) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(n);
 
+/**
+ * Formatea una fecha ISO a una representación legible en español.
+ *
+ * @param iso Fecha en formato ISO.
+ * @returns Fecha formateada con día, mes abreviado y año.
+ */
 const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+  new Date(iso).toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 
+/**
+ * Convierte un gasto a metadatos compatibles con el visor PDF.
+ *
+ * @param exp Gasto de origen.
+ * @returns Metadatos consumibles por {@link PdfViewerModal}.
+ *
+ * @remarks
+ * Cuando el modelo incluya `attachmentUrl`,
+ * este helper lo propagará automáticamente
+ * como URL de vista previa y descarga.
+ */
 function expenseToPdfMetadata(exp: Expense): PdfMetadata {
   return {
-    id:          exp.number,
-    title:       `Soporte — ${exp.concept}`,
-    category:    exp.category,
-    author:      exp.submittedBy,
-    updatedAt:   fmtDate(exp.date),
-    restricted:  false,
-    previewUrl:  (exp as any).attachmentUrl ?? undefined,
+    id: exp.number,
+    title: `Soporte — ${exp.concept}`,
+    category: exp.category,
+    author: exp.submittedBy,
+    updatedAt: fmtDate(exp.date),
+    restricted: false,
+    previewUrl: (exp as any).attachmentUrl ?? undefined,
     downloadUrl: (exp as any).attachmentUrl ?? undefined,
   };
 }
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Props                                                                       */
+/* -------------------------------------------------------------------------- */
 
-interface Props { expenses: Expense[] }
+/**
+ * Props del componente {@link ExpenseTable}.
+ *
+ * @property expenses Lista de gastos a mostrar.
+ */
+interface Props {
+  expenses: Expense[];
+}
 
-// ─── StatusBadge ──────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Subcomponentes comunes                                                      */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Badge visual para representar el estado de un gasto.
+ *
+ * @param props Propiedades del componente.
+ * @returns Etiqueta visual con ícono y estado del gasto.
+ */
 function StatusBadge({ status }: { status: ExpenseStatus }) {
   const cfg = STATUS_CFG[status];
   const Icon = cfg.icon;
+
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${cfg.badgeBg} ${cfg.badgeText}`}>
-      <Icon className="h-3 w-3" />{cfg.label}
+      <Icon className="h-3 w-3" />
+      {cfg.label}
     </span>
   );
 }
 
-// Chip pequeño de nivel de aprobación — diferenciador visual vs facturas
+/**
+ * Chip visual para representar el nivel de aprobación.
+ *
+ * @param props Propiedades del componente.
+ * @returns Indicador compacto del flujo de aprobación requerido.
+ *
+ * @remarks
+ * Este elemento aporta una capa adicional de semántica visual
+ * frente a otros módulos como facturas o pagos.
+ */
 function ApprovalChip({ level }: { level: Expense['approvalLevel'] }) {
   const cfg = APPROVAL_CFG[level];
+
   return (
     <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${cfg.bg} ${cfg.text} ${cfg.border}`}>
       {cfg.label}
@@ -99,29 +296,90 @@ function ApprovalChip({ level }: { level: Expense['approvalLevel'] }) {
   );
 }
 
+/**
+ * Etiqueta visual para encabezados de sección.
+ *
+ * @param props Propiedades del componente.
+ * @returns Título pequeño en mayúsculas para agrupar bloques de información.
+ */
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{children}</h3>;
+  return (
+    <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+      {children}
+    </h3>
+  );
 }
 
-// ─── Register Form — panel lateral (diferente al modal centrado de facturas) ──
+/* -------------------------------------------------------------------------- */
+/* Panel de registro                                                           */
+/* -------------------------------------------------------------------------- */
 
-function RegisterExpensePanel({ onClose }: { onClose: () => void }) {
+/**
+ * Props del componente {@link RegisterExpensePanel}.
+ *
+ * @property onClose Acción para cerrar el panel lateral.
+ */
+type RegisterExpensePanelProps = {
+  onClose: () => void;
+};
+
+/**
+ * Panel lateral para registrar un nuevo gasto.
+ *
+ * @param props Propiedades del componente.
+ * @returns Formulario lateral de creación de gasto.
+ *
+ * @remarks
+ * Este componente permite:
+ * - capturar la información principal del gasto
+ * - seleccionar categoría y departamento
+ * - definir monto y fecha
+ * - adjuntar soporte documental
+ * - mostrar dinámicamente el nivel de aprobación requerido
+ *
+ * El nivel de aprobación depende del monto ingresado
+ * y se calcula en tiempo real.
+ */
+function RegisterExpensePanel({ onClose }: RegisterExpensePanelProps) {
+  /**
+   * Valor de monto ingresado en el formulario.
+   */
   const [amount, setAmount] = useState('');
-  const numAmount   = parseInt(amount.replace(/\D/g, ''), 10) || 0;
+
+  /**
+   * Valor numérico del monto, normalizado a partir del texto ingresado.
+   */
+  const numAmount = parseInt(amount.replace(/\D/g, ''), 10) || 0;
+
+  /**
+   * Nivel de aprobación calculado automáticamente según el monto.
+   *
+   * @remarks
+   * Reglas aplicadas:
+   * - menor a `AUTO` → automática
+   * - menor a `MANAGER` → gerente de área
+   * - superior → finanzas / gerencia
+   */
   const approvalLvl =
-    numAmount < APPROVAL_THRESHOLDS.AUTO    ? 'auto' :
+    numAmount < APPROVAL_THRESHOLDS.AUTO ? 'auto' :
     numAmount < APPROVAL_THRESHOLDS.MANAGER ? 'manager' : 'finance';
 
   return (
     <AnimatePresence>
-      <motion.div key="panel-overlay"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      <motion.div
+        key="panel-overlay"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-sm"
         onClick={onClose}
       />
-      <motion.aside key="panel"
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      <motion.aside
+        key="panel"
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
         className="fixed right-0 top-0 z-50 h-full w-full max-w-[480px] bg-white shadow-2xl flex flex-col"
         onClick={e => e.stopPropagation()}
@@ -145,14 +403,16 @@ function RegisterExpensePanel({ onClose }: { onClose: () => void }) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-
           <div>
             <label className="block text-[12px] font-semibold text-slate-600 mb-1.5">
               Concepto <span className="text-red-400">*</span>
             </label>
-            <input type="text" placeholder="Descripción del gasto…"
+            <input
+              type="text"
+              placeholder="Descripción del gasto…"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] text-slate-700 placeholder:text-slate-400
-                         focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all" />
+                         focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -185,46 +445,57 @@ function RegisterExpensePanel({ onClose }: { onClose: () => void }) {
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">$</span>
-                <input type="text" inputMode="numeric" value={amount}
-                  onChange={e => setAmount(e.target.value)} placeholder="0"
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  placeholder="0"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-7 pr-4 py-2.5 text-[13px] text-slate-700 placeholder:text-slate-400
-                             focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all" />
+                             focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all"
+                />
               </div>
             </div>
             <div>
               <label className="block text-[12px] font-semibold text-slate-600 mb-1.5">
                 Fecha del gasto <span className="text-red-400">*</span>
               </label>
-              <input type="date"
+              <input
+                type="date"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[13px] text-slate-700
-                           focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all" />
+                           focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all"
+              />
             </div>
           </div>
 
           {/* Nivel de aprobación dinámico */}
           {numAmount > 0 && (
-            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
               className={`rounded-xl border p-3.5 flex items-start gap-2.5 ${
-                approvalLvl === 'auto'    ? 'bg-teal-50 border-teal-200'     :
-                approvalLvl === 'manager' ? 'bg-amber-50 border-amber-200'   :
-                                            'bg-violet-50 border-violet-200'
+                approvalLvl === 'auto' ? 'bg-teal-50 border-teal-200' :
+                approvalLvl === 'manager' ? 'bg-amber-50 border-amber-200' :
+                'bg-violet-50 border-violet-200'
               }`}
             >
               <Info className={`h-4 w-4 mt-0.5 shrink-0 ${
                 approvalLvl === 'auto' ? 'text-teal-500' :
                 approvalLvl === 'manager' ? 'text-amber-500' : 'text-violet-500'
-              }`} />
+              }`}
+              />
               <div>
                 <p className={`text-[12px] font-semibold ${
                   approvalLvl === 'auto' ? 'text-teal-700' :
                   approvalLvl === 'manager' ? 'text-amber-700' : 'text-violet-700'
-                }`}>
-                  {approvalLvl === 'auto'    && 'Aprobación automática'}
+                }`}
+                >
+                  {approvalLvl === 'auto' && 'Aprobación automática'}
                   {approvalLvl === 'manager' && 'Requiere aprobación del gerente de área'}
                   {approvalLvl === 'finance' && 'Requiere aprobación de Finanzas + Gerencia'}
                 </p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  {approvalLvl === 'auto'    && 'Monto menor a $500.000 COP.'}
+                  {approvalLvl === 'auto' && 'Monto menor a $500.000 COP.'}
                   {approvalLvl === 'manager' && 'Monto entre $500.000 y $5.000.000 COP.'}
                   {approvalLvl === 'finance' && 'Monto superior a $5.000.000 COP.'}
                 </p>
@@ -252,16 +523,21 @@ function RegisterExpensePanel({ onClose }: { onClose: () => void }) {
             <label className="block text-[12px] font-semibold text-slate-600 mb-1.5">
               Observaciones <span className="text-slate-400 font-normal">(opcional)</span>
             </label>
-            <textarea rows={3} placeholder="Información adicional para el aprobador…"
+            <textarea
+              rows={3}
+              placeholder="Información adicional para el aprobador…"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] text-slate-700 placeholder:text-slate-400 resize-none
-                         focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all" />
+                         focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all"
+            />
           </div>
         </div>
 
         {/* Footer */}
         <div className="border-t border-slate-100 px-6 py-4 flex gap-2.5 shrink-0">
-          <button onClick={onClose}
-            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-[13px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-[13px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+          >
             Cancelar
           </button>
           <button className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-700 py-2.5 text-[13px] font-semibold text-white hover:bg-slate-600 transition-colors">
@@ -276,19 +552,60 @@ function RegisterExpensePanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── Detail Drawer ────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Drawer de detalle                                                           */
+/* -------------------------------------------------------------------------- */
 
-function ExpenseDrawer({ exp, onClose, onOpenPdf }: {
-  exp: Expense; onClose: () => void; onOpenPdf: (m: PdfMetadata) => void;
-}) {
+/**
+ * Props del componente {@link ExpenseDrawer}.
+ *
+ * @property exp Gasto seleccionado.
+ * @property onClose Acción para cerrar el panel lateral.
+ * @property onOpenPdf Acción para abrir el soporte asociado.
+ */
+type ExpenseDrawerProps = {
+  exp: Expense;
+  onClose: () => void;
+  onOpenPdf: (m: PdfMetadata) => void;
+};
+
+/**
+ * Drawer lateral con el detalle completo de un gasto.
+ *
+ * @param props Propiedades del componente.
+ * @returns Panel lateral con información operativa, económica y documental.
+ *
+ * @remarks
+ * Este componente muestra:
+ * - estado del gasto
+ * - nivel de aprobación
+ * - solicitante
+ * - fechas principales
+ * - detalle económico
+ * - observaciones
+ *
+ * También presenta acciones contextuales
+ * según el estado actual del gasto.
+ */
+function ExpenseDrawer({ exp, onClose, onOpenPdf }: ExpenseDrawerProps) {
   const cfg = STATUS_CFG[exp.status];
 
   return (
     <AnimatePresence>
-      <motion.div key="ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      <motion.div
+        key="ov"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-sm" onClick={onClose} />
-      <motion.aside key="dr" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+        className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <motion.aside
+        key="dr"
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
         className="fixed right-0 top-0 z-50 h-full w-full max-w-[460px] bg-white shadow-2xl flex flex-col"
         onClick={e => e.stopPropagation()}
@@ -313,7 +630,6 @@ function ExpenseDrawer({ exp, onClose, onOpenPdf }: {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
           {/* Status + approval */}
           <div className={`rounded-xl border p-4 ${cfg.badgeBg}`}>
             <div className="flex items-center justify-between">
@@ -328,7 +644,8 @@ function ExpenseDrawer({ exp, onClose, onOpenPdf }: {
             )}
             {exp.rejectionReason && (
               <p className="mt-2 text-[12px] text-red-700 flex items-start gap-1.5 leading-snug">
-                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />{exp.rejectionReason}
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                {exp.rejectionReason}
               </p>
             )}
           </div>
@@ -350,7 +667,7 @@ function ExpenseDrawer({ exp, onClose, onOpenPdf }: {
           <section>
             <SectionLabel>Fechas</SectionLabel>
             <div className="grid grid-cols-2 gap-2">
-              {([['Fecha del gasto', exp.date], ['Fecha de envío', exp.submittedAt]] as [string,string][])
+              {([['Fecha del gasto', exp.date], ['Fecha de envío', exp.submittedAt]] as [string, string][])
                 .map(([l, d]) => (
                   <div key={l} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-center">
                     <p className="text-[10px] text-slate-400 uppercase tracking-wide">{l}</p>
@@ -415,9 +732,11 @@ function ExpenseDrawer({ exp, onClose, onOpenPdf }: {
               <Banknote className="h-4 w-4" /> Marcar como pagado
             </button>
           )}
-          <button onClick={() => onOpenPdf(expenseToPdfMetadata(exp))}
+          <button
+            onClick={() => onOpenPdf(expenseToPdfMetadata(exp))}
             className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] font-semibold text-slate-600 hover:bg-teal-50 hover:border-teal-200 hover:text-teal-700 transition-colors"
-            title="Ver soporte">
+            title="Ver soporte"
+          >
             <FileText className="h-4 w-4" /> Soporte
           </button>
         </div>
@@ -426,68 +745,208 @@ function ExpenseDrawer({ exp, onClose, onOpenPdf }: {
   );
 }
 
-// ─── Sort button ──────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Botón de ordenamiento                                                       */
+/* -------------------------------------------------------------------------- */
 
-function SortBtn({ label, sortKey: active, onClick }: {
-  label: string; sortKey: SortKey; active: boolean; onClick: () => void;
-}) {
+/**
+ * Props del componente {@link SortBtn}.
+ *
+ * @property label Texto visible del botón.
+ * @property sortKey Clave de ordenamiento asociada.
+ * @property active Indica si el criterio está activo.
+ * @property onClick Acción a ejecutar al seleccionar el botón.
+ */
+type SortBtnProps = {
+  label: string;
+  sortKey: SortKey;
+  active: boolean;
+  onClick: () => void;
+};
+
+/**
+ * Botón reutilizable para ordenar la tabla.
+ *
+ * @param props Propiedades del componente.
+ * @returns Botón con indicador visual del criterio activo.
+ */
+function SortBtn({ label, sortKey: active, onClick }: SortBtnProps) {
   return (
-    <button onClick={onClick} className={`flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide transition-colors
-      ${active ? 'text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}>
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide transition-colors
+      ${active ? 'text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}
+    >
       {label}
       <ArrowUpDown className={`h-3 w-3 transition-opacity ${active ? 'opacity-100' : 'opacity-40'}`} />
     </button>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Componente principal                                                        */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * Tabla principal de gastos.
+ *
+ * @param props Propiedades del componente.
+ * @returns Vista tabular con búsqueda, filtros, ordenamiento, paginación y detalle.
+ *
+ * @remarks
+ * Este componente administra el flujo principal de consulta
+ * y gestión de gastos del módulo financiero.
+ *
+ * Mantiene estado para:
+ * - búsqueda
+ * - filtro por estado
+ * - ordenamiento
+ * - paginación
+ * - gasto seleccionado
+ * - visor PDF
+ * - apertura del panel de registro
+ *
+ * El conjunto visible de gastos se memoiza con `useMemo`
+ * para optimizar el rendimiento del render.
+ *
+ * @example
+ * ```tsx
+ * <ExpenseTable expenses={expenses} />
+ * ```
+ */
 export function ExpenseTable({ expenses }: Props) {
-  const [search, setSearch]     = useState('');
-  const [status, setStatus]     = useState<ExpenseStatus | 'all'>('all');
-  const [sortKey, setSortKey]   = useState<SortKey>('date');
-  const [sortDir, setSortDir]   = useState<SortDir>('desc');
-  const [page, setPage]         = useState(1);
+  /**
+   * Texto actual de búsqueda.
+   */
+  const [search, setSearch] = useState('');
+
+  /**
+   * Estado actualmente seleccionado como filtro.
+   */
+  const [status, setStatus] = useState<ExpenseStatus | 'all'>('all');
+
+  /**
+   * Clave actual de ordenamiento.
+   */
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+
+  /**
+   * Dirección actual del ordenamiento.
+   */
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  /**
+   * Página actual de la tabla paginada.
+   */
+  const [page, setPage] = useState(1);
+
+  /**
+   * Gasto seleccionado para mostrar en el drawer.
+   */
   const [selected, setSelected] = useState<Expense | null>(null);
-  const [pdfMeta, setPdfMeta]   = useState<PdfMetadata | null>(null);
-  const [pdfOpen, setPdfOpen]   = useState(false);
+
+  /**
+   * Metadatos del soporte actualmente abierto en el visor.
+   */
+  const [pdfMeta, setPdfMeta] = useState<PdfMetadata | null>(null);
+
+  /**
+   * Indica si el visor PDF se encuentra abierto.
+   */
+  const [pdfOpen, setPdfOpen] = useState(false);
+
+  /**
+   * Indica si el panel lateral de registro se encuentra abierto.
+   */
   const [formOpen, setFormOpen] = useState(false);
 
-  const openPdf  = (m: PdfMetadata) => { setPdfMeta(m); setPdfOpen(true); };
-  const closePdf = () => { setPdfOpen(false); setTimeout(() => setPdfMeta(null), 300); };
+  /**
+   * Abre el visor PDF con los metadatos indicados.
+   *
+   * @param m Metadatos del documento a visualizar.
+   */
+  const openPdf = (m: PdfMetadata) => {
+    setPdfMeta(m);
+    setPdfOpen(true);
+  };
 
+  /**
+   * Cierra el visor PDF y limpia sus metadatos posteriormente.
+   */
+  const closePdf = () => {
+    setPdfOpen(false);
+    setTimeout(() => setPdfMeta(null), 300);
+  };
+
+  /**
+   * Alterna el criterio y dirección de ordenamiento.
+   *
+   * @param key Nueva clave de ordenamiento.
+   *
+   * @remarks
+   * Si el criterio ya está activo, alterna entre ascendente
+   * y descendente. Cuando cambia el criterio, la paginación
+   * vuelve a la primera página.
+   */
   const toggleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortKey(key); setSortDir('desc'); }
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
     setPage(1);
   };
 
+  /**
+   * Lista de gastos filtrados y ordenados.
+   *
+   * @remarks
+   * Este cálculo:
+   * - aplica búsqueda por número, concepto, solicitante, área y categoría
+   * - filtra por estado
+   * - ordena según el criterio activo
+   */
   const filtered = useMemo(() => {
     let data = [...expenses];
+
     if (search.trim()) {
       const q = search.toLowerCase();
       data = data.filter(e =>
-        e.number.toLowerCase().includes(q)      ||
-        e.concept.toLowerCase().includes(q)     ||
+        e.number.toLowerCase().includes(q) ||
+        e.concept.toLowerCase().includes(q) ||
         e.submittedBy.toLowerCase().includes(q) ||
-        e.department.toLowerCase().includes(q)  ||
+        e.department.toLowerCase().includes(q) ||
         e.category.toLowerCase().includes(q),
       );
     }
-    if (status !== 'all') data = data.filter(e => e.status === status);
+
+    if (status !== 'all') {
+      data = data.filter(e => e.status === status);
+    }
+
     data.sort((a, b) => {
       const [va, vb] =
-        sortKey === 'date'       ? [a.date,       b.date]      :
-        sortKey === 'amount'     ? [a.amount,      b.amount]    :
-        sortKey === 'number'     ? [a.number,      b.number]    :
-                                   [a.department,  b.department];
+        sortKey === 'date' ? [a.date, b.date] :
+        sortKey === 'amount' ? [a.amount, b.amount] :
+        sortKey === 'number' ? [a.number, b.number] :
+        [a.department, b.department];
+
       return sortDir === 'asc' ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
     });
+
     return data;
   }, [expenses, search, status, sortKey, sortDir]);
 
+  /**
+   * Número total de páginas disponibles.
+   */
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged      = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  /**
+   * Subconjunto de gastos correspondiente a la página actual.
+   */
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <>
@@ -495,17 +954,23 @@ export function ExpenseTable({ expenses }: Props) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-          <input type="search" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+          <input
+            type="search"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
             placeholder="Concepto, área, solicitante…"
             className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-[13px] text-slate-700 placeholder:text-slate-400
-                       focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all" />
+                       focus:outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/15 transition-all"
+          />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50 transition shadow-sm">
             <Download className="h-3.5 w-3.5" /> Exportar
           </button>
-          <button onClick={() => setFormOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-teal-600 px-3.5 py-2.5 text-[12px] font-semibold text-white hover:bg-teal-700 transition shadow-sm shadow-teal-200">
+          <button
+            onClick={() => setFormOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-teal-600 px-3.5 py-2.5 text-[12px] font-semibold text-white hover:bg-teal-700 transition shadow-sm shadow-teal-200"
+          >
             <Plus className="h-3.5 w-3.5" /> Registrar gasto
           </button>
         </div>
@@ -514,15 +979,19 @@ export function ExpenseTable({ expenses }: Props) {
       {/* ── Status tabs ── */}
       <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-0.5">
         {ALL_STATUSES.map(s => {
-          const isAll  = s === 'all';
-          const cfg    = isAll ? null : STATUS_CFG[s as ExpenseStatus];
-          const count  = isAll ? expenses.length : expenses.filter(e => e.status === s).length;
+          const isAll = s === 'all';
+          const cfg = isAll ? null : STATUS_CFG[s as ExpenseStatus];
+          const count = isAll ? expenses.length : expenses.filter(e => e.status === s).length;
           const active = status === s;
+
           return (
-            <button key={s} onClick={() => { setStatus(s); setPage(1); }}
+            <button
+              key={s}
+              onClick={() => { setStatus(s); setPage(1); }}
               className={`flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-[12px] font-medium whitespace-nowrap transition-all
                 ${active ? 'bg-teal-600 border-teal-600 text-white shadow-sm shadow-teal-200'
-                         : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300 hover:text-teal-600'}`}>
+                  : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300 hover:text-teal-600'}`}
+            >
               {!isAll && cfg && <span className={`h-2 w-2 rounded-full ${active ? 'bg-white/70' : cfg.dotColor}`} />}
               {isAll ? 'Todos' : cfg!.label}
               <span className={`text-[11px] font-semibold ${active ? 'text-white/75' : 'text-slate-400'}`}>{count}</span>
@@ -538,19 +1007,19 @@ export function ExpenseTable({ expenses }: Props) {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/70">
                 <th className="py-3 pl-5 pr-3 text-left">
-                  <SortBtn label="Número"    sortKey="number"     active={sortKey==='number'}     onClick={()=>toggleSort('number')}     />
+                  <SortBtn label="Número" sortKey="number" active={sortKey === 'number'} onClick={() => toggleSort('number')} />
                 </th>
                 <th className="py-3 px-3 text-left">
-                  <SortBtn label="Área"      sortKey="department" active={sortKey==='department'} onClick={()=>toggleSort('department')} />
+                  <SortBtn label="Área" sortKey="department" active={sortKey === 'department'} onClick={() => toggleSort('department')} />
                 </th>
                 <th className="py-3 px-3 text-left hidden lg:table-cell">
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Solicitante</span>
                 </th>
                 <th className="py-3 px-3 text-left">
-                  <SortBtn label="Fecha"     sortKey="date"       active={sortKey==='date'}       onClick={()=>toggleSort('date')}       />
+                  <SortBtn label="Fecha" sortKey="date" active={sortKey === 'date'} onClick={() => toggleSort('date')} />
                 </th>
                 <th className="py-3 px-3 text-right">
-                  <SortBtn label="Monto"     sortKey="amount"     active={sortKey==='amount'}     onClick={()=>toggleSort('amount')}     />
+                  <SortBtn label="Monto" sortKey="amount" active={sortKey === 'amount'} onClick={() => toggleSort('amount')} />
                 </th>
                 <th className="py-3 px-3 text-left">
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Estado</span>
@@ -568,8 +1037,10 @@ export function ExpenseTable({ expenses }: Props) {
                     </td>
                   </tr>
                 ) : paged.map((exp, idx) => (
-                  <motion.tr key={exp.id}
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  <motion.tr
+                    key={exp.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.04, duration: 0.2 }}
                     onClick={() => setSelected(exp)}
                     className="group border-b border-slate-50 last:border-0 hover:bg-teal-50/30 cursor-pointer transition-colors"
@@ -595,12 +1066,12 @@ export function ExpenseTable({ expenses }: Props) {
                       </div>
                     </td>
 
-                    {/* Solicitante — columna extra vs facturas */}
+                    {/* Solicitante */}
                     <td className="py-3.5 px-3 hidden lg:table-cell">
                       <div className="flex items-center gap-1.5">
                         <div className="h-6 w-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
                           <span className="text-[9px] font-bold text-slate-500">
-                            {exp.submittedBy.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                            {exp.submittedBy.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </span>
                         </div>
                         <p className="text-[12px] text-slate-600">{exp.submittedBy}</p>
@@ -632,15 +1103,26 @@ export function ExpenseTable({ expenses }: Props) {
                     {/* Acciones */}
                     <td className="py-3.5 pl-3 pr-5">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={e => { e.stopPropagation(); setSelected(exp); }}
+                        <button
+                          onClick={e => { e.stopPropagation(); setSelected(exp); }}
                           className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-teal-100 hover:text-teal-600 transition"
-                          title="Ver detalle"><Eye className="h-3.5 w-3.5" /></button>
-                        <button onClick={e => { e.stopPropagation(); openPdf(expenseToPdfMetadata(exp)); }}
+                          title="Ver detalle"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); openPdf(expenseToPdfMetadata(exp)); }}
                           className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition"
-                          title="Ver soporte"><FileText className="h-3.5 w-3.5" /></button>
-                        <button onClick={e => e.stopPropagation()}
-                          className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition">
-                          <MoreHorizontal className="h-3.5 w-3.5" /></button>
+                          title="Ver soporte"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={e => e.stopPropagation()}
+                          className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition"
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </td>
                   </motion.tr>
@@ -657,25 +1139,38 @@ export function ExpenseTable({ expenses }: Props) {
               {filtered.length} resultado{filtered.length !== 1 ? 's' : ''} · página {page} de {totalPages}
             </p>
             <div className="flex items-center gap-1">
-              <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
-                className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-white hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition">
-                <ChevronLeft className="h-3.5 w-3.5" /></button>
-              {Array.from({ length: totalPages }, (_, i) => i+1).map(n => (
-                <button key={n} onClick={() => setPage(n)}
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-white hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                <button
+                  key={n}
+                  onClick={() => setPage(n)}
                   className={`h-7 w-7 rounded-lg text-[12px] font-medium transition ${
                     n === page ? 'bg-teal-600 text-white shadow-sm' : 'border border-slate-200 text-slate-500 hover:bg-white hover:text-teal-600'
-                  }`}>{n}</button>
+                  }`}
+                >
+                  {n}
+                </button>
               ))}
-              <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}
-                className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-white hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition">
-                <ChevronRight className="h-3.5 w-3.5" /></button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-white hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {selected  && <ExpenseDrawer exp={selected} onClose={() => setSelected(null)} onOpenPdf={openPdf} />}
-      {formOpen  && <RegisterExpensePanel onClose={() => setFormOpen(false)} />}
+      {selected && <ExpenseDrawer exp={selected} onClose={() => setSelected(null)} onOpenPdf={openPdf} />}
+      {formOpen && <RegisterExpensePanel onClose={() => setFormOpen(false)} />}
       <PdfViewerModal open={pdfOpen} onClose={closePdf} metadata={pdfMeta} />
     </>
   );
