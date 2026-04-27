@@ -31,7 +31,7 @@
 //   Monitor de Servidores          → it + admin   (it:view_server_monitor)
 
 import { QuickLinksSection } from "@/app/components/ui/QuickLinksSection";
-import ITDashboardSection from "./ITDashboardSection";
+import { ITDashboardSection } from "./dashboard-section/ITDashboardSection";
 import ServiceStatusCard from "./ServiceStatusCard";
 import ServerMonitorPanel from "./ServerMonitorPanel";
 import ITTicketsCard from "./ITTicketsCard";
