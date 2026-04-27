@@ -28,7 +28,8 @@ import {
   Tag, User, Calendar, ChevronDown,
 } from 'lucide-react';
 import type { StrategicReport, ReportStatus } from '@/lib/graph/departments/finance.service';
-import PdfViewerModal, { type PdfMetadata } from '@/app/components/pdf/PdfViewerModal';
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+import type { PdfMetadata } from "@/app/components/pdf/types";
 
 /* -------------------------------------------------------------------------- */
 /* Configuración                                                               */

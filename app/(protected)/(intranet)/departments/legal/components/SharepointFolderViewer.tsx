@@ -22,7 +22,8 @@ import {
   Upload, Trash2, Pencil, RefreshCw, Plus, AlertTriangle, History,
   CheckCircle2,
 } from "lucide-react";
-import PdfViewerModal, { type PdfMetadata } from "@/app/components/pdf/PdfViewerModal";
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+import type { PdfMetadata } from "@/app/components/pdf/types";
 import type { SharePointDocument }          from "@/types/sharepoint";
 import type { SharePointFolder }            from "../config/legalSharepointFolders";
 import { can, type AccessLevel }            from "@/lib/roles";

@@ -32,7 +32,8 @@ import {
   X, FileText, Send, User, Info, FileEdit,
 } from 'lucide-react';
 import type { Expense, ExpenseStatus, ExpenseCategory, ExpenseDepartment } from '@/lib/graph/departments/finance.service';
-import PdfViewerModal, { type PdfMetadata } from '@/app/components/pdf/PdfViewerModal';
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+import type { PdfMetadata } from "@/app/components/pdf/types";
 
 /* -------------------------------------------------------------------------- */
 /* Configuración                                                               */
