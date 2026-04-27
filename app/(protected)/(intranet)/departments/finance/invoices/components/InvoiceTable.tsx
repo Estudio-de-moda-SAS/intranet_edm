@@ -32,7 +32,8 @@ import {
   X,
 } from 'lucide-react';
 import type { Invoice, InvoiceStatus } from '@/lib/graph/departments/finance.service';
-import PdfViewerModal, { type PdfMetadata } from '@/app/components/pdf/PdfViewerModal';
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+import type { PdfMetadata } from "@/app/components/pdf/types";
 
 /* -------------------------------------------------------------------------- */
 /* Configuración                                                               */

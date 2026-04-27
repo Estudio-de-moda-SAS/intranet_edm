@@ -27,7 +27,7 @@
 // ✅ SERVER COMPONENT — sin "use client"
 
 import type { Metadata }      from "next";
-import { auth }               from "@/auth";
+import { cookies }          from "next/headers";
 import { DEV_SESSION }        from "@/lib/devSession";
 import type { AccessLevel }   from "@/lib/roles";
 import { getRetailData }      from "@/lib/graph/departments/retail.service";
@@ -107,8 +107,8 @@ export default async function RetailHomePage() {
   if (isBypass) {
     accessLevel = DEV_SESSION.user.accessLevel;
   } else {
-    const session = await auth();
-    accessLevel   = session?.user?.accessLevel ?? "employee";
+    const cookieStore = await cookies();
+    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";
   }
 
   /**

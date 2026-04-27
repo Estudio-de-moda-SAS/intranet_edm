@@ -3,158 +3,94 @@
  * Componente cliente que renderiza el encabezado global de la intranet.
  *
  * @remarks
- * Este archivo gestiona la experiencia principal de navegación, incluyendo:
+ * Este archivo gestiona la experiencia principal de navegacion, incluyendo:
  * - Branding corporativo.
- * - Navegación por departamentos.
- * - Búsqueda global.
- * - Menú de usuario.
+ * - Navegacion por departamentos.
+ * - Busqueda global.
+ * - Menu de usuario.
  * - Acceso al chatbot.
- * - Adaptación entre vista móvil y escritorio.
+ * - Adaptacion entre vista movil y escritorio.
  */
 
 'use client';
 
-import { useGlobalSearch } from '@/app/hooks/useGlobalSearch';
-import GlobalSearchResults from '../ui/search/GlobalSearchResults';
-import type { AccessLevel } from '@/lib/roles';
+import { useGlobalSearch }   from '@/app/hooks/useGlobalSearch';
+import GlobalSearchResults   from '../ui/search/GlobalSearchResults';
+import type { AccessLevel }  from '@/lib/roles';
 
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
+import Image       from 'next/image';
+import Link        from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Menu } from 'lucide-react';
 
 import { DEPARTMENTS, BRAND, Department } from '@/config/config';
-import { useDevSession } from '@/lib/useDevSession';
-import UserMenu from './UserMenu';
-import CorporateBot from './chatbot/ChatBot';
+import { useAppSession }  from '@/lib/useAppSession';
+import UserMenu           from './UserMenu';
+import CorporateBot       from './chatbot/ChatBot';
 
-/**
- * Umbral de scroll para contraer el header.
- */
-const SHRINK_AT = 140;
+// -- Constantes ----------------------------------------------------------------
 
-/**
- * Umbral de scroll para expandir nuevamente el header.
- */
-const EXPAND_AT = 60;
-
-/**
- * Configuración compartida de transición para animaciones del header.
- */
+const SHRINK_AT  = 140;
+const EXPAND_AT  = 60;
 const TRANSITION = { duration: 0.3, ease: 'easeInOut' } as const;
-
-/**
- * Usuario vacío usado como fallback cuando no hay sesión.
- */
 const EMPTY_USER = { name: '', role: '', email: '' };
+
+// -- Componente ----------------------------------------------------------------
 
 /**
  * Componente principal del encabezado global.
  *
- * @returns Encabezado responsive con navegación, búsqueda y acciones de usuario.
- *
- * @remarks
- * Flujo general:
- * 1. Obtiene sesión, ruta actual y nivel de acceso.
- * 2. Controla estados de scroll, búsqueda y menú móvil.
- * 3. Gestiona la búsqueda global según permisos.
- * 4. Renderiza versiones diferenciadas para móvil y escritorio.
- * 5. Muestra overlay de búsqueda en móvil cuando corresponde.
+ * @returns Encabezado responsive con navegacion, busqueda y acciones de usuario.
  */
 export default function GlobalHeader() {
-  /**
-   * Indica si existe logo configurado en la marca.
-   */
-  const hasLogo = Boolean((BRAND as any).logoUrl);
-
-  /**
-   * Ruta actual de la aplicación.
-   */
+  const hasLogo  = Boolean((BRAND as any).logoUrl);
   const pathname = usePathname();
 
-  /**
-   * Estado visual del header contraído por scroll.
-   */
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  /**
-   * Estado del buscador móvil.
-   */
-  const [searchOpen, setSearchOpen] = useState(false);
-
-  /**
-   * Estado del menú móvil.
-   */
+  const [isScrolled,    setIsScrolled]    = useState(false);
+  const [searchOpen,    setSearchOpen]    = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  /**
-   * Referencias internas para foco, búsqueda y control de scroll.
-   */
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-  const ticking = useRef(false);
-  const scrolledRef = useRef(false);
-  const stateRef = useRef(false);
-  const lockRef = useRef(false);
+  const searchInputRef      = useRef<HTMLInputElement>(null);
+  const searchContainerRef  = useRef<HTMLDivElement>(null);
+  const ticking             = useRef(false);
+  const scrolledRef         = useRef(false);
+  const stateRef            = useRef(false);
+  const lockRef             = useRef(false);
 
-  /**
-   * Sesión de desarrollo usada para construir el usuario visible.
-   */
-  const devSession = useDevSession();
-  const sessionUser = devSession?.user ?? null;
+  // Reemplaza useDevSession — funciona en bypass y en produccion con MSAL
+  const { user: sessionUser, isLoading } = useAppSession();
 
   /**
    * Usuario adaptado al formato esperado por {@link UserMenu}.
    */
   const user = sessionUser
     ? {
-        name: sessionUser.name ?? 'Usuario',
-        role: (sessionUser as any).role ?? '',
+        name:  sessionUser.name  ?? 'Usuario',
+        role:  sessionUser.role  ?? '',
         email: sessionUser.email ?? '',
-        ...(sessionUser.image && { avatarUrl: sessionUser.image }),
-        ...((sessionUser as any).department && { department: (sessionUser as any).department }),
+        ...(sessionUser.image      && { avatarUrl:   sessionUser.image      }),
+        ...(sessionUser.department && { department:  sessionUser.department }),
       }
     : EMPTY_USER;
 
-  /**
-   * Nivel de acceso actual usado por la búsqueda global.
-   */
-  const accessLevel: AccessLevel = (sessionUser as any)?.accessLevel ?? 'public';
+  const accessLevel: AccessLevel = sessionUser?.accessLevel ?? 'employee';
 
-  /**
-   * Estado y resultados de la búsqueda global.
-   */
   const { query, setQuery, results } = useGlobalSearch(accessLevel);
 
-  /**
-   * Mantiene sincronizado el estado actual de scroll.
-   */
   useEffect(() => { stateRef.current = isScrolled; }, [isScrolled]);
 
-  /**
-   * Al expandirse el header, desplaza suavemente la vista al inicio.
-   */
   useEffect(() => {
     if (!isScrolled) window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [isScrolled]);
 
-  /**
-   * Enfoca el input de búsqueda móvil cuando se abre.
-   */
   useEffect(() => {
     if (searchOpen) setTimeout(() => searchInputRef.current?.focus(), 50);
   }, [searchOpen]);
 
-  /**
-   * Cierra el menú móvil al cambiar de ruta.
-   */
   useEffect(() => { setMobileMenuOpen(false); }, [pathname]);
 
-  /**
-   * Controla el comportamiento del header según el scroll.
-   */
   useEffect(() => {
     const update = () => {
       if (lockRef.current) { ticking.current = false; return; }
@@ -186,9 +122,6 @@ export default function GlobalHeader() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  /**
-   * Limpia la búsqueda al hacer clic fuera del contenedor.
-   */
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -203,9 +136,6 @@ export default function GlobalHeader() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [setQuery]);
 
-  /**
-   * Limpia la búsqueda al presionar Escape.
-   */
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setQuery('');
@@ -215,6 +145,10 @@ export default function GlobalHeader() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [setQuery]);
 
+  // Mientras MSAL resuelve el perfil, no ocultar el UserMenu —
+  // simplemente no renderizarlo aun para evitar flash
+  const showUserMenu = !isLoading && Boolean(user.name);
+
   return (
     <>
       <header
@@ -222,7 +156,7 @@ export default function GlobalHeader() {
         style={{ fontFamily: "'DM Sans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif" }}
       >
 
-        {/* Vista móvil */}
+        {/* Vista movil */}
         <div className={`md:hidden w-full border-b transition-all duration-300 ${
           isScrolled
             ? 'bg-white/95 dark:bg-[#161b22]/95 backdrop-blur-xl border-slate-200 dark:border-[#30363d] shadow-sm dark:shadow-none'
@@ -246,7 +180,7 @@ export default function GlobalHeader() {
               <CorporateBot variant="default" iconOnly />
               <button
                 onClick={() => setSearchOpen(true)}
-                aria-label="Abrir búsqueda"
+                aria-label="Abrir busqueda"
                 className="flex h-8 w-8 items-center justify-center rounded-lg border transition
                            border-slate-200 bg-slate-50 text-slate-500
                            dark:border-[#30363d] dark:bg-[#21262d] dark:text-[#768390]
@@ -255,10 +189,10 @@ export default function GlobalHeader() {
               >
                 <Search className="h-4 w-4" />
               </button>
-              {user.name && <UserMenu user={user} />}
+              {showUserMenu && <UserMenu user={user} />}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label="Menú"
+                aria-label="Menu"
                 className="flex h-8 w-8 items-center justify-center rounded-lg border transition
                            border-slate-200 bg-slate-50 text-slate-500
                            dark:border-[#30363d] dark:bg-[#21262d] dark:text-[#768390]
@@ -394,14 +328,14 @@ export default function GlobalHeader() {
                       />
                     )}
                   </motion.div>
-                  {user.name && <UserMenu user={user} />}
+                  {showUserMenu && <UserMenu user={user} />}
                 </div>
               </motion.div>
             </div>
           </motion.div>
         </div>
 
-        {/* Vista escritorio: barra de navegación */}
+        {/* Vista escritorio: barra de navegacion */}
         <div className={`hidden md:block w-full border-b relative z-10 transition-all duration-300 ${
           isScrolled
             ? 'bg-white/95 dark:bg-[#161b22]/95 backdrop-blur-xl border-slate-100 dark:border-[#21262d]'
@@ -436,7 +370,7 @@ export default function GlobalHeader() {
 
       </header>
 
-      {/* Overlay de búsqueda móvil */}
+      {/* Overlay de busqueda movil */}
       <AnimatePresence>
         {searchOpen && (
           <motion.div
@@ -460,7 +394,7 @@ export default function GlobalHeader() {
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition
                            text-slate-400 dark:text-[#768390]
                            hover:text-slate-700 dark:hover:text-[#e6edf3]"
-                aria-label="Cerrar búsqueda"
+                aria-label="Cerrar busqueda"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -475,7 +409,7 @@ export default function GlobalHeader() {
                 />
               ) : (
                 <p className="mt-6 text-center text-sm text-slate-300 dark:text-[#545d68]">
-                  Escribe para buscar noticias, personas, documentos…
+                  Escribe para buscar noticias, personas, documentos...
                 </p>
               )}
             </div>
@@ -486,22 +420,12 @@ export default function GlobalHeader() {
   );
 }
 
-// ── AreaSelectHeader ──────────────────────────────────────────────────────────
+// -- AreaSelectHeader ----------------------------------------------------------
 
 import { useRouter } from 'next/navigation';
 
-/**
- * Representa una opción de área disponible para navegación rápida.
- */
 export type Area = { id: string; label: string; href: string };
 
-/**
- * Selector auxiliar para navegar a la home de un área.
- *
- * @param props Propiedades del componente.
- * @param props.areas Lista de áreas disponibles.
- * @returns Selector de cambio rápido de área.
- */
 export function AreaSelectHeader({ areas }: { areas: Area[] }) {
   const router = useRouter();
   const [val, setVal] = useState('');
@@ -509,7 +433,7 @@ export function AreaSelectHeader({ areas }: { areas: Area[] }) {
   return (
     <div className="hidden items-center gap-2 sm:flex">
       <span className="text-xs text-slate-500 dark:text-[#768390]">
-        Home de área:
+        Home de area:
       </span>
       <select
         value={val}
@@ -518,14 +442,14 @@ export function AreaSelectHeader({ areas }: { areas: Area[] }) {
           setVal('');
           if (href) router.push(href);
         }}
-        aria-label="Cambiar a home de área"
+        aria-label="Cambiar a home de area"
         className="rounded-lg border px-2 py-1 text-xs transition-colors
                    border-slate-200 bg-white text-slate-700
                    dark:border-[#30363d] dark:bg-[#21262d] dark:text-[#cdd9e5]
                    focus:outline-none focus:ring-2 focus:ring-violet-500/30
                    focus:border-violet-400 dark:focus:border-violet-500/50"
       >
-        <option value="">Selecciona…</option>
+        <option value="">Selecciona...</option>
         {areas.map((a) => (
           <option key={a.id} value={a.href}>
             {a.label}

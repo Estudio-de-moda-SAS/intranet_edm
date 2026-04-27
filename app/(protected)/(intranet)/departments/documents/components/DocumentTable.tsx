@@ -28,7 +28,8 @@ import {
 } from "lucide-react";
 import { CLASSIFICATION_META } from "../config/documentClassification";
 import type { DocumentItem }   from "../config/documentData";
-import PdfViewerModal, { type PdfMetadata } from "@/app/components/pdf/PdfViewerModal";
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+import type { PdfMetadata } from "@/app/components/pdf/types";
 
 /**
  * Configuración visual de estados documentales.

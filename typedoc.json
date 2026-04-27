@@ -42,7 +42,7 @@
     "*"
   ],
   "navigationLinks": {
-    "Intranet EDM": "http://localhost:3000",
+    "Intranet EDM": "http://localhost:5173",
     "Cómo contribuir": "../CONTRIBUTING.md"
   },
   "plugin": [],

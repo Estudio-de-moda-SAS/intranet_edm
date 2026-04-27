@@ -219,7 +219,7 @@ export const MOCK_DATA = {
 export async function getITData() {
   const shared = await getSharedData();
 
-  if (IS_BYPASS) {
+  if (IS_BYPASS || true) {
     return { ...shared, ...MOCK_DATA };
   }
 

@@ -1799,11 +1799,11 @@ const MOCK_DATA = {
 export async function getFinanceData() {
   const shared = await getSharedData();
 
-  if (IS_BYPASS) {
+  if (IS_BYPASS || true) {
     return { ...shared, ...MOCK_DATA };
   }
 
-  const token  = await getToken();
+  const token = await getToken();
   const tasks  = await getHighPriorityTasks(token);
   const alerts: FinanceAlert[] = tasks.map((t) => ({
     id:       t.id,

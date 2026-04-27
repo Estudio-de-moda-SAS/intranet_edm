@@ -22,12 +22,12 @@
 // ✅ SERVER COMPONENT — sin "use client"
 
 import type { Metadata }      from "next";
-import { auth }               from "@/auth";
 import { DEV_SESSION }        from "@/lib/devSession";
 import type { AccessLevel }   from "@/lib/roles";
 import { getFinanceData }     from "@/lib/graph/departments/finance.service";
 import { PageTransition }     from "@/app/components/ui/PageTransition";
 import FinancePageContent     from "./components/FinanceHomePage";
+import { cookies }     from "next/headers";
 
 /**
  * Metadatos de la página del módulo de Finanzas.
@@ -97,8 +97,8 @@ export default async function FinanceHomePage() {
   if (isBypass) {
     accessLevel = DEV_SESSION.user.accessLevel;
   } else {
-    const session = await auth();
-    accessLevel   = session?.user?.accessLevel ?? "employee";
+    const cookieStore = await cookies();
+    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";
   }
 
   // ── Datos ─────────────────────────────────────────────────────

@@ -7,36 +7,46 @@
  * Centraliza dos responsabilidades que todos los services de departamento
  * necesitan antes de consultar Graph:
  *
- * 1. **{@link getToken}** — obtiene el token de acceso delegado desde la
- *    sesión de NextAuth, o retorna un token mock en modo bypass.
- * 2. **{@link getSharedData}** — obtiene el perfil básico del usuario
+ * 1. **{@link getToken}** — obtiene el token de acceso delegado desde el
+ *    header `Authorization` de la request entrante, o retorna un token
+ *    mock en modo bypass.
+ * 2. **{@link getSharedData}** — obtiene el perfil basico del usuario
  *    autenticado desde `/me` en Graph, o retorna {@link MOCK_USER} en
- *    modo bypass.
+ *    modo bypass o mientras Graph no esta habilitado.
  *
- * Ambas funciones son consumidas por `getHomeData` y los services de
- * cada departamento como paso previo a sus propias consultas a Graph.
+ * **Modelo de seguridad con MSAL:**
+ * El servidor nunca almacena ni genera tokens de Graph. El cliente obtiene
+ * el token con MSAL y lo envia en el header `Authorization: Bearer` de
+ * cada llamada al Route Handler correspondiente. El servidor actua
+ * exclusivamente como proxy autenticado hacia Graph.
+ *
+ * **Activar Graph real:**
+ * Cuando los Route Handlers de cada departamento esten implementados
+ * y el cliente envie el token via header, cambiar la condicion de
+ * `getSharedData` de `|| true` a la logica de Route Handler correspondiente.
  *
  * @example
  * ```ts
- * // En cualquier service de departamento:
- * const shared = await getSharedData();
- * const token  = await getToken();
- *
- * const data = await callGraph<MiTipo>("/me/...", token);
- * return { user: shared.user, ...data };
+ * // En un Route Handler que recibe el token del cliente:
+ * export async function GET() {
+ *   const token = await getToken();
+ *   const data  = await callGraph<MiTipo>("/me/...", token);
+ *   return Response.json(data);
+ * }
  * ```
  */
 
-import type { Session } from "next-auth";
-import { callGraph }    from "@/lib/graph/graphClient";
+import { callGraph } from "@/lib/graph/graphClient";
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+// -- Flags --------------------------------------------------------------------
+
+/** `true` cuando el bypass de autenticacion esta activo. */
+const IS_BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
+
+// -- Tipos --------------------------------------------------------------------
 
 /**
- * Subconjunto del perfil de usuario devuelto por `/v1.0/me` en Graph,
- * limitado a los campos necesarios para construir el objeto `user` compartido
- * entre services.
- *
+ * Subconjunto del perfil de usuario devuelto por `/v1.0/me` en Graph.
  * @internal
  */
 type GraphProfileBasic = {
@@ -48,100 +58,78 @@ type GraphProfileBasic = {
   officeLocation?: string | null;
 };
 
-// ── Mock ──────────────────────────────────────────────────────────────────────
+// -- Mock ---------------------------------------------------------------------
 
 /**
- * Perfil de usuario mock usado en modo bypass para desarrollo local.
- *
- * @remarks
- * Simula la estructura que devuelve {@link getSharedData} en producción,
- * permitiendo que los services de departamento funcionen sin depender de
- * Microsoft Graph ni de una sesión activa de Entra ID.
- *
+ * Perfil de usuario mock usado en modo bypass y mientras Graph no esta activo.
  * @internal
  */
 const MOCK_USER = {
-  name:     "Juan Esteban Avendaño Gomez",
+  name:     "Juan Esteban Avendano Gomez",
   role:     "Aprendiz TI 2",
-  location: "Medellín",
+  location: "Medellin",
   email:    "juanesteban@empresa.com",
   id:       "mock-user-id",
 };
 
-// ── Token ─────────────────────────────────────────────────────────────────────
+// -- Token --------------------------------------------------------------------
 
 /**
- * Obtiene el token de acceso delegado para Microsoft Graph desde la sesión
- * activa de NextAuth.
+ * Obtiene el token de acceso delegado para Microsoft Graph desde el
+ * header `Authorization` de la request entrante.
  *
  * @remarks
- * En modo bypass (`NEXT_PUBLIC_AUTH_BYPASS === "true"`), retorna el literal
- * `"mock-token"` sin realizar ninguna llamada a NextAuth, permitiendo el
- * desarrollo local sin autenticación con Entra ID.
+ * En modo bypass retorna `"mock-token"` sin leer headers.
  *
- * En producción, `auth()` se importa dinámicamente para evitar que se
- * ejecute en el cliente — `auth()` es exclusivo de Server Components y
- * Route Handlers. El campo `accessToken` está tipado sin `as any` gracias
- * a la declaración de módulo en `types/next-auth.d.ts`.
+ * En produccion, lee el header `Authorization: Bearer {token}` que el
+ * cliente envia con cada llamada al Route Handler. El token lo obtiene
+ * el cliente con MSAL — el servidor nunca lo genera ni lo almacena.
  *
- * @returns Token de acceso delegado listo para usar como header
- *   `Authorization: Bearer {token}` en llamadas a Graph.
- * @throws `Error` si no hay sesión activa o el token no está disponible
- *   en los claims de la sesión.
- *
- * @example
- * ```ts
- * const token = await getToken();
- * const profile = await callGraph<GraphProfileBasic>("/me", token);
- * ```
+ * @returns Token de acceso delegado.
+ * @throws Si el header no esta presente o tiene formato invalido.
  */
 export async function getToken(): Promise<string> {
-  if (process.env.NEXT_PUBLIC_AUTH_BYPASS === "true") {
-    return "mock-token";
+  if (IS_BYPASS) return "mock-token";
+
+  const { headers }   = await import("next/headers");
+  const headerStore   = await headers();
+  const authorization = headerStore.get("authorization");
+
+  if (!authorization?.startsWith("Bearer ")) {
+    throw new Error("No access token — header Authorization ausente o invalido");
   }
 
-  const { auth } = await import("@/auth");
-  const session  = await auth() as Session | null;
-
-  const token = session?.accessToken;
-  if (!token) throw new Error("No access token — usuario no autenticado");
-
-  return token;
+  return authorization.slice("Bearer ".length);
 }
 
-// ── Datos compartidos ─────────────────────────────────────────────────────────
+// -- Datos compartidos --------------------------------------------------------
 
 /**
- * Obtiene el perfil básico del usuario autenticado desde Microsoft Graph,
+ * Obtiene el perfil basico del usuario autenticado desde Microsoft Graph,
  * normalizado a la estructura compartida entre todos los services de
  * departamento.
  *
  * @remarks
- * Consulta `/me` en Graph seleccionando únicamente los campos necesarios
- * para construir el objeto `user` que acompaña todas las respuestas de
- * los services: `displayName`, `jobTitle`, `department`, `mail`, `id` y
- * `officeLocation`.
+ * **Modo bypass** (`NEXT_PUBLIC_AUTH_BYPASS=true`):
+ * Retorna {@link MOCK_USER} directamente sin llamar a Graph.
  *
- * En modo bypass retorna {@link MOCK_USER} directamente, sin llamar a
- * {@link getToken} ni a Graph.
+ * **Produccion sin Route Handlers** (estado actual):
+ * Retorna {@link MOCK_USER} directamente. El `|| true` de la condicion
+ * garantiza que nunca se llame a `getToken()` desde un Server Component
+ * donde no hay header `Authorization`. Cuando los Route Handlers esten
+ * implementados, reemplazar `|| true` por la logica correspondiente.
  *
- * Los valores `null` o `undefined` en el perfil de Graph se normalizan a
- * strings vacíos o al literal `"Usuario"` para `name`, garantizando que
- * el objeto retornado nunca tenga campos indefinidos.
+ * **Produccion con Route Handlers activos:**
+ * Consulta `/me` en Graph y retorna el perfil real del colaborador.
  *
- * @returns Objeto con la propiedad `user` que contiene el perfil
- *   normalizado del colaborador autenticado.
- *
- * @example
- * ```ts
- * const { user } = await getSharedData();
- * // user.name     → "Juan Esteban Avendaño Gomez"
- * // user.role     → "Aprendiz TI 2"
- * // user.location → "Medellín"
- * ```
+ * @returns Objeto con la propiedad `user` con el perfil del colaborador.
  */
 export async function getSharedData() {
-  if (process.env.NEXT_PUBLIC_AUTH_BYPASS === "true") {
+  // || true mantiene mock en produccion hasta que los Route Handlers
+  // de cada departamento esten implementados y pasen el token via header.
+  // Para activar Graph real: eliminar "|| true" y asegurarse de que
+  // esta funcion solo se llama desde Route Handlers, no Server Components.
+  if (IS_BYPASS || true) {
     return { user: MOCK_USER };
   }
 
@@ -162,15 +150,10 @@ export async function getSharedData() {
   };
 }
 
-// ── Tipos exportados ──────────────────────────────────────────────────────────
+// -- Tipos exportados ---------------------------------------------------------
 
 /**
  * Tipo inferido del valor resuelto por {@link getSharedData}.
- *
- * @remarks
- * Útil para tipar el parámetro `shared` en services que reciben el resultado
- * de `getSharedData` como argumento, evitando duplicar la definición del
- * tipo de retorno.
  *
  * @example
  * ```ts
