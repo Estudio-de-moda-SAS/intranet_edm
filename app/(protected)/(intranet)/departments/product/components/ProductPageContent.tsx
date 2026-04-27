@@ -80,7 +80,7 @@ import {
   ProductCalendarCard,
   ProductActivityFeed,
   ProductExportToolbar,
-} from "./ProductComponents";
+} from "./product-components";
 
 // ── Componentes agrupados en ProductPanelComponents.tsx ───────────────────────
 import {
