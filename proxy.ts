@@ -196,7 +196,6 @@ export default function proxy(req: NextRequest): NextResponse {
   // ── 1. Rutas públicas ──────────────────────────────────────────────────
   const isPublic =
     pathname.startsWith("/login")        ||
-    pathname.startsWith("/auth/callback") ||
     pathname.startsWith("/unauthorized") ||
     pathname.startsWith("/api")          ||
     pathname.startsWith("/_next")        ||
