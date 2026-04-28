@@ -57,7 +57,7 @@ export const msal = new PublicClientApplication({
   auth: {
     clientId:    CLIENT_ID,
     authority:   `https://login.microsoftonline.com/${TENANT_ID}`,
-    redirectUri: "https://localhost:5273/",
+    redirectUri: "https://intranet-edm.netlify.app/",
   },
   cache: {
     cacheLocation: "localStorage",
