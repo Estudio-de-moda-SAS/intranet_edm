@@ -137,6 +137,12 @@ export const DEPARTMENTS: Department[] = [
     href:  "/departments/documents",
     show:  false,
   },
+  {
+  id: "ticket-systems",
+  label: "Tickets",
+  href: "/departments/ticket-systems",
+  show: true,
+},
 ];
 
 // ── Marca ─────────────────────────────────────────────────────────────────────
