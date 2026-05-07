@@ -1,3 +1,5 @@
+"use client";
+
 import { TicketSystemCard } from "./components/TicketSystemCard";
 import { TICKET_SYSTEMS } from "./config/ticketSystems.config";
 import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHeroBanner";
@@ -5,7 +7,6 @@ import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHer
 export function TicketSystemsPageContent() {
   return (
     <main className="space-y-6">
-      {/* Banner reutilizable */}
       <DepartmentHeroBanner
         breadcrumb="Departamentos · Tickets"
         title="Sistemas de Tickets"
@@ -26,27 +27,22 @@ export function TicketSystemsPageContent() {
         ]}
       />
 
-      {/* Contenido */}
       <section className="px-6 pt-10 pb-12 lg:px-14">
         <div className="mx-auto max-w-6xl">
-          
-          {/* Header de sección */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-slate-900">
               Plataformas disponibles
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Selecciona el sistema al que necesitas acceder.
+              Elige el sistema donde quieres crear o consultar tickets.
             </p>
           </div>
 
-          {/* Grid de sistemas */}
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {TICKET_SYSTEMS.map((system) => (
               <TicketSystemCard key={system.id} system={system} />
             ))}
           </div>
-
         </div>
       </section>
     </main>
