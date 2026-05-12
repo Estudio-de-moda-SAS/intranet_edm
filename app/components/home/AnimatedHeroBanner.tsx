@@ -117,10 +117,7 @@ export function AnimatedHeroBanner({ user }: Props) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="relative border-b
-                 border-violet-100/80
-                 dark:border-violet-500/15"
-      style={{ width: "100vw", marginLeft: "calc(50% - 50vw)", marginTop: 0 }}
+className="relative border-b border-violet-100/80 dark:border-violet-500/15"
     >
       {/* Fondo decorativo */}
       <div className="absolute inset-0 overflow-hidden rounded-none">

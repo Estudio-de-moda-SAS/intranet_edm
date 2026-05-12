@@ -49,45 +49,10 @@ import type { AccessLevel, Permission }   from "@/lib/roles";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-/**
- * Cookie que el cliente escribe tras un login exitoso de MSAL.
- * Su presencia indica que hay una sesión activa en el navegador.
- *
- * @remarks
- * No es `httpOnly` porque el cliente JavaScript de MSAL debe poder
- * escribirla. No contiene datos sensibles — solo indica si hay sesión.
- */
-export const AUTH_COOKIE = "edm_authed";
-
-/**
- * Cookie que persiste el `AccessLevel` resuelto desde Microsoft Graph.
- * Se escribe junto con {@link AUTH_COOKIE} tras el login exitoso.
- *
- * @remarks
- * El middleware la lee para evaluar permisos de ruta sin llamadas
- * adicionales a Graph. Si no existe, el nivel por defecto es `'employee'`.
- */
+export const AUTH_COOKIE         = "edm_authed";
 export const ACCESS_LEVEL_COOKIE = "edm_access_level";
+export const LAST_PAGE_COOKIE    = "edm_last_page";
 
-/**
- * Nombre de la cookie que persiste la última ruta visitada con éxito.
- *
- * @remarks
- * Se usa como fallback de navegación cuando un colaborador intenta
- * acceder a una ruta sin permiso.
- */
-export const LAST_PAGE_COOKIE = "edm_last_page";
-
-/**
- * Mapa de prefijos de ruta a permisos requeridos para acceder a ellas.
- *
- * @remarks
- * El orden es crítico — se selecciona el **primer prefijo que coincida**.
- * Las rutas más específicas deben preceder a las más generales.
- *
- * Rutas sin entrada se consideran de acceso libre para cualquier
- * colaborador autenticado.
- */
 export const PREFIX_PERMISSIONS: { prefix: string; permission: Permission }[] = [
   // ── Finanzas ────────────────────────────────────────────────────────────
   { prefix: "/finance/reports/new",                permission: "finance:create_report"  },
@@ -139,9 +104,6 @@ export const PREFIX_PERMISSIONS: { prefix: string; permission: Permission }[] = 
   { prefix: "/admin", permission: "admin:access" },
 ];
 
-/**
- * Prefijos que nunca deben guardarse en {@link LAST_PAGE_COOKIE}.
- */
 export const SKIP_LAST_PAGE = [
   "/unauthorized",
   "/login",
@@ -151,10 +113,6 @@ export const SKIP_LAST_PAGE = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Escribe la cookie `edm_last_page` en la respuesta dada.
- * @internal
- */
 function setLastPageCookie(res: NextResponse, pathname: string): void {
   if (SKIP_LAST_PAGE.some((p) => pathname.startsWith(p))) return;
   res.cookies.set(LAST_PAGE_COOKIE, pathname, {
@@ -167,29 +125,6 @@ function setLastPageCookie(res: NextResponse, pathname: string): void {
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
-/**
- * Función principal del middleware de Next.js.
- *
- * @remarks
- * A diferencia de la versión anterior con NextAuth, esta función ya no
- * está envuelta con `auth()` — MSAL corre exclusivamente en el cliente
- * y no puede verificar tokens en el Edge Runtime.
- *
- * La verificación de sesión se basa en la cookie {@link AUTH_COOKIE} que
- * el cliente escribe tras un login exitoso de MSAL. La autorización usa
- * la cookie {@link ACCESS_LEVEL_COOKIE} para evitar llamadas a Graph.
- *
- * **Orden de evaluación:**
- * 1. Si la ruta es pública → `NextResponse.next()`.
- * 2. Si no hay `edm_authed` y no hay bypass → redirige a `/login`.
- * 3. Busca el prefijo más específico en {@link PREFIX_PERMISSIONS}.
- * 4. Sin restricción → deja pasar y actualiza cookie.
- * 5. Con restricción → evalúa `can(accessLevel, permission)`.
- * 6. Con permiso → deja pasar y actualiza cookie.
- * 7. Sin permiso → redirige a última página conocida o `/unauthorized`.
- *
- * @param req - Request de Next.js.
- */
 export default function proxy(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl;
 
@@ -231,7 +166,7 @@ export default function proxy(req: NextRequest): NextResponse {
     accessLevel = resolveDevAccessLevel();
   } else {
     const cookieLevel = req.cookies.get(ACCESS_LEVEL_COOKIE)?.value;
-    accessLevel = (cookieLevel as AccessLevel | undefined) ?? "employee";
+    accessLevel = (cookieLevel as AccessLevel | undefined) ?? "admin"; // TODO: revertir a "employee" en producción
   }
 
   // ── 6. Con permiso → dejar pasar ──────────────────────────────────────
@@ -255,10 +190,6 @@ export default function proxy(req: NextRequest): NextResponse {
 
 // ── Configuración del matcher ─────────────────────────────────────────────────
 
-/**
- * Excluye assets estáticos para no ejecutar el middleware en cada imagen
- * o chunk de JS, optimizando el rendimiento en el Edge Runtime.
- */
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

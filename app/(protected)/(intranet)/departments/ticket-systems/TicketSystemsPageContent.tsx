@@ -7,7 +7,6 @@ export function TicketSystemsPageContent() {
     <main className="space-y-6">
       {/* Banner reutilizable */}
       <DepartmentHeroBanner
-        breadcrumb="Departamentos · Tickets"
         title="Sistemas de Tickets"
         subtitle="Accede de forma centralizada a las plataformas de tickets habilitadas por la compañía."
         gradientFrom="from-slate-900"

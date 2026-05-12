@@ -19,12 +19,10 @@
 // ✅ SERVER COMPONENT
 
 import type { Metadata } from "next";
-import { cookies }          from "next/headers";
-import { DEV_SESSION } from "@/lib/devSession";
-import type { AccessLevel } from "@/lib/roles";
 import { getLegalData } from "@/lib/graph/departments/legal.service";
 import { PageTransition } from "@/app/components/ui/PageTransition";
 import LegalHomePage from "./components/LegalHomePage";
+import { getServerAccessLevel } from "@/lib/getServerAccessLevel";
 
 /**
  * Metadata estática de la página del departamento jurídico.
@@ -46,15 +44,6 @@ export const metadata: Metadata = {
  * relativamente actualizada sin perder beneficios de rendimiento.
  */
 export const revalidate = 300;
-
-/**
- * Indica si la autenticación debe ser omitida en entorno de desarrollo.
- *
- * @remarks
- * Cuando esta bandera está habilitada, el nivel de acceso del usuario
- * se obtiene desde la sesión simulada de desarrollo.
- */
-const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
 /**
  * Página principal del módulo legal.
@@ -81,16 +70,7 @@ export default async function LegalPage() {
    * Se resuelve a partir de la sesión real o de la sesión simulada
    * según el entorno de ejecución.
    */
-  let accessLevel: AccessLevel;
-
-  // ── Resolver nivel de acceso ──────────────────────────────────
-  if (isBypass) {
-    accessLevel = DEV_SESSION.user.accessLevel;
-  } else {
-    const cookieStore = await cookies();
-    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";
-  }
-  // ── Datos ─────────────────────────────────────────────────────
+const accessLevel = await getServerAccessLevel();  // ── Datos ─────────────────────────────────────────────────────
   const data = await getLegalData();
 
   return (

@@ -27,10 +27,11 @@
 
 "use client";
 
-import { useMsal }                            from "@azure/msal-react";
-import { useGraphProfile }                    from "./useGraphProfile";
-import { DEV_SESSION }                        from "./devSession";
-import { can as canFn }                       from "./roles";
+import { useMsal }                               from "@azure/msal-react";
+import { useGraphProfile }                       from "./useGraphProfile";
+import { DEV_SESSION }                           from "./devSession";
+import { can as canFn }                          from "./roles";
+import { DEV_DISABLE_ROLES }                     from "@/config/config";
 import type { AccessLevel, AppUser, Permission } from "./roles";
 
 const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
@@ -102,8 +103,11 @@ export interface AppSession {
  * @remarks
  * **Modo bypass** (`NEXT_PUBLIC_AUTH_BYPASS === "true"`):
  * Retorna {@link DEV_SESSION} directamente sin invocar MSAL ni Graph.
- * Permite simular cualquier nivel de acceso en desarrollo modificando
- * `devSession.ts`, sin depender de Microsoft Entra ID.
+ *
+ * **Roles desactivados** (`DEV_DISABLE_ROLES === true`):
+ * En cuanto MSAL confirma que hay sesión activa, devuelve `admin` sin
+ * esperar a que Graph resuelva — la query está desactivada en este modo.
+ * Para restaurar: `DEV_DISABLE_ROLES = false` en `config/config.ts`.
  *
  * **Modo producción**:
  * Usa {@link useGraphProfile} para obtener el perfil desde Graph con el
@@ -117,18 +121,6 @@ export interface AppSession {
  *
  * @returns Objeto {@link AppSession} con el usuario resuelto, nivel de
  *   acceso, función `can` y estados de carga y autenticación.
- *
- * @example
- * ```tsx
- * export default function FinancePanel() {
- *   const { user, can, isLoading } = useAppSession();
- *
- *   if (isLoading) return <Spinner />;
- *   if (!can('finance:view_dashboard')) return <Unauthorized />;
- *
- *   return <Dashboard user={user!} />;
- * }
- * ```
  */
 export function useAppSession(): AppSession {
 
@@ -154,7 +146,7 @@ export function useAppSession(): AppSession {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data, isLoading } = useGraphProfile();
 
-  // Sin sesión MSAL → estado no autenticado
+  // Sin sesión MSAL → no autenticado
   if (!hasMsalSession) {
     return {
       user:      null,
@@ -165,7 +157,31 @@ export function useAppSession(): AppSession {
     };
   }
 
-  // MSAL tiene sesión pero Graph aún está resolviendo
+  // Roles desactivados → hay sesión MSAL, no hace falta esperar a Graph.
+  // useGraphProfile tiene la query desactivada en este modo, data nunca llega.
+  // Para restaurar: DEV_DISABLE_ROLES = false en config/config.ts
+  if (DEV_DISABLE_ROLES) {
+    const account = accounts[0];
+    const base    = DEV_SESSION.user as AppUser;
+    const user: AppUser = {
+      ...base,
+      accessLevel: "admin",
+      ...(account && {
+        id:    account.localAccountId,
+        name:  account.name     ?? base.name,
+        email: account.username ?? base.email,
+      }),
+    };
+    return {
+      user,
+      level:     "admin",
+      can:       () => true,
+      isLoading: false,
+      isAuthed:  true,
+    };
+  }
+
+  // Graph aún está resolviendo
   if (isLoading || !data) {
     return {
       user:      null,

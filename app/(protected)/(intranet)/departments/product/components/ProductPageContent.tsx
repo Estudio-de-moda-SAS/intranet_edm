@@ -402,7 +402,6 @@ export default function ProductPageContent({ accessLevel }: Props) {
 
       {/* ── Hero — todos ──────────────────────────────────────────── */}
       <DepartmentHeroBanner
-        breadcrumb="Departamentos · Producto"
         title="Desarrollo de Producto"
         subtitle="Colecciones, fichas técnicas y seguimiento de muestras en tiempo real."
         imageSrc="/images/product-banner.jpg"
@@ -417,7 +416,7 @@ export default function ProductPageContent({ accessLevel }: Props) {
         ctaLinks={ctaLinks}
       />
 
-      <div className="px-4 pb-10 lg:px-14">
+<div className="px-6 pb-10">
 
         {/* ── Comunicados — todos ───────────────────────────────────── */}
         <ProductAnnouncementBanner className="-mt-2" />

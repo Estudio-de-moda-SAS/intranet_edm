@@ -303,7 +303,6 @@ export default function FinancePageContent({ accessLevel }: Props) {
     >
       {/* ── Hero — todos ──────────────────────────────────────────── */}
       <DepartmentHeroBanner
-        breadcrumb="Departamentos · Finanzas"
         title="Gestión Financiera"
         subtitle="Control presupuestario, reportes y seguimiento operativo en tiempo real."
         imageSrc="/images/finance-banner.jpg"
@@ -318,7 +317,7 @@ export default function FinancePageContent({ accessLevel }: Props) {
         ctaLinks={ctaLinks}
       />
 
-      <div className="px-4 pb-10 lg:px-14">
+<div className="px-6 pb-10">
         {/* ── Comunicados — todos ────────────────────────────────── */}
         <FinanceAnnouncementBanner className="-mt-2" />
 

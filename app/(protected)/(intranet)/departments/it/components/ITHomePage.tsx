@@ -176,7 +176,6 @@ export default function ITPageContent({ data, accessLevel }: Props) {
     >
       {/* ── HERO — todos ──────────────────────────────────────────── */}
       <DepartmentHeroBanner
-        breadcrumb="Departamentos · TI"
         title="Tecnología de la Información"
         subtitle="Monitoreo de infraestructura, gestión de sistemas y soporte técnico en tiempo real."
         imageSrc="/images/it-banner.jpg"
@@ -191,7 +190,7 @@ export default function ITPageContent({ data, accessLevel }: Props) {
         actions={<ITTicketController />}
       />
 
-      <div className="px-4 pb-10 lg:px-14">
+<div className="px-6 pb-10">
         {/* ── KPI STRIP — manager+ ──────────────────────────────────── */}
         {showKPIs && <ITKPIStrip />}
 

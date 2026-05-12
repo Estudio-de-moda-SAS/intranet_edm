@@ -21,12 +21,11 @@
  // ✅ SERVER COMPONENT — sin "use client"
 
 import type { Metadata }    from "next";
-import { cookies }     from "next/headers";
 import { DEV_SESSION }      from "@/lib/devSession";
-import type { AccessLevel } from "@/lib/roles";
 import { getAdminData }     from "@/lib/graph/departments/administrative.service";
 import { PageTransition }   from "@/app/components/ui/PageTransition";
 import AdminHomePage        from "./components/AdminHomePage";
+import { getServerAccessLevel } from "@/lib/getServerAccessLevel";
 
 /**
  * Metadatos de la página para SEO y configuración de la vista.
@@ -44,13 +43,6 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 /**
- * Indica si el sistema está en modo bypass de autenticación.
- *
- * Cuando está activo, se utiliza {@link DEV_SESSION} en lugar de la sesión real.
- */
-const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
-
-/**
  * Componente principal del módulo de Servicios Administrativos.
  *
  * @returns Página renderizada con los datos administrativos y el nivel de acceso del usuario.
@@ -65,14 +57,7 @@ const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
  */
 export default async function AdministrativePage() {
 
-  let accessLevel: AccessLevel;
-
-  if (isBypass) {
-    accessLevel = DEV_SESSION.user.accessLevel;
-  } else {
-    const cookieStore = await cookies();
-    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";  }
-
+const accessLevel = await getServerAccessLevel();
   /**
    * Datos del módulo de Servicios Administrativos obtenidos desde la API.
    */

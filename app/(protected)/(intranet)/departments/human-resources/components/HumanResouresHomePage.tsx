@@ -260,7 +260,6 @@ export default function HRPageContent({ accessLevel }: Props) {
     >
       {/* ── HERO — todos ──────────────────────────────────────────── */}
       <DepartmentHeroBanner
-        breadcrumb="Departamentos · RRHH"
         title="Recursos Humanos"
         subtitle="Gestión del talento, bienestar organizacional y desarrollo de personas."
         imageSrc="/images/hr-banner.jpg"
@@ -296,7 +295,7 @@ export default function HRPageContent({ accessLevel }: Props) {
         ]}
       />
 
-      <div className="px-4 pb-10 lg:px-14">
+<div className="px-6 pb-10">
         {/* ── KPI STRIP — manager+ ──────────────────────────────────── */}
         {showKPIs && <HRKPIStrip />}
 
