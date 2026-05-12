@@ -45,7 +45,7 @@ export type Department = {
   /**
    * Nombre display del departamento tal como aparece en la UI
    * (ej. `"Finanzas"`, `"TI"`, `"Servicios Administrativos"`).
-* Se usa como valor de `AnnouncementCategory` en
+   * Se usa como valor de `AnnouncementCategory` en
    * `types/announcement.ts`.
    */
   label: string;
@@ -63,6 +63,31 @@ export type Department = {
    */
   show: boolean;
 };
+
+// ── Flags de desarrollo ───────────────────────────────────────────────────────
+
+/**
+ * Desactiva el sistema de roles durante el desarrollo, otorgando nivel
+ * `'admin'` a cualquier usuario autenticado.
+ *
+ * Cuando es `true`:
+ * - El middleware (`proxy.ts`) omite la verificación de permisos por ruta.
+ * - El hook `useAppSession` devuelve `level: 'admin'` y `can()` siempre `true`.
+ *
+ * @remarks
+ * Para restaurar el sistema de roles en producción, eliminar esta
+ * constante o asignarle `false`. No requiere cambios en ningún otro archivo.
+ *
+ * @example
+ * ```ts
+ * // Activado — roles desactivados, todos ven todo:
+ * export const DEV_DISABLE_ROLES = true;
+ *
+ * // Desactivado — comportamiento real de producción:
+ * export const DEV_DISABLE_ROLES = false;
+ * ```
+ */
+export const DEV_DISABLE_ROLES = true; // TODO: asignar false antes de producción
 
 // ── Departamentos ─────────────────────────────────────────────────────────────
 
@@ -138,11 +163,17 @@ export const DEPARTMENTS: Department[] = [
     show:  false,
   },
   {
-  id: "ticket-systems",
-  label: "Tickets",
-  href: "/departments/ticket-systems",
-  show: true,
-},
+    id:    "ticket-systems",
+    label: "Tickets",
+    href:  "/departments/ticket-systems",
+    show:  true,
+  },
+  {
+    id:    "tableros",
+    label: "Tableros",
+    href:  "/departments/boards",
+    show:  false,
+  },
 ];
 
 // ── Marca ─────────────────────────────────────────────────────────────────────

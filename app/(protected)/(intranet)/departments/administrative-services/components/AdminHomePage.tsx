@@ -153,7 +153,6 @@ export default function AdminHomePage({ data, accessLevel }: Props) {
     >
       {/* ── HERO — todos ──────────────────────────────────────────── */}
       <DepartmentHeroBanner
-        breadcrumb="Departamentos · Servicios Administrativos"
         title="Servicios Administrativos"
         subtitle="Recepción, control de accesos, registro de visitantes y reserva de espacios."
         imageSrc="/images/admin-banner.jpg"
@@ -168,7 +167,7 @@ export default function AdminHomePage({ data, accessLevel }: Props) {
         actions={<AdminHeroActions />}
       />
 
-      <div className="px-4 pb-10 lg:px-14">
+<div className="px-6 pb-10">
 
         {/* ── KPI STRIP — todos ─────────────────────────────────────── */}
         <AdminKPIStrip />

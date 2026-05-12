@@ -90,7 +90,6 @@ export default async function LegalHomePage({ data, accessLevel }: Props) {
       }}
     >
       <DepartmentHeroBanner
-        breadcrumb="Departamentos · Jurídico"
         title="Área Jurídica"
         subtitle="Gestión documental, contratos, litigios, cumplimiento normativo y asesoría legal corporativa."
         imageSrc="/images/legal-banner.jpg"

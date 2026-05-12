@@ -19,12 +19,10 @@
  */
 
 import type { Metadata }      from "next";
-import { cookies }          from "next/headers";
-import { DEV_SESSION }        from "@/lib/devSession";
-import type { AccessLevel }   from "@/lib/roles";
 import { getProductData }     from "@/lib/graph/departments/product.service";
 import { PageTransition }     from "@/app/components/ui/PageTransition";
 import ProductPageContent     from "./components/ProductPageContent";
+import { getServerAccessLevel } from "@/lib/getServerAccessLevel";
 
 /**
  * Metadatos de la página para SEO y configuración del documento.
@@ -37,17 +35,6 @@ export const metadata: Metadata = {
   title: "Producto · EDM",
   description: "Colecciones, fichas técnicas, muestras y lanzamientos de Estudio de Moda SAS.",
 };
-
-/**
- * Indicador de bypass de autenticación.
- *
- * @remarks
- * Cuando está activo (`true`), permite simular una sesión sin necesidad
- * de autenticación real, usando datos definidos en `DEV_SESSION`.
- *
- * Usado principalmente en entornos de desarrollo.
- */
-const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
 /**
  * Página principal del módulo de Producto.
@@ -81,15 +68,7 @@ export default async function ProductHomePage() {
    * Define los permisos para visualizar o interactuar con
    * el contenido del módulo.
    */
-  let accessLevel: AccessLevel;
-
-  if (isBypass) {
-    accessLevel = DEV_SESSION.user.accessLevel;
-  } else {
-    const cookieStore = await cookies();
-    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";
-  }
-  // ── Datos ─────────────────────────────────────────────────────
+const accessLevel = await getServerAccessLevel();  // ── Datos ─────────────────────────────────────────────────────
 
   /**
    * Datos del módulo de producto.

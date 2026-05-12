@@ -15,12 +15,10 @@
 // ✅ SERVER COMPONENT — sin "use client"
 
 import type { Metadata } from "next";
-import { cookies }          from "next/headers";
-import { DEV_SESSION } from "@/lib/devSession";
-import type { AccessLevel } from "@/lib/roles";
 import { getITData } from "@/lib/graph/departments/it.service";
 import { PageTransition } from "@/app/components/ui/PageTransition";
 import ITPageContent from "./components/ITHomePage";
+import { getServerAccessLevel } from "@/lib/getServerAccessLevel";
 
 /**
  * Metadatos de la página de TI.
@@ -40,15 +38,6 @@ export const metadata: Metadata = {
  * La página se regenera cada 120 segundos.
  */
 export const revalidate = 120;
-
-/**
- * Flag de bypass de autenticación.
- *
- * @remarks
- * Permite simular sesión de usuario en entornos de desarrollo
- * usando `DEV_SESSION` en lugar de {@link auth}.
- */
-const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
 /**
  * Página principal del módulo de Tecnología (TI).
@@ -75,15 +64,7 @@ const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
  * ```
  */
 export default async function ITHomePage() {
-  let accessLevel: AccessLevel;
-
-  if (isBypass) {
-    accessLevel = DEV_SESSION.user.accessLevel;
-  } else {
-    const cookieStore = await cookies();
-    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";
-  }
-
+const accessLevel = await getServerAccessLevel();
   /**
    * Datos del módulo TI obtenidos desde el servicio.
    */

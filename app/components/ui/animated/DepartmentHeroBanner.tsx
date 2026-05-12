@@ -58,11 +58,6 @@ type CtaLink = {
  */
 export interface DepartmentHeroBannerProps {
   /**
-   * Texto superior de contexto o breadcrumb.
-   */
-  breadcrumb: string;
-
-  /**
    * Título principal del banner.
    */
   title: string;
@@ -160,7 +155,6 @@ const instant: Variants = {
  * 6. Si existen, renderiza acciones y CTA en escritorio.
  */
 export function DepartmentHeroBanner({
-  breadcrumb,
   title,
   subtitle,
   imageSrc,
@@ -228,12 +222,6 @@ export function DepartmentHeroBanner({
           className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
         >
           <div className="flex flex-col gap-3 max-w-2xl">
-            <div>
-              <span className="rounded-full border border-white/20 bg-white/10 px-3 py-0.5 text-[11px] font-semibold uppercase tracking-widest text-white/60 backdrop-blur-sm">
-                {breadcrumb}
-              </span>
-            </div>
-
             <h1 className="text-3xl font-bold text-white tracking-tight leading-tight lg:text-4xl">
               {title}
             </h1>

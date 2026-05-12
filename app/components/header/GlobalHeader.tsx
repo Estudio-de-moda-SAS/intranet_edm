@@ -28,7 +28,6 @@ import { Search, X, Menu } from 'lucide-react';
 import { DEPARTMENTS, BRAND, Department } from '@/config/config';
 import { useAppSession }  from '@/lib/useAppSession';
 import UserMenu           from './UserMenu';
-import CorporateBot       from './chatbot/ChatBot';
 
 // -- Constantes ----------------------------------------------------------------
 
@@ -59,9 +58,13 @@ export default function GlobalHeader() {
   const stateRef            = useRef(false);
   const lockRef             = useRef(false);
 
-  // Reemplaza useDevSession — funciona en bypass y en produccion con MSAL
   const { user: sessionUser, isLoading } = useAppSession();
-
+console.log('SESSION:', {
+  isAuthed: !!sessionUser,
+  isLoading,
+  level: sessionUser?.accessLevel,
+  email: sessionUser?.email,
+});
   /**
    * Usuario adaptado al formato esperado por {@link UserMenu}.
    */
@@ -145,8 +148,6 @@ export default function GlobalHeader() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [setQuery]);
 
-  // Mientras MSAL resuelve el perfil, no ocultar el UserMenu —
-  // simplemente no renderizarlo aun para evitar flash
   const showUserMenu = !isLoading && Boolean(user.name);
 
   return (
@@ -177,7 +178,6 @@ export default function GlobalHeader() {
             </Link>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              <CorporateBot variant="default" iconOnly />
               <button
                 onClick={() => setSearchOpen(true)}
                 aria-label="Abrir busqueda"
@@ -237,102 +237,104 @@ export default function GlobalHeader() {
         </div>
 
         {/* Vista escritorio: barra superior */}
+        {/* El div wrapper controla el padding horizontal — fuera del motion.div
+            para que Framer Motion no lo sobreescriba con su layout engine */}
         <div className={`hidden md:block w-full border-b relative z-[60] transition-all duration-300 ${
           isScrolled
             ? 'bg-white/95 dark:bg-[#161b22]/95 backdrop-blur-xl border-slate-200 dark:border-[#30363d] shadow-sm dark:shadow-none'
             : 'bg-white dark:bg-[#161b22] border-slate-100 dark:border-[#21262d]'
         }`}>
-          <motion.div
-            layout
-            animate={{ paddingTop: isScrolled ? 10 : 18, paddingBottom: isScrolled ? 10 : 18 }}
-            transition={TRANSITION}
-            className="mx-auto max-w-7xl px-6"
-          >
-            <div className="flex items-center justify-between gap-6">
+          <div className="w-full px-20">
+            <motion.div
+              layout
+              animate={{ paddingTop: isScrolled ? 10 : 18, paddingBottom: isScrolled ? 10 : 18 }}
+              transition={TRANSITION}
+            >
+              <div className="flex items-center justify-between gap-6">
 
-              <div className={`flex items-center ${isScrolled ? 'gap-3' : 'gap-5'}`}>
-                <Link href="/" className="flex items-center shrink-0">
-                  {hasLogo ? (
-                    <motion.div
+                <div className={`flex items-center ${isScrolled ? 'gap-3' : 'gap-5'}`}>
+                  <Link href="/" className="flex items-center shrink-0">
+                    {hasLogo ? (
+                      <motion.div
+                        layout
+                        animate={{ width: isScrolled ? 50 : 60, height: isScrolled ? 36 : 64 }}
+                        transition={TRANSITION}
+                        className="relative"
+                      >
+                        <Image src={(BRAND as any).logoUrl} alt="Logo" fill className="object-contain" priority />
+                      </motion.div>
+                    ) : (
+<motion.div
+  layout
+  animate={{ paddingTop: isScrolled ? 16 : 32, paddingBottom: isScrolled ? 16 : 32 }}
+  transition={TRANSITION}
+  style={{ paddingTop: isScrolled ? 16 : 32, paddingBottom: isScrolled ? 16 : 32 }}
+/>                    )}
+                  </Link>
+
+                  <div className="flex flex-col justify-center min-w-0">
+                    <motion.h1
                       layout
-                      animate={{ width: isScrolled ? 50 : 60, height: isScrolled ? 36 : 64 }}
+                      animate={{ fontSize: isScrolled ? 20 : 32 }}
                       transition={TRANSITION}
-                      className="relative"
+                      className="brand-title font-bold tracking-tight leading-none truncate text-violet-900 dark:text-[#e2d9f8]"
                     >
-                      <Image src={(BRAND as any).logoUrl} alt="Logo" fill className="object-contain" priority />
-                    </motion.div>
-                  ) : (
-                    <motion.div
+                      ESTUDIO DE MODA
+                    </motion.h1>
+                    <motion.p
                       layout
-                      animate={{ width: isScrolled ? 36 : 64, height: isScrolled ? 36 : 64, borderRadius: isScrolled ? 10 : 16 }}
+                      animate={{ opacity: isScrolled ? 0 : 1, height: isScrolled ? 0 : 18, marginTop: isScrolled ? 0 : 4 }}
                       transition={TRANSITION}
-                      className="bg-gradient-to-br from-violet-600 to-purple-700 shadow-md shadow-violet-200 dark:shadow-none"
-                    />
-                  )}
-                </Link>
-
-                <div className="flex flex-col justify-center min-w-0">
-                  <motion.h1
-                    layout
-                    animate={{ fontSize: isScrolled ? 20 : 32 }}
-                    transition={TRANSITION}
-                    className="brand-title font-bold tracking-tight leading-none truncate text-violet-900 dark:text-[#e2d9f8]"
-                  >
-                    ESTUDIO DE MODA
-                  </motion.h1>
-                  <motion.p
-                    layout
-                    animate={{ opacity: isScrolled ? 0 : 1, height: isScrolled ? 0 : 18, marginTop: isScrolled ? 0 : 4 }}
-                    transition={TRANSITION}
-                    className="text-[13px] overflow-hidden whitespace-nowrap text-slate-400 dark:text-[#545d68]"
-                  >
-                    Plataforma interna corporativa
-                  </motion.p>
+                      className="text-[13px] overflow-hidden whitespace-nowrap text-slate-400 dark:text-[#545d68]"
+                    >
+                      Plataforma interna corporativa
+                    </motion.p>
+                  </div>
                 </div>
-              </div>
 
-              <motion.div
-                layout
-                transition={TRANSITION}
-                className={`flex shrink-0 ${isScrolled ? 'flex-row items-center gap-3' : 'flex-col items-end gap-3'}`}
-              >
-                <CorporateBot variant={isScrolled ? 'default' : 'expanded'} />
+                <motion.div
+                  layout
+                  transition={TRANSITION}
+                  className={`flex shrink-0 ${isScrolled ? 'flex-row items-center gap-3' : 'flex-col items-end gap-3'}`}
+                >
 
-                <div className="flex items-center gap-3">
-                  <motion.div
-                    ref={searchContainerRef}
-                    layout
-                    animate={{ width: isScrolled ? 200 : 240, opacity: 1 }}
-                    transition={TRANSITION}
-                    className="relative z-[999]"
-                  >
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none text-slate-400 dark:text-[#545d68]" />
-                    <input
-                      id="global-search-input"
-                      type="search"
-                      placeholder="Buscar en la intranet..."
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      className="w-full rounded-lg border py-2 text-[13px] pl-9 pr-4 transition-all duration-200
-                                 border-slate-200 bg-slate-50 text-slate-700 placeholder:text-slate-400
-                                 dark:border-[#30363d] dark:bg-[#21262d] dark:text-[#cdd9e5] dark:placeholder:text-[#545d68]
-                                 focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50
-                                 focus:bg-white dark:focus:bg-[#1c2128]
-                                 focus:ring-2 focus:ring-violet-500/15 dark:focus:ring-violet-500/20"
-                    />
-                    {query && (
-                      <GlobalSearchResults
-                        results={results}
-                        query={query}
-                        onSelect={() => setQuery('')}
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      ref={searchContainerRef}
+                      layout
+                      animate={{ width: isScrolled ? 200 : 240, opacity: 1 }}
+                      transition={TRANSITION}
+                      className="relative z-[999]"
+                    >
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none text-slate-400 dark:text-[#545d68]" />
+                      <input
+                        id="global-search-input"
+                        type="search"
+                        placeholder="Buscar en la intranet..."
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        className="w-full rounded-lg border py-2 text-[13px] pl-9 pr-4 transition-all duration-200
+                                   border-slate-200 bg-slate-50 text-slate-700 placeholder:text-slate-400
+                                   dark:border-[#30363d] dark:bg-[#21262d] dark:text-[#cdd9e5] dark:placeholder:text-[#545d68]
+                                   focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50
+                                   focus:bg-white dark:focus:bg-[#1c2128]
+                                   focus:ring-2 focus:ring-violet-500/15 dark:focus:ring-violet-500/20"
                       />
-                    )}
-                  </motion.div>
-                  {showUserMenu && <UserMenu user={user} />}
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
+                      {query && (
+                        <GlobalSearchResults
+                          results={results}
+                          query={query}
+                          onSelect={() => setQuery('')}
+                        />
+                      )}
+                    </motion.div>
+                    {showUserMenu && <UserMenu user={user} />}
+                  </div>
+                </motion.div>
+
+              </div>
+            </motion.div>
+          </div>
         </div>
 
         {/* Vista escritorio: barra de navegacion */}
@@ -341,7 +343,7 @@ export default function GlobalHeader() {
             ? 'bg-white/95 dark:bg-[#161b22]/95 backdrop-blur-xl border-slate-100 dark:border-[#21262d]'
             : 'bg-slate-50 dark:bg-[#0d1117] border-slate-100 dark:border-[#21262d]'
         }`}>
-          <nav className="mx-auto max-w-7xl px-6 flex items-center gap-0.5">
+          <nav className="w-full px-8 flex items-center gap-0.5">
             {DEPARTMENTS.map((dept: Department) => {
               const isActive = pathname.startsWith(dept.href);
               return (

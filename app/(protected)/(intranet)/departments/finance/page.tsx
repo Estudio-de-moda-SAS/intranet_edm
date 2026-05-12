@@ -22,12 +22,10 @@
 // ✅ SERVER COMPONENT — sin "use client"
 
 import type { Metadata }      from "next";
-import { DEV_SESSION }        from "@/lib/devSession";
-import type { AccessLevel }   from "@/lib/roles";
 import { getFinanceData }     from "@/lib/graph/departments/finance.service";
 import { PageTransition }     from "@/app/components/ui/PageTransition";
 import FinancePageContent     from "./components/FinanceHomePage";
-import { cookies }     from "next/headers";
+import { getServerAccessLevel } from "@/lib/getServerAccessLevel";
 
 /**
  * Metadatos de la página del módulo de Finanzas.
@@ -40,16 +38,6 @@ export const metadata: Metadata = {
   title: "Finanzas · EDM",
   description: "Gestión financiera, reportes, presupuesto y control operativo.",
 };
-
-/**
- * Indica si la autenticación debe omitirse en el entorno actual.
- *
- * @remarks
- * Este flag permite utilizar una sesión simulada en desarrollo
- * para acelerar pruebas locales del módulo sin depender del flujo real
- * de autenticación.
- */
-const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
 /**
  * Página principal del módulo de Finanzas.
@@ -92,15 +80,7 @@ export default async function FinanceHomePage() {
    * Este valor gobierna qué secciones, acciones y paneles
    * estarán disponibles dentro de la homepage de Finanzas.
    */
-  let accessLevel: AccessLevel;
-
-  if (isBypass) {
-    accessLevel = DEV_SESSION.user.accessLevel;
-  } else {
-    const cookieStore = await cookies();
-    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";
-  }
-
+const accessLevel = await getServerAccessLevel();
   // ── Datos ─────────────────────────────────────────────────────
 
   /**

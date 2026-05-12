@@ -300,7 +300,6 @@ export default function RetailPageContent({ accessLevel }: Props) {
     >
       {/* ── HERO — todos ──────────────────────────────────────────── */}
       <DepartmentHeroBanner
-        breadcrumb="Departamentos · Retail"
         title="Retail"
         subtitle="Visión unificada de los canales comercial, e-commerce y tiendas físicas."
         imageSrc="/images/retail-banner.jpg"
