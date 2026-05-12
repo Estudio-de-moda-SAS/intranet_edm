@@ -27,12 +27,10 @@
 // ✅ SERVER COMPONENT — sin "use client"
 
 import type { Metadata }      from "next";
-import { cookies }          from "next/headers";
-import { DEV_SESSION }        from "@/lib/devSession";
-import type { AccessLevel }   from "@/lib/roles";
 import { getRetailData }      from "@/lib/graph/departments/retail.service";
 import { PageTransition }     from "@/app/components/ui/PageTransition";
 import RetailPageContent      from "./components/RetailHomePage";
+import { getServerAccessLevel } from "@/lib/getServerAccessLevel";
 
 /**
  * Metadatos de la página del módulo de Retail.
@@ -50,19 +48,6 @@ export const metadata: Metadata = {
   title: "Retail · EDM",
   description: "Visión unificada de los canales comercial, e-commerce y tiendas físicas.",
 };
-
-/**
- * Indicador de bypass de autenticación.
- *
- * @remarks
- * Cuando esta bandera está activa, la página utiliza la sesión
- * simulada de desarrollo definida en {@link DEV_SESSION}
- * en lugar de consultar la sesión real del usuario.
- *
- * Esta lógica suele utilizarse en entornos de desarrollo
- * o pruebas internas para acelerar validaciones de interfaz.
- */
-const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
 /**
  * Página principal del módulo de Retail.
@@ -102,15 +87,7 @@ export default async function RetailHomePage() {
    * Determina qué secciones, acciones o bloques del módulo
    * podrán mostrarse en la interfaz.
    */
-  let accessLevel: AccessLevel;
-
-  if (isBypass) {
-    accessLevel = DEV_SESSION.user.accessLevel;
-  } else {
-    const cookieStore = await cookies();
-    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";
-  }
-
+const accessLevel = await getServerAccessLevel();
   /**
    * Datos agregados del módulo de Retail.
    *

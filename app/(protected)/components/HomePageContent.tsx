@@ -113,7 +113,7 @@ export function HomePageContent({ data }: HomePageContentProps) {
       {/* ============================================================ */}
       <AnimatedHeroBanner user={data.user} />
 
-      <div className="px-4 pb-10 lg:px-14">
+<div className="px-6 pb-10">
 
         {/* ========================================================== */}
         {/* KPI Strip                                                  */}

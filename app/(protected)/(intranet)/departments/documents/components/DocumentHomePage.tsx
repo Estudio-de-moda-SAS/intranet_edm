@@ -111,7 +111,6 @@ export default function DocumentHomePage({ accessLevel }: Props) {
       style={{ fontFamily: "'DM Sans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif" }}
     >
       <DepartmentHeroBanner
-        breadcrumb="Departamentos · Documentación"
         title="Gestión Documental"
         subtitle="Repositorio corporativo, control de versiones, aprobaciones y cumplimiento documental."
         imageSrc="/images/documentos-banner.jpg"

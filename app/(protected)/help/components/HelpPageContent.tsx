@@ -93,7 +93,6 @@ export default function HelpPageContent() {
         {/* Hero                                                         */}
         {/* ============================================================ */}
         <DepartmentHeroBanner
-          breadcrumb="Soporte · Help Center"
           title="Centro de Ayuda"
           subtitle="Soporte técnico, guías rápidas, estado de sistemas y gestión de tickets."
           imageSrc="/images/help-banner.jpg"

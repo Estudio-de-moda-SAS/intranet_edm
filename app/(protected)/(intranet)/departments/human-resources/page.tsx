@@ -25,10 +25,10 @@
 import type { Metadata }    from "next";
 import { cookies }          from "next/headers";
 import { DEV_SESSION }      from "@/lib/devSession";
-import type { AccessLevel } from "@/lib/roles";
 import { getHRData }        from "@/lib/graph/departments/hr.service";
 import { PageTransition }   from "@/app/components/ui/PageTransition";
 import HRPageContent        from "./components/HumanResouresHomePage";
+import { getServerAccessLevel } from "@/lib/getServerAccessLevel";
 
 /**
  * Metadatos de la página del módulo de Recursos Humanos.
@@ -49,7 +49,6 @@ export const metadata: Metadata = {
  * Cuando está activo, se usa {@link DEV_SESSION} como fuente del nivel
  * de acceso en lugar de la sesión autenticada real.
  */
-const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
 /**
  * Página principal del módulo de Recursos Humanos.
@@ -67,14 +66,7 @@ const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
  */
 export default async function HRHomePage() {
 
-  let accessLevel: AccessLevel;
-
-  if (isBypass) {
-    accessLevel = DEV_SESSION.user.accessLevel;
-  } else {
-    const cookieStore = await cookies();
-    accessLevel = (cookieStore.get("edm_access_level")?.value as AccessLevel) ?? "employee";
-  }
+const accessLevel = await getServerAccessLevel();
 
   const data = await getHRData();
 
