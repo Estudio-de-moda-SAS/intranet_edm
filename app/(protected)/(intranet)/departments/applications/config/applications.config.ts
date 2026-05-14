@@ -1,0 +1,151 @@
+import type { AppItem } from "@/app/components/ui/AppsGrid";
+
+export type AppCategory =
+  | "RRHH"
+  | "TI"
+  | "Administrativo"
+  | "Operaciones"
+  | "Corporativo";
+
+export type CompanyAppItem = AppItem & {
+  category: AppCategory;
+};
+
+export const COMPANY_APPS: CompanyAppItem[] = [
+ {
+    label: "LETS BUY",
+    description: "Gestión de compras corporativas",
+    href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/e507ada7-0412-4ccc-95d9-d6e26e45a162?tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c&source=portal",
+    icon: "shoppingCart",
+    color: "purple",
+    category: "Corporativo",
+  },
+  {
+    label: "DAY OFF",
+    description: "Solicitud y gestión de días libres",
+    href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/6ff5ee90-2c58-4476-a248-3e1333b3081e?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=3af6e625-ac0a-4221-bdfe-8093cef22ca2&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+    icon: "calendarDays",
+    color: "pink",
+    category: "RRHH",
+  },
+  {
+    label: "Requisiciones",
+    description: "Gestión de vacantes y solicitudes",
+    href: "https://apps.powerapps.com/play/e/Default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/e98a8711-82d5-4f4c-9931-8b967baaaf61?source=teamsopenwebsite&screenColor=rgba(109,+49,+162,+1)&hint=197ad5df-49e2-4f7f-8a06-920c7fae273c",
+    icon: "shieldCheck",
+    color: "purple",
+    category: "RRHH",
+  },
+  {
+    label: "Incapacidades",
+    description: "Gestión médica y novedades",
+    href: "https://www.tusipe.com/ords/f?p=100:11:::NO::P11_NIT_GRUPO,G_DS_GRUPO,G_NIT_GRUPO:890926803,ESTUDIO+DE+MODA+SAS,890926803",
+    icon: "award",
+    color: "amber",
+    category: "RRHH",
+  },
+  {
+    label: "NETWORKING",
+    description: "Conexión y comunicación entre equipos",
+    href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/a5d3bda3-b4f7-4164-9f3d-5c9d86a3468d?source=teamsopenwebsite&screenColor=rgba(10%2C%2034%2C%2057%2C%201)&hint=6fbd58b4-412c-4c6c-bfed-eecc9dd154d7&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+    icon: "globe",
+    color: "coral",
+    category: "Corporativo",
+  },
+  {
+    label: "Gestión E",
+    description: "Gestión de procesos empresariales",
+    href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/286622c2-98db-45ee-b0e0-41a6c0034a49?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=ca7a8f9f-c0d1-42e3-aa47-704e9ec1236f&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+    icon: "briefcase",
+    color: "blue",
+    category: "Administrativo",
+  },
+  {
+    label: "PCH",
+    description: "Portal corporativo de herramientas internas",
+    href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/0c5d9b32-1269-4eac-9f03-b2e9f0985849?source=teamsopenwebsite&screenColor=rgba(10%2C%2034%2C%2057%2C%201)&hint=ce26d49f-0a09-4c99-94d8-56b739347525&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+    icon: "layoutDashboard",
+    color: "indigo",
+    category: "Corporativo",
+  },
+  {
+    label: "Head Talent",
+    description: "Gestión de talento humano",
+    href: "https://sites.google.com/view/headtalentedm/inicio",
+    icon: "fileText",
+    color: "blue",
+    category: "RRHH",
+  },
+  {
+    label: "NominaWeb",
+    description: "Gestión de nómina y pagos",
+    href: "https://nominaweb.estudiodemoda.com.co:8008/siesa/jsp/index.jsp?pre=S",
+    icon: "creditCard",
+    color: "amber",
+    category: "RRHH",
+  },
+  {
+    label: "App Novedades",
+    description: "Gestión de novedades del colaborador",
+    href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/9efefc59-56bc-49cc-b7ce-6bb3534f3f33?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=03064be8-c574-4ec8-bff6-76b7598c2b4a&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+    icon: "bell",
+    color: "blue",
+    category: "RRHH",
+  },
+  {
+    label: "SGSST-GESTOR SG-SST",
+    description: "Gestión de seguridad y salud en el trabajo",
+    href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/f8a15d03-1d85-4663-8493-8bcafede41db?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=701eb79c-5d96-4ec6-bc1f-fadadb3db70d&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+    icon: "shieldCheck",
+    color: "green",
+    category: "Administrativo",
+  },
+  {
+    label: "360 Talent",
+    description: "Evaluación y desempeño",
+    href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/c6be31e7-f395-4e1c-8b9e-8d903852e186?tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c&hint=2a81121d-1b52-42db-aea3-52314ca680ec&sourcetime=1708012225179&parCedulaColaborador=1057593843",
+    icon: "barChart3",
+    color: "purple",
+    category: "RRHH",
+  },
+  {
+    label: "Beneficios",
+    description: "Programas y bienestar corporativo",
+    href: "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/CH/Beneficios/SitePages/BENEFICIOS-(PRINCIPAL).aspx?CID=ddb337ec-3536-4de6-b12f-2cedb8ab2a78",
+    icon: "heartHandshake",
+    color: "green",
+    category: "RRHH",
+  },
+  {
+    label: "Gobierno de Datos",
+    description: "Gestión y control de información",
+    href: "https://estudiodemoda.sharepoint.com/sites/FS/Tecnologia/PR/GC/GD/Datos%20Admin/Forms/AllItems.aspx",
+    icon: "briefcase",
+    color: "teal",
+    category: "Corporativo",
+  },
+  {
+    label: "YOU V2",
+    description: "Autogestión del colaborador",
+    href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/7fc644f1-5666-40a9-b7b2-3db4301993c3?source=teamsopenwebsite&screenColor=rgba(255%2C%20255%2C%20255%2C%201)&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+    icon: "users",
+    color: "purple",
+    category: "RRHH",
+  },
+  {
+    label: "Autogestión",
+    description: "Servicios internos del colaborador",
+    href: "https://autogestion.estudiodemoda.com.co/",
+    icon: "userPlus",
+    color: "green",
+    category: "RRHH",
+  },
+{
+  label: "Registro de Indicadores",
+  description: "Gestión y seguimiento de indicadores corporativos",
+  href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/b10b1d75-1252-4a90-ba24-b10d161419d2?source=teamsopenwebsite&screenColor=rgba(46%2C%20196%2C%20182%2C%201)&hint=52fc3ecb-98c0-496e-b91e-9a21d78f4459&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+  icon: "barChart3",
+  color: "indigo",
+  category: "Corporativo",
+},
+];
