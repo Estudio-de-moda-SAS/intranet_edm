@@ -7,7 +7,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import {
   Award,
   BarChart2,
@@ -30,6 +29,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   MessageSquare,
+  MonitorUp,
   PieChart,
   Settings,
   ShieldCheck,
@@ -44,6 +44,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useFavorites } from "@/features/favorites/FavoritesContext";
 import { AddFavoriteModal } from "@/app/components/home/AddFavoriteModal";
+import { AppPreviewModal } from "@/app/components/ui/AppPreviewModal";
 
 export type AppColor =
   | "purple"
@@ -63,6 +64,7 @@ export type AppItem = {
   id?: string;
   label: string;
   href: string;
+  embedUrl?: string;
   icon?: LucideIcon | string;
   color?: AppColor;
   description?: string;
@@ -76,6 +78,7 @@ export type AppsGridProps = {
   headerIcon?: LucideIcon;
   cols?: 2 | 3 | 4;
   variant?: AppsGridVariant;
+  showFavorites?: boolean;
   favoriteHrefs?: string[];
   onToggleFavorite?: (item: AppItem) => void;
 };
@@ -232,14 +235,18 @@ interface AppCardProps {
   item: AppItem;
   isFavorite: boolean;
   onStarClick: (item: AppItem) => void;
+  onPreviewClick: (item: AppItem) => void;
   variant?: AppsGridVariant;
+  showFavorites?: boolean;
 }
 
 function AppCard({
   item,
   isFavorite,
   onStarClick,
+  onPreviewClick,
   variant = "compact",
+  showFavorites = true,
 }: AppCardProps) {
   const c = COLOR_MAP[item.color ?? "purple"] ?? COLOR_MAP.purple;
   const Icon = resolveIcon(item.icon);
@@ -247,101 +254,120 @@ function AppCard({
 
   return (
     <li className="min-h-0">
-      <Link
-        href={item.href}
-        target="_blank"
-        rel="noopener noreferrer"
+      <div
         className={cn(
-          "group relative flex h-full items-center overflow-hidden",
+          "group relative flex h-full flex-col overflow-hidden",
           "border border-slate-200 border-l-[3px] bg-slate-50",
           "transition-all duration-300 ease-out",
           "before:absolute before:inset-0 before:opacity-0 before:transition-opacity before:duration-300",
           "hover:-translate-y-[3px] hover:border-slate-300",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2",
           isLauncher
-            ? "min-h-[82px] gap-3 rounded-2xl px-4 py-4 pr-14 hover:shadow-[0_14px_32px_rgba(15,23,42,0.10)] before:bg-gradient-to-br before:from-white/70 before:to-violet-50/60 hover:before:opacity-100"
-            : "gap-2.5 rounded-[10px] px-3 py-2.5 pr-11 hover:scale-[1.01] hover:shadow-md",
+           ? "min-h-[82px] gap-2 rounded-2xl px-4 py-2.5 hover:shadow-[0_14px_32px_rgba(15,23,42,0.10)] before:bg-gradient-to-br before:from-white/70 before:to-violet-50/60 hover:before:opacity-100"
+            : "gap-2.5 rounded-[10px] px-3 py-2.5 hover:scale-[1.01] hover:shadow-md",
           c.border,
           c.hoverBg,
           c.hoverBorder,
         )}
       >
-        <span
-          className={cn(
-            "relative z-10 flex shrink-0 items-center justify-center",
-            "transition-transform duration-300 group-hover:scale-110",
-            isLauncher ? "h-11 w-11 rounded-xl" : "h-8 w-8 rounded-[7px]",
-            c.bg,
-          )}
-        >
-          {Icon && (
-            <Icon
-              size={isLauncher ? 18 : 14}
-              className={c.icon}
-            />
-          )}
-        </span>
-
-        <span className="relative z-10 min-w-0 flex-1">
+        <div className="relative z-10 flex min-w-0 items-center gap-3">
           <span
             className={cn(
-              "block truncate font-semibold leading-tight text-slate-700 transition-colors duration-300 group-hover:text-violet-700",
-              isLauncher ? "text-[14px]" : "text-[12.5px]",
+              "flex shrink-0 items-center justify-center",
+              "transition-transform duration-300 group-hover:scale-110",
+              isLauncher ? "h-11 w-11 rounded-xl" : "h-8 w-8 rounded-[7px]",
+              c.bg,
             )}
           >
-            {item.label}
+            {Icon && (
+              <Icon
+                size={isLauncher ? 18 : 14}
+                className={c.icon}
+              />
+            )}
           </span>
 
-          {item.description && (
+          <span className="min-w-0 flex-1">
             <span
               className={cn(
-                "mt-0.5 block truncate leading-tight text-slate-400",
-                isLauncher ? "text-[12px]" : "text-[11px]",
+                "block truncate font-semibold leading-tight text-slate-700 transition-colors duration-300 group-hover:text-violet-700",
+                isLauncher ? "text-[14px]" : "text-[12.5px]",
               )}
             >
-              {item.description}
+              {item.label}
             </span>
-          )}
-        </span>
 
-        <span
-          className={cn(
-            "absolute z-10 flex items-center justify-center rounded-full bg-violet-100 text-violet-600 transition-all duration-300",
-            "group-hover:translate-x-0.5 group-hover:bg-violet-600 group-hover:text-white",
-            isLauncher ? "right-4 top-1/2 h-7 w-7 -translate-y-1/2" : "right-2.5 top-1/2 h-6 w-6 -translate-y-1/2",
-          )}
-          aria-hidden="true"
-        >
-          <ExternalLink size={isLauncher ? 14 : 12} />
-        </span>
-
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onStarClick(item);
-          }}
-          title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
-          className={cn(
-            "absolute z-20 flex items-center justify-center rounded-full",
-            "transition-all duration-200",
-            isLauncher
-              ? "right-2 top-2 h-5 w-5 bg-white/85 text-slate-300 shadow-sm backdrop-blur-sm hover:text-amber-400"
-              : "right-1.5 top-1.5 h-5 w-5",
-            isFavorite
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-100",
-          )}
-        >
-          <Star
-            size={isLauncher ? 11 : 11}
-            className={cn(
-              "transition-all",
-              isFavorite ? "fill-amber-400 text-amber-400" : "fill-none",
+            {item.description && (
+              <span
+                className={cn(
+                  "mt-0.5 block truncate leading-tight text-slate-400",
+                  isLauncher ? "text-[12px]" : "text-[11px]",
+                )}
+              >
+                {item.description}
+              </span>
             )}
-          />
-        </button>
-      </Link>
+          </span>
+
+          {showFavorites && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onStarClick(item);
+              }}
+              title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-full",
+                "transition-all duration-200",
+                isLauncher
+                  ? "h-7 w-7 bg-white/85 text-slate-300 shadow-sm backdrop-blur-sm hover:text-amber-400"
+                  : "h-5 w-5",
+                isFavorite
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100",
+              )}
+            >
+              <Star
+                size={isLauncher ? 12 : 11}
+                className={cn(
+                  "transition-all",
+                  isFavorite ? "fill-amber-400 text-amber-400" : "fill-none",
+                )}
+              />
+            </button>
+          )}
+        </div>
+
+        <div className="relative z-10 mt-auto flex flex-wrap items-center gap-2">
+          {item.embedUrl && (
+            <button
+              type="button"
+              onClick={() => onPreviewClick(item)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 font-medium text-violet-700 transition-all duration-200 hover:border-violet-300 hover:bg-violet-100",
+                isLauncher ? "px-3 py-1.5 text-[12px]" : "px-2.5 py-1 text-[11px]",
+              )}
+            >
+              <MonitorUp className={cn(isLauncher ? "h-3.5 w-3.5" : "h-3 w-3")} />
+              Usar aquí
+            </button>
+          )}
+
+          <a
+            href={item.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white font-medium text-slate-600 transition-all duration-200 hover:border-violet-200 hover:text-violet-700",
+              isLauncher ? "px-3 py-1.5 text-[12px]" : "px-2.5 py-1 text-[11px]",
+            )}
+          >
+            Abrir aplicación
+            <ExternalLink className={cn(isLauncher ? "h-3.5 w-3.5" : "h-3 w-3")} />
+          </a>
+        </div>
+      </div>
     </li>
   );
 }
@@ -354,12 +380,14 @@ export function AppsGrid({
   headerIcon: HeaderIcon = LayoutGrid,
   cols = 3,
   variant = "compact",
+  showFavorites = true,
 }: AppsGridProps) {
   const { favoriteHrefs, addFavorite, removeFavorite, getFavoriteByHref } =
     useFavorites();
 
   const [page, setPage] = useState(0);
   const [pendingApp, setPendingApp] = useState<AppItem | null>(null);
+  const [previewApp, setPreviewApp] = useState<AppItem | null>(null);
 
   const totalPages = Math.min(Math.ceil(apps.length / PAGE_SIZE), MAX_PAGES);
 
@@ -452,7 +480,7 @@ export function AppsGrid({
         <ul
           className={cn(
             "grid flex-1",
-            variant === "launcher" ? "gap-3 p-4" : "gap-1.5 p-2.5",
+            variant === "launcher" ? "gap-2.5 p-3" : "gap-1.5 p-2.5",
           )}
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
         >
@@ -462,7 +490,9 @@ export function AppsGrid({
               item={app}
               isFavorite={favoriteHrefs.includes(app.href)}
               onStarClick={handleStarClick}
+              onPreviewClick={setPreviewApp}
               variant={variant}
+              showFavorites={showFavorites}
             />
           ))}
         </ul>
@@ -509,6 +539,13 @@ export function AppsGrid({
         preselectedApp={pendingApp}
         existingHrefs={favoriteHrefs}
         onAdd={addFavorite}
+      />
+
+      <AppPreviewModal
+        open={previewApp !== null}
+        onClose={() => setPreviewApp(null)}
+        title={previewApp?.label ?? ""}
+        url={previewApp?.embedUrl ?? previewApp?.href ?? ""}
       />
     </>
   );

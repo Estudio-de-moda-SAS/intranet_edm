@@ -138,6 +138,7 @@ export function ApplicationsPageContent() {
               title="Aplicaciones corporativas"
               cols={3}
               variant="launcher"
+              showFavorites={false}
               headerIconBg="bg-violet-50"
               headerIconColor="text-violet-600"
             />
