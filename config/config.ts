@@ -169,6 +169,12 @@ export const DEPARTMENTS: Department[] = [
     show:  true,
   },
   {
+  id: "applications",
+  label: "Aplicaciones",
+  href: "/departments/applications",
+  show: true,
+  },
+  {
     id:    "tableros",
     label: "Tableros",
     href:  "/departments/boards",
