@@ -6,13 +6,19 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHeroBanner";
 import { AppsGrid } from "@/app/components/ui/AppsGrid";
 
+import { useAppSession } from "@/lib/useAppSession";
+import { useFrequentApps } from "./hooks/useFrequentApps";
+
 import {
   COMPANY_APPS,
   type AppCategory,
 } from "./config/applications.config";
 
-const CATEGORIES: Array<AppCategory | "Todas"> = [
+type AppFilter = AppCategory | "Todas" | "Mis frecuentes";
+
+const CATEGORIES: AppFilter[] = [
   "Todas",
+  "Mis frecuentes",
   "RRHH",
   "TI",
   "Administrativo",
@@ -22,7 +28,16 @@ const CATEGORIES: Array<AppCategory | "Todas"> = [
 
 export function ApplicationsPageContent() {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<AppCategory | "Todas">("Todas");
+  const [category, setCategory] = useState<AppFilter>("Todas");
+
+  const { user } = useAppSession();
+
+  const userKey = user?.email ?? user?.id ?? null;
+
+  const {
+    isFrequent,
+    toggleFrequent,
+  } = useFrequentApps({ userKey });
 
   const filteredApps = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -32,12 +47,14 @@ export function ApplicationsPageContent() {
         app.label.toLowerCase().includes(normalizedSearch) ||
         app.description?.toLowerCase().includes(normalizedSearch);
 
-      const matchesCategory =
-        category === "Todas" || app.category === category;
+    const matchesCategory =
+      category === "Todas" ||
+      app.category === category ||
+     (category === "Mis frecuentes" && isFrequent(app.id));
 
       return matchesSearch && matchesCategory;
     });
-  }, [search, category]);
+  }, [search, category, isFrequent]);
 
   return (
     <main className="space-y-6">
@@ -93,7 +110,7 @@ export function ApplicationsPageContent() {
                   <select
                     value={category}
                     onChange={(event) =>
-                      setCategory(event.target.value as AppCategory | "Todas")
+                      setCategory(event.target.value as AppFilter)
                     }
                     className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-8 text-sm text-slate-700 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100 sm:w-52"
                   >
@@ -133,15 +150,18 @@ export function ApplicationsPageContent() {
           </div>
 
           {filteredApps.length > 0 ? (
-            <AppsGrid
-              apps={filteredApps}
-              title="Aplicaciones corporativas"
-              cols={3}
-              variant="launcher"
-              showFavorites={false}
-              headerIconBg="bg-violet-50"
-              headerIconColor="text-violet-600"
-            />
+           <AppsGrid
+           apps={filteredApps}
+           title="Aplicaciones corporativas"
+           cols={3}
+           variant="launcher"
+           showFavorites={false}
+           showFrequentControls
+           isFrequentApp={isFrequent}
+           onToggleFrequentApp={toggleFrequent}
+           headerIconBg="bg-violet-50"
+           headerIconColor="text-violet-600"
+          />
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-sm">
               <h3 className="text-sm font-semibold text-slate-800">
