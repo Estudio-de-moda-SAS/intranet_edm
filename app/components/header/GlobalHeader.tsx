@@ -344,12 +344,16 @@ console.log('SESSION:', {
             : 'bg-slate-50 dark:bg-[#0d1117] border-slate-100 dark:border-[#21262d]'
         }`}>
           <nav className="w-full px-8 flex items-center gap-0.5">
-            {DEPARTMENTS.map((dept: Department) => {
-              const isActive = pathname.startsWith(dept.href);
-              return (
-                <Link
-                  key={dept.id}
-                  href={dept.href}
+  {DEPARTMENTS
+    .filter((dept: Department) => dept.show)
+    .map((dept: Department) => {
+
+      const isActive = pathname.startsWith(dept.href);
+
+      return (
+        <Link
+          key={dept.id}
+          href={dept.href}
                   className={`group relative px-3 py-3 text-[13px] font-medium transition-colors duration-150 whitespace-nowrap rounded-md ${
                     isActive
                       ? 'text-violet-700 dark:text-violet-400'
