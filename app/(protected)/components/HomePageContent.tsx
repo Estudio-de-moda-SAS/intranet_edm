@@ -98,6 +98,11 @@ type HomePageContentProps = {
  * ```
  */
 export function HomePageContent({ data }: HomePageContentProps) {
+  const SHOW_REQUESTS_PANEL = false;
+  const SHOW_BIRTHDYAS_CARD = false;
+  const SHOW_RECOGNITIONS_CARD = false;
+  const SHOW_EVENTS_SECTION = false;
+  const SHOW_TASKS_CARD = false;
   return (
     <main
       className="min-h-screen w-full"
@@ -134,10 +139,11 @@ export function HomePageContent({ data }: HomePageContentProps) {
               <NewsSection announcements={data.announcements} />
             </AnimatedCard>
 
+            {SHOW_REQUESTS_PANEL && (
             <AnimatedCard delay={0.08}>
               <RequestsPanel />
             </AnimatedCard>
-
+            )}
           </div>
 
           {/* -------------------------------------------------------- */}
@@ -151,26 +157,34 @@ export function HomePageContent({ data }: HomePageContentProps) {
             </AnimatedCard>
 
             {/* Tareas */}
-            <AnimatedCard delay={0.20}>
-              <TasksCard tasks={data.tasks} />
-            </AnimatedCard>
+            {SHOW_TASKS_CARD && (
+              <AnimatedCard delay={0.20}>
+                <TasksCard tasks={data.tasks} />
+              </AnimatedCard>
+            )}
 
             {/* Reconocimientos */}
-            <AnimatedCard delay={0.24}>
-              <RecognitionsCard
-                recognitions={data.recognitions ?? MOCK_RECOGNITIONS}
-              />
-            </AnimatedCard>
+            {SHOW_RECOGNITIONS_CARD && (
+              <AnimatedCard delay={0.24}>
+                <RecognitionsCard
+                  recognitions={data.recognitions ?? MOCK_RECOGNITIONS}
+                />
+              </AnimatedCard>
+            )}
 
             {/* Eventos */}
-            <AnimatedCard delay={0.12}>
-              <EventsSection events={data.events} />
-            </AnimatedCard>
+            {SHOW_EVENTS_SECTION && (
+              <AnimatedCard delay={0.12}>
+                <EventsSection events={data.events} />
+              </AnimatedCard>
+            )}
 
             {/* Cumpleaños */}
-            <AnimatedCard delay={0.28}>
-              <BirthdaysCard birthdays={data.birthdays} />
-            </AnimatedCard>
+            {SHOW_BIRTHDYAS_CARD && (
+              <AnimatedCard delay={0.28}>
+                <BirthdaysCard birthdays={data.birthdays} />
+              </AnimatedCard>
+            )}
 
           </aside>
         </div>

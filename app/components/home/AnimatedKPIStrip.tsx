@@ -8,6 +8,9 @@
  */
 
 "use client";
+import { LayoutGrid, Ticket } from "lucide-react";
+import { COMPANY_APPS} from "@/app/(protected)/(intranet)/departments/applications/config/applications.config";
+import { TICKET_SYSTEMS } from "@/app/(protected)/(intranet)/departments/ticket-systems/config/ticketSystems.config";
 
 import { motion, type Variants } from "framer-motion";
 import {
@@ -59,13 +62,15 @@ type StatItem = {
  */
 const STATS: StatItem[] = [
   { label: "Empleados activos",    value: "1,284", sub: "+12 este mes",       icon: Users,         accent: "violet",  enabled: false },
-  { label: "Tareas pendientes",    value: "47",    sub: "−8 esta semana",      icon: ClipboardList, accent: "indigo",  enabled: true },
-  { label: "Eventos próximos",     value: "6",     sub: "próximos 30 días",    icon: Calendar,      accent: "sky",     enabled: true },
-  { label: "Noticias sin leer",    value: "13",    sub: "pendientes de leer",  icon: Bell,          accent: "fuchsia", enabled: true },
+  { label: "Tareas pendientes",    value: "47",    sub: "−8 esta semana",      icon: ClipboardList, accent: "indigo",  enabled: false },
+  { label: "Eventos próximos",     value: "6",     sub: "próximos 30 días",    icon: Calendar,      accent: "sky",     enabled: false },
+  { label: "Noticias sin leer",    value: "13",    sub: "pendientes de leer",  icon: Bell,          accent: "fuchsia", enabled: false },
   { label: "Solicitudes abiertas", value: "28",    sub: "en gestión",          icon: FileText,      accent: "purple",  enabled: false },
   { label: "Documentos recientes", value: "94",    sub: "subidos este mes",    icon: TrendingUp,    accent: "emerald", enabled: true },
   { label: "Tiempo de respuesta",  value: "2.4h",  sub: "promedio del equipo", icon: Clock,         accent: "amber",   enabled: false },
   { label: "Reconocimientos",      value: "17",    sub: "en el último mes",    icon: Award,         accent: "rose",    enabled: false },
+  { label: "Aplicaciones Disponibles",    value: COMPANY_APPS.length.toString(),     sub: "Herramientas corporativas",            icon: LayoutGrid, accent: "violet",  enabled: true }, 
+  { label: "Sistemas de Tickets",    value: TICKET_SYSTEMS.length.toString(),     sub: "Plataformas de Soporte",    icon: Ticket,   accent: "sky",  enabled: true },
 ];
 
 /**

@@ -47,7 +47,7 @@ export function saludo(nombre?: string): string {
  * @param fechaISO - Fecha en formato ISO 8601 (ej. `"2024-03-15T10:30:00Z"`).
  * @param withTime - Si es `true`, incluye la hora en formato corto (HH:mm).
  *   Por defecto `false`.
- * @param locale   - Código BCP 47 del locale a usar. Por defecto `"es-CO"`.
+ * @param locale   - Código BCP del locale a usar. Por defecto `"es-CO"`.
  * @returns Cadena de fecha formateada según el locale indicado.
  *
  * @example

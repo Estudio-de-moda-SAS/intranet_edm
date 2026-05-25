@@ -53,6 +53,9 @@ interface Props {
  *   - Derecha: tarjetas informativas y quick links.
  */
 export function NewsSection({ announcements }: Props) {
+  const SHOW_POLICIES_CARD_ASIDE = false; // Controla visibilidad de la tarjeta de políticas en el lado derecho
+  const SHOW_QUICK_LINKS_SECTION = false; // Controla visibilidad de la sección de quick links en el lado derecho
+  
   if (!announcements?.length) return null;
 
   return (
@@ -88,13 +91,32 @@ export function NewsSection({ announcements }: Props) {
         </div>
 
         {/* Panel derecho */}
-        <div className="grid grid-cols-2 grid-rows-2 gap-2 lg:h-full">
-          <KnowUsCard />
-          <PoliciesCardAside />
-          <div className="col-span-2 lg:h-full">
-            <QuickLinksSection quickLinks={homeQuickLinks} />
-          </div>
-        </div>
+<div className="grid grid-cols-2 grid-rows-2 gap-2 lg:h-full">
+  <div
+    className={`
+      ${
+        SHOW_POLICIES_CARD_ASIDE
+          ? SHOW_QUICK_LINKS_SECTION
+            ? "col-span-1 row-span-1"
+            : "col-span-1 row-span-2"
+          : SHOW_QUICK_LINKS_SECTION
+            ? "col-span-2 row-span-1"
+            : "col-span-2 row-span-2"
+      }
+      lg:h-full
+    `}
+  >
+    <KnowUsCard />
+  </div>
+
+  {SHOW_POLICIES_CARD_ASIDE && <PoliciesCardAside />}
+
+  {SHOW_QUICK_LINKS_SECTION && (
+    <div className="col-span-2 lg:h-full">
+      <QuickLinksSection quickLinks={homeQuickLinks} />
+    </div>
+  )}
+</div>
 
       </div>
     </section>
