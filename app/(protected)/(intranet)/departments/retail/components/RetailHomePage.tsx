@@ -149,6 +149,10 @@ const TEAM_ACCENT = {
   topAccent:       "from-indigo-500 via-violet-400 to-purple-500",
 } as const;
 
+const SHOW_COMMERCIAL = false;
+const SHOW_ECOMMERCE = false;
+const SHOW_STORES = false;
+const SHOW_ANALYTICS = false;
 // ── Component ─────────────────────────────────────────────────────────────────
 
 /**
@@ -232,22 +236,22 @@ export default function RetailPageContent({ accessLevel }: Props) {
   /**
    * Controla la visibilidad del canal Comercial.
    */
-  const showCommercial = can(accessLevel, 'retail:view_commercial');
+  const showCommercial = SHOW_COMMERCIAL && can(accessLevel, 'retail:view_commercial');
 
   /**
    * Controla la visibilidad del canal E-Commerce.
    */
-  const showEcommerce  = can(accessLevel, 'retail:view_ecommerce');
+  const showEcommerce  = SHOW_ECOMMERCE && can(accessLevel, 'retail:view_ecommerce');
 
   /**
    * Controla la visibilidad del canal Tiendas.
    */
-  const showStores     = can(accessLevel, 'retail:view_stores');
+  const showStores     = SHOW_STORES && can(accessLevel, 'retail:view_stores');
 
   /**
    * Controla la visibilidad del bloque de analítica transversal.
    */
-  const showAnalytics  = can(accessLevel, 'retail:view_analytics');
+  const showAnalytics  = SHOW_ANALYTICS && can(accessLevel, 'retail:view_analytics');
 
   /**
    * Indica si existe al menos un canal operativo visible para el usuario.

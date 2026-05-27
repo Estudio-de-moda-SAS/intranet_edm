@@ -125,14 +125,17 @@ const TEAM_ACCENT = {
  * <ITPageContent data={data} accessLevel={accessLevel} />
  * ```
  */
+const SHOW_SERVER_MONITOR = false; // Toggle para monitor de servidores, controlado por permisos
+const SHOW_SERVICE_STATUS = false; // Toggle para estado de servicios, controlado por permisos
+
 export default function ITPageContent({ data, accessLevel }: Props) {
   const showKPIs = can(accessLevel, "it:view_kpis");
-  const showTickets = can(accessLevel, "it:view_tickets");
+  const showTickets =  can(accessLevel, "it:view_tickets");
   const showDashboard = can(accessLevel, "it:view_dashboard");
-  const showServiceStatus = can(accessLevel, "it:view_service_status");
+  const showServiceStatus = SHOW_SERVICE_STATUS && can(accessLevel, "it:view_service_status");
   const processedITLinks = processQuickLinks(itQuickLinks, accessLevel);
   const showQuickLinks = processedITLinks.length > 0;
-  const showServerMonitor = can(accessLevel, "it:view_server_monitor");
+  const showServerMonitor = SHOW_SERVER_MONITOR && can(accessLevel, "it:view_server_monitor");
 
   /**
    * Indica si existe contenido para la columna principal.
