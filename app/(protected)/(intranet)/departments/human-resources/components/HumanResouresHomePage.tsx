@@ -109,6 +109,10 @@ const TEAM_ACCENT = {
   topAccent: "from-rose-500 via-pink-400 to-purple-500",
 } as const;
 
+const SHOW_RECRUITMENT = false;
+const SHOW_HEADCOUNT = false;
+const SHOW_ANALYTICS = false;
+const SHOW_TRAINING = false;
 // ── Component ─────────────────────────────────────────────────────────────────
 
 /**
@@ -162,12 +166,12 @@ export default function HRPageContent({ accessLevel }: Props) {
   /**
    * Visibilidad de la tarjeta de formación.
    */
-  const showTraining = can(accessLevel, "hr:view_training");
+  const showTraining = SHOW_TRAINING && can(accessLevel, "hr:view_training");
 
   /**
    * Visibilidad de la sección de headcount.
    */
-  const showHeadcount = can(accessLevel, "hr:view_headcount");
+  const showHeadcount = SHOW_HEADCOUNT && can(accessLevel, "hr:view_headcount");
 
   /**
    * Visibilidad de la sección de solicitudes.
@@ -177,12 +181,12 @@ export default function HRPageContent({ accessLevel }: Props) {
   /**
    * Visibilidad de la sección de reclutamiento.
    */
-  const showRecruitment = can(accessLevel, "hr:view_recruitment");
+  const showRecruitment = SHOW_RECRUITMENT && can(accessLevel, "hr:view_recruitment");
 
   /**
    * Visibilidad del dashboard de analítica de personas.
    */
-  const showAnalytics = can(accessLevel, "hr:view_analytics");
+  const showAnalytics = SHOW_ANALYTICS && can(accessLevel, "hr:view_analytics");
 
   /**
    * Quick links procesados según permisos del usuario.
