@@ -14,7 +14,7 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, ChevronRight } from "lucide-react";
+import { LayoutGrid, ChevronRight, ExternalLink } from "lucide-react";
 import { PowerBIViewer } from "./PowerBIViewer";
 import {
   POWERBI_DASHBOARDS,
@@ -22,6 +22,7 @@ import {
   type PowerBIDashboard,
   type PowerBIArea,
 } from "@/config/powerbi.catalog";
+
 
 // ---------------------------------------------------------------------------
 // Props
@@ -182,21 +183,29 @@ function DashboardCard({ dashboard, isSelected, onClick }: DashboardCardProps) {
         />
       </div>
 
-      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-        <span
-          className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${colorClass}`}
-        >
-          {dashboard.area}
-        </span>
-        {dashboard.tags?.map((tag) => (
-          <span
-            key={tag}
-            className="inline-block px-2 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
+     <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+  <span
+    className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${colorClass}`}
+  >
+    {dashboard.area}
+  </span>
+
+  {dashboard.openMode === "external" && (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
+      <ExternalLink className="w-3 h-3" />
+      SharePoint
+    </span>
+  )}
+
+  {dashboard.tags?.map((tag) => (
+    <span
+      key={tag}
+      className="inline-block px-2 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full"
+    >
+      {tag}
+    </span>
+  ))}
+</div>
     </motion.button>
   );
 }
@@ -280,7 +289,7 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
 
         {/* Left: dashboard list */}
-        <aside className="flex flex-col gap-2 pt-1">
+        <aside className="flex flex-col gap-2 pt-1 max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
           <AnimatePresence mode="popLayout">
             {filtered.length === 0 ? (
               <EmptyState key="empty" area={activeArea} />
@@ -290,7 +299,14 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
                   key={dashboard.id}
                   dashboard={dashboard}
                   isSelected={selected?.id === dashboard.id}
-                  onClick={() => setSelectedId(dashboard.id)}
+                  onClick={() => {
+                  if (dashboard.openMode === "external") {
+                  window.open(dashboard.reportUrl, "_blank", "noopener,noreferrer");
+                  return;
+              }
+
+  setSelectedId(dashboard.id);
+}}
                 />
               ))
             )}

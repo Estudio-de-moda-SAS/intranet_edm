@@ -38,7 +38,8 @@ export type PowerBIArea =
   | "Tiendas"
   | "Jurídico"
   | "Producto"
-  | "Servicios Administrativos";
+  | "Servicios Administrativos"
+  | "Corporativo";
 
 export interface PowerBIDashboard {
   /** Unique slug — used as React key and DOM anchor. */
@@ -54,6 +55,9 @@ export interface PowerBIDashboard {
   /** Iframe aspect ratio. Defaults to "16/9" when omitted. */
   aspectRatio?: "16/9" | "4/3" | "21/9";
   tags?: string[];
+
+  openMode?: "external";
+   /** External navigation instead of iframe embed */
 }
 
 // ---------------------------------------------------------------------------
@@ -64,16 +68,102 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
   {
     id: "tablero-comercial",
     title: "Tablero Comercial",
-    description: "Indicadores clave del área comercial.",
+    description: "",
     area: "Comercial",
     reportUrl:
       "https://app.powerbi.com/view?r=eyJrIjoiMDg0YzVlOGMtNDIyOS00M2IxLWEwYjktMTUwMjkyM2E5Njg3IiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
-    tags: ["ventas", "comercial"],
+    tags: [],
+  },
+  {
+    id:"tablero-activacion-comercial",
+    title: "Tablero Activación Comercial",
+    description: "",
+    area: "Comercial",
+    reportUrl:
+      "https://app.powerbi.com/view?r=eyJrIjoiZDJiMzA2NGYtMGNiOC00Mzk2LWE5YjktMTBhOGE2OWUyYzU5IiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
+    tags: [],
+  },
+  {
+    id:"tablero-panorama",
+    title: "Tablero Panorama",
+    description: "",
+    area: "Corporativo",
+    reportUrl:
+      "https://app.powerbi.com/view?r=eyJrIjoiZjkyODA4NTEtMTc2Yy00MDIxLWJiNDctZDdiNmYwOTJjNGI1IiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
+    tags: [],
+  },
+  {
+    id: "tablero-nacionalizacion",
+    title: "Tablero Nacionalización ZF",
+    description: "",
+    area: "Corporativo",
+    reportUrl:
+      "https://app.powerbi.com/view?r=eyJrIjoiZDg4NDUyYTItMTE5ZC00OTY4LTgyNTAtMTRjNmI4N2RjNjNhIiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
+    tags: [],
+  },
+  {
+    id:"tablero-wholesale",
+    title: "Tablero Wholesale",
+    description: "",
+    area: "Corporativo",
+    reportUrl:
+      "https://app.powerbi.com/view?r=eyJrIjoiNzE4YmQ2MmItMDI5Ni00MmU3LTk5NTMtMzFlNWRhNWQ3MjIyIiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
+    tags: [],
+  },
+   {
+    id: "tablero-indicadores",
+    title: "Tablero de Indicadores",
+    description: "",
+    area: "Corporativo",
+    reportUrl:
+      "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/CO/SitePages/Tablero-de-Indicadores.aspx",
+    tags: [],
+    openMode: "external",
+  },
+  {
+    id:"tablero-ventas-diarias",
+    title: "Tablero Ventas Diarias",
+    description: "",
+    area: "Corporativo",
+    reportUrl:
+      "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/VB/SitePages/Ventas-Diarias.aspx",
+    openMode: "external",
+    tags: [],
+  },
+  {
+    id:"tablero-abc-familias",
+    title: "Tablero ABC Familias",
+    description: "",
+    area: "Corporativo",
+    reportUrl:
+      "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/CO/SitePages/ABC-Familias.aspx",
+    openMode: "external",
+    tags: [],
+  },
+  {
+    id: "tablero-analisis-almacen",
+    title: "Tablero Análisis por Almacén",
+    description: "",
+    area: "Corporativo",
+    reportUrl:
+      "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/CO/SitePages/Análisis-por-almacen.aspx",
+    openMode: "external",
+    tags: [],
+  },
+  {
+    id:"tablero-you",
+    title: "Tablero You",
+    description: "",
+    area: "Corporativo",
+    reportUrl:
+      "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/you/SitePages/YOU.aspx",
+    openMode: "external",
+    tags: [],
   },
   // Agrega los demás tableros cuando tengas sus URLs:
   // {
-  //   id: "tablero-finanzas",
-  //   title: "Tablero Finanzas",
+  //   id: "tablero",
+  //   title: "Tablero ",
   //   description: "Cartera, recaudo y estados financieros.",
   //   area: "Finanzas",
   //   reportUrl: "https://app.powerbi.com/groups/.../reports/.../...",
