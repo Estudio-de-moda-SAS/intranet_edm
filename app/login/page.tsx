@@ -96,12 +96,10 @@ function BackgroundBlobs() {
 }
 
 const FEATURES = [
-  { label: "Recursos Humanos",  delay: 0    },
-  { label: "Finanzas",          delay: 0.12 },
-  { label: "Area Comercial",    delay: 0.24 },
-  { label: "E-Commerce",        delay: 0.36 },
-  { label: "Tecnologia",        delay: 0.48 },
-  { label: "Operaciones",       delay: 0.60 },
+  { label: "Documentos",  delay: 0    },
+  { label: "Tickets",          delay: 0.12 },
+  { label: "Aplicaciones",    delay: 0.24 },
+  { label: "Tableros",        delay: 0.36 },
 ];
 
 // -- Page ---------------------------------------------------------------------
@@ -314,7 +312,7 @@ export default function LoginPage() {
 
           <p className="mt-5 text-center text-[11px] text-slate-400">
             Problemas para ingresar?{" "}
-            <a href="mailto:soporte@estudiomoda.com" className="font-semibold text-violet-600 hover:text-violet-700 transition-colors">
+            <a href="mailto:listo@estudiodemoda.com.co" className="font-semibold text-violet-600 hover:text-violet-700 transition-colors">
               Contacta a TI
             </a>
           </p>
