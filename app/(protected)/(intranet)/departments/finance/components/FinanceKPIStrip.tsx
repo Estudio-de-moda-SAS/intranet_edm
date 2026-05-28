@@ -90,6 +90,7 @@ const KPI_ITEMS: DeptKpiItem[] = [
     borderColor: "border-l-violet-500",
     iconBg: "bg-violet-50 dark:bg-violet-500/[0.12]",
     iconColor: "text-violet-600 dark:text-violet-400",
+    enabled: false, // Ejemplo de KPI deshabilitado
   },
   {
     label: "Facturas pendientes",
@@ -120,6 +121,7 @@ const KPI_ITEMS: DeptKpiItem[] = [
     borderColor: "border-l-indigo-500",
     iconBg: "bg-indigo-50 dark:bg-indigo-500/[0.12]",
     iconColor: "text-indigo-600 dark:text-indigo-400",
+    enabled: false, // Ejemplo de KPI deshabilitado
   },
   {
     label: "Por pagar",
@@ -130,6 +132,7 @@ const KPI_ITEMS: DeptKpiItem[] = [
     borderColor: "border-l-orange-500",
     iconBg: "bg-orange-50 dark:bg-orange-500/[0.12]",
     iconColor: "text-orange-600 dark:text-orange-400",
+    enabled: false, // Ejemplo de KPI deshabilitado
   },
   {
     label: "Reportes del mes",
@@ -140,6 +143,7 @@ const KPI_ITEMS: DeptKpiItem[] = [
     borderColor: "border-l-purple-500",
     iconBg: "bg-purple-50 dark:bg-purple-500/[0.12]",
     iconColor: "text-purple-600 dark:text-purple-400",
+    enabled: false, // Ejemplo de KPI deshabilitado
   },
 ];
 
@@ -171,5 +175,5 @@ const KPI_ITEMS: DeptKpiItem[] = [
  * ```
  */
 export function FinanceKPIStrip() {
-  return <DepartmentKPIStrip items={KPI_ITEMS} />;
+  return <DepartmentKPIStrip items={KPI_ITEMS.filter((item) => item.enabled !== false)} />;
 }

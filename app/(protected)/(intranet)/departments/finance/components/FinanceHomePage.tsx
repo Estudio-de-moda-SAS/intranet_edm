@@ -134,6 +134,28 @@ const TEAM_ACCENT = {
  * La función desacopla la lógica de permisos de la construcción
  * del componente visual del hero banner.
  */
+const SHOW_FINANCE_ANNOUNCEMENT = true;
+
+const SHOW_FINANCE_KPIS = true;
+
+const SHOW_FINANCE_MODULES = true;
+
+const SHOW_FINANCE_ALERTS = false;
+
+const SHOW_FINANCE_TOOLS = true;
+
+const SHOW_FINANCE_QUICK_LINKS = true;
+
+const SHOW_FINANCE_PANEL = false;
+
+const SHOW_FINANCE_CALENDAR = false;
+
+const SHOW_FINANCE_ACTIVITY = false;
+
+const SHOW_FINANCE_EXPORT = false;
+
+
+
 function buildCtaLinks(accessLevel: AccessLevel) {
   const links: { href: string; label: string; variant: "ghost" | "solid" }[] = [];
 
@@ -194,7 +216,7 @@ export default function FinancePageContent({ accessLevel }: Props) {
   /**
    * Enlaces de acción visibles en el hero banner.
    */
-  const ctaLinks = buildCtaLinks(accessLevel);
+  const ctaLinks = SHOW_FINANCE_ANNOUNCEMENT && buildCtaLinks(accessLevel);
 
   /* ------------------------------------------------------------------------ */
   /* Guards base                                                              */
@@ -203,34 +225,34 @@ export default function FinancePageContent({ accessLevel }: Props) {
   /**
    * Indica si el usuario puede visualizar la franja de KPIs.
    */
-  const showKPIs = can(accessLevel, "finance:view_kpis");
+  const showKPIs = SHOW_FINANCE_KPIS && can(accessLevel, "finance:view_kpis");
 
   /**
    * Indica si se debe renderizar la columna principal
    * con módulos funcionales del área.
    */
-  const showMain = can(accessLevel, "finance:view_modules");
+  const showMain =  SHOW_FINANCE_MODULES && can(accessLevel, "finance:view_modules");
 
   /**
    * Indica si el bloque de alertas está habilitado.
    */
-  const showAlerts = can(accessLevel, "finance:view_alerts");
+  const showAlerts = SHOW_FINANCE_ALERTS && can(accessLevel, "finance:view_alerts");
 
   /**
    * Indica si el bloque de herramientas financieras está habilitado.
    */
-  const showTools = can(accessLevel, "finance:view_tools");
+  const showTools = SHOW_FINANCE_TOOLS && can(accessLevel, "finance:view_tools");
 
   /**
    * Indica si se deben mostrar accesos rápidos del módulo.
    */
-  const showLinks = can(accessLevel, "finance:view_modules");
+  const showLinks = SHOW_FINANCE_QUICK_LINKS && can(accessLevel, "finance:view_modules");
 
   /**
    * Indica si el panel analítico financiero completo
    * está disponible para el usuario.
    */
-  const showPanel = can(accessLevel, "finance:view_dashboard");
+  const showPanel = SHOW_FINANCE_PANEL && can(accessLevel, "finance:view_dashboard");
 
   /* ------------------------------------------------------------------------ */
   /* Guards complementarios                                                   */
@@ -239,17 +261,17 @@ export default function FinancePageContent({ accessLevel }: Props) {
   /**
    * Indica si la tarjeta de calendario financiero debe mostrarse.
    */
-  const showCalendar = can(accessLevel, "finance:view_modules");
+  const showCalendar = SHOW_FINANCE_CALENDAR && can(accessLevel, "finance:view_modules");
 
   /**
    * Indica si el feed de actividad reciente está habilitado.
    */
-  const showActivity = can(accessLevel, "finance:view_dashboard");
+  const showActivity = SHOW_FINANCE_ACTIVITY && can(accessLevel, "finance:view_dashboard");
 
   /**
    * Indica si la barra de exportación debe mostrarse.
    */
-  const showExport = can(accessLevel, "finance:create_report");
+  const showExport = SHOW_FINANCE_EXPORT && can(accessLevel, "finance:create_report");
 
   /* ------------------------------------------------------------------------ */
   /* Layout derivado                                                          */
