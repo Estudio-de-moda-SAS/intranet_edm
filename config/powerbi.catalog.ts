@@ -71,8 +71,9 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
     description: "",
     area: "Comercial",
     reportUrl:
-      "https://app.powerbi.com/view?r=eyJrIjoiMDg0YzVlOGMtNDIyOS00M2IxLWEwYjktMTUwMjkyM2E5Njg3IiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
+      "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/CO/SitePages/Tablero-comercial.aspx?csf=1&web=1&e=YihZ7G&cid=e6aa629f-9f8e-4490-b7b1-5e0aed93a9ea",
     tags: [],
+    openMode: "external",
   },
   {
     id:"tablero-activacion-comercial",
@@ -80,7 +81,7 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
     description: "",
     area: "Comercial",
     reportUrl:
-      "https://app.powerbi.com/view?r=eyJrIjoiZDJiMzA2NGYtMGNiOC00Mzk2LWE5YjktMTBhOGE2OWUyYzU5IiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
+      "t",
     tags: [],
   },
   {
@@ -89,8 +90,9 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
     description: "",
     area: "Corporativo",
     reportUrl:
-      "https://app.powerbi.com/view?r=eyJrIjoiZjkyODA4NTEtMTc2Yy00MDIxLWJiNDctZDdiNmYwOTJjNGI1IiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
+      "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/CO/SitePages/Tablero-comercial.aspx?csf=1&web=1&e=YihZ7G&cid=e6aa629f-9f8e-4490-b7b1-5e0aed93a9ea",
     tags: [],
+    openMode: "external",
   },
   {
     id: "tablero-nacionalizacion",
@@ -98,7 +100,7 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
     description: "",
     area: "Corporativo",
     reportUrl:
-      "https://app.powerbi.com/view?r=eyJrIjoiZDg4NDUyYTItMTE5ZC00OTY4LTgyNTAtMTRjNmI4N2RjNjNhIiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
+      "t",
     tags: [],
   },
   {
@@ -107,8 +109,9 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
     description: "",
     area: "Corporativo",
     reportUrl:
-      "https://app.powerbi.com/view?r=eyJrIjoiNzE4YmQ2MmItMDI5Ni00MmU3LTk5NTMtMzFlNWRhNWQ3MjIyIiwidCI6ImNkNDhlY2Q5LTdlMTUtNGY0Yi05N2Q5LWVjODEzZWU0MmIyYyIsImMiOjR9",
+      "t",
     tags: [],
+
   },
    {
     id: "tablero-indicadores",
