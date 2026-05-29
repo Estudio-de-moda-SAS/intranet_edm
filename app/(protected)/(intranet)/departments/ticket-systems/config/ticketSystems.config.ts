@@ -23,7 +23,7 @@ export const TICKET_SYSTEMS: TicketSystem[] = [
     id: "it-support",
     name: "Solvi",
     description:
-      "Plataforma de soporte y seguimiento de incidencias. Eficiencia, trazabilidad y foco en el usuario.",
+      "Plataforma de soporte y seguimiento de incidencias.",
     details:
       "Solvi es la plataforma principal utilizada para gestionar incidencias, solicitudes técnicas y requerimientos relacionados con sistemas internos, accesos y soporte operativo de LISTO.",
     useCases: [
@@ -69,7 +69,7 @@ export const TICKET_SYSTEMS: TicketSystem[] = [
     "Controlar ingresos y accesos",
     "Realizar solicitudes operativas de recepción",
   ],
-  url: "https://sa-helpdesk.netlify.app/",
+  url: "https://victorious-field-074e1b00f.7.azurestaticapps.net/",
   icon: Mail,
   accent: "sky",
   external: true,
