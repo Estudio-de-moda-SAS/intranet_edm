@@ -39,7 +39,7 @@ jobs:
           NEXT_PUBLIC_MSAL_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_MSAL_CLIENT_ID }}
           NEXT_PUBLIC_MSAL_TENANT_ID: ${{ secrets.NEXT_PUBLIC_MSAL_TENANT_ID }}
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_NICE_ROCK_02E9C090F }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WONDERFUL_HILL_0D962700F }}
           action: "upload"
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
