@@ -98,6 +98,20 @@ export function ProfilePageClient({ initialProfile }: ProfilePageClientProps) {
     { timezone: "", language: "" }
   );
 
+  // Perfil desde Graph — activo en produccion cuando initialProfile.id === ""
+  const { data: graphData, isLoading } = useGraphProfile();
+
+  /**
+   * Usuario proveniente de Microsoft Graph.
+   *
+   * Se extrae en una constante para que el efecto de enriquecimiento
+   * no dependa del objeto completo `graphData`. Algunos hooks pueden
+   * retornar un objeto nuevo en cada render aunque los datos internos
+   * sean los mismos, lo que puede disparar el `useEffect` repetidamente
+   * y provocar un ciclo infinito de `setProfile`.
+   */
+  const graphUser = graphData?.user;
+
   // Cargar preferencias desde localStorage en el cliente
   useEffect(() => {
     const saved = loadPrefs();
@@ -109,15 +123,25 @@ export function ProfilePageClient({ initialProfile }: ProfilePageClientProps) {
     }));
   }, []);
 
-  // Perfil desde Graph — activo en produccion cuando initialProfile.id === ""
-  const { data: graphData, isLoading } = useGraphProfile();
+  /**
+   * Enriquecer perfil con datos reales de Graph en produccion.
+   *
+   * IMPORTANTE:
+   * Este efecto depende de propiedades especificas de `graphUser`
+   * y no de `graphData` completo. Esto evita re-renderizados infinitos
+   * cuando `useGraphProfile` entrega nuevas referencias del objeto
+   * contenedor, pero el usuario realmente no ha cambiado.
+   */
+const SHOW_SESSIONS_CARD = false; // TODO: habilitar cuando Graph tenga la info de sesiones activas
+const SHOW_CORPORATE_INFO_CARD = false; // TODO: habilitar cuando Graph tenga employeeId y joined
+const SHOW_REGIONAL_PREFS_CARD = false; // TODO: habilitar cuando Graph tenga timezone y language
+const SHOW_PASSWORD_CARD = false; // TODO: habilitar cuando Graph tenga User.ReadWrite para cambiar contraseña
 
-  // Enriquecer perfil con datos reales de Graph en produccion
   useEffect(() => {
     if (initialProfile.id) return;
-    if (!graphData?.user)  return;
+    if (!graphUser) return;
 
-    const u     = graphData.user;
+    const u     = graphUser;
     const saved = loadPrefs();
 
     setProfile({
@@ -134,7 +158,19 @@ export function ProfilePageClient({ initialProfile }: ProfilePageClientProps) {
       ...(u.joined     && { joined:     u.joined     }),
       ...(u.phone      && { phone:      u.phone      }),
     });
-  }, [initialProfile.id, graphData]);
+  }, [
+    initialProfile.id,
+    graphUser?.id,
+    graphUser?.name,
+    graphUser?.image,
+    graphUser?.role,
+    graphUser?.email,
+    graphUser?.department,
+    graphUser?.location,
+    graphUser?.employeeId,
+    graphUser?.joined,
+    graphUser?.phone,
+  ]);
 
   /**
    * Actualiza un campo del perfil.
@@ -177,15 +213,15 @@ export function ProfilePageClient({ initialProfile }: ProfilePageClientProps) {
         {/* Columna izquierda */}
         <div className="lg:col-span-2 space-y-6">
           <PersonalInfoCard profile={profile} onUpdate={updateField} />
-          <RegionalPrefsCard profile={profile} onUpdate={updateField} />
-          <PasswordCard />
+          {SHOW_REGIONAL_PREFS_CARD && <RegionalPrefsCard profile={profile} onUpdate={updateField} />}
+          {SHOW_PASSWORD_CARD && <PasswordCard />}
         </div>
 
         {/* Columna derecha */}
         <div className="space-y-6">
           <TwoFACard />
-          <SessionsCard />
-          <CorporateInfoCard profile={profile} />
+          {SHOW_SESSIONS_CARD && <SessionsCard />}
+          {SHOW_CORPORATE_INFO_CARD && <CorporateInfoCard profile={profile} />}
         </div>
       </div>
     </div>

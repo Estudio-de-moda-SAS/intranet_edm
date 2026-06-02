@@ -76,6 +76,7 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
    * - el fondo decorativo radial
    * - el gradiente del avatar fallback
    */
+  const SHOW_JOINED_DATE = false;
   const hue = nameToHue(profile.name ?? "");
 
   return (
@@ -137,11 +138,13 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
                 <Building2 className="h-3 w-3" />
                 {profile.employeeId}
               </span>
-
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                Desde {profile.joined}
-              </span>
+              
+              {SHOW_JOINED_DATE && profile.joined && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Desde {profile.joined}
+                </span>
+              )}
 
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
