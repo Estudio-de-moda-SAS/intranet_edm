@@ -54,7 +54,7 @@ interface Props {
  */
 export function NewsSection({ announcements }: Props) {
   const SHOW_POLICIES_CARD_ASIDE = false; // Controla visibilidad de la tarjeta de políticas en el lado derecho
-  const SHOW_QUICK_LINKS_SECTION = false; // Controla visibilidad de la sección de quick links en el lado derecho
+  const SHOW_QUICK_LINKS_SECTION = true; // Controla visibilidad de la sección de quick links en el lado derecho
   
   if (!announcements?.length) return null;
 
@@ -111,11 +111,17 @@ export function NewsSection({ announcements }: Props) {
 
   {SHOW_POLICIES_CARD_ASIDE && <PoliciesCardAside />}
 
-  {SHOW_QUICK_LINKS_SECTION && (
-    <div className="col-span-2 lg:h-full">
-      <QuickLinksSection quickLinks={homeQuickLinks} />
-    </div>
-  )}
+ {SHOW_QUICK_LINKS_SECTION && (
+  <div className="col-span-2 lg:h-full">
+    <QuickLinksSection
+      quickLinks={homeQuickLinks}
+      title="Accesos rápidos"
+      subtitle="Accede a tus herramientas corporativas"
+      badgeLabel={`${homeQuickLinks.length} herramientas`}
+      showFavorites={false}
+    />
+  </div>
+)}
 </div>
 
       </div>
