@@ -50,14 +50,22 @@ export function TicketSystemCard({ system }: Props) {
           aria-label={`Acceder a ${system.name}`}
         >
           <div
-            className={`
-              flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl
-              transition-all duration-300 ease-out group-hover:scale-105
-              ${accentClass}
-            `}
-          >
-            <Icon className="h-5 w-5" />
-          </div>
+           className={`
+    flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl
+    transition-all duration-300 ease-out group-hover:scale-105
+    ${accentClass}
+  `}
+>
+  {system.logo ? (
+    <img
+      src={system.logo}
+      alt={system.name}
+      className="h-8 w-8 object-contain"
+    />
+  ) : (
+    <Icon className="h-5 w-5" />
+  )}
+</div>
 
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-semibold text-slate-800 transition-colors group-hover:text-violet-800">
