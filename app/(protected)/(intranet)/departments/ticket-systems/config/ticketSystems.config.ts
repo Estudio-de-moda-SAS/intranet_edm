@@ -4,6 +4,7 @@ import {
   LucideIcon,
   Car,
   Mail,
+  Hexagon,
 } from "lucide-react";
 
 export type TicketSystem = {
@@ -14,6 +15,7 @@ export type TicketSystem = {
   useCases?: string[];
   url: string;
   icon: LucideIcon;
+  logo?: string;
   accent: string;
   external?: boolean;
 };
@@ -40,11 +42,11 @@ export const TICKET_SYSTEMS: TicketSystem[] = [
 
   {
     id: "hr-support",
-    name: "Capital Humano",
+    name: "Gestor Documental",
     description:
       "Plataforma de gestión documental EDM.",
     details:
-      "La aplicación de Capital Humano permite gestionar procesos y documentación relacionada con talento humano, solicitudes internas y recursos corporativos asociados al colaborador.",
+      "La aplicación de Gestor Documental permite gestionar procesos y documentación relacionada con talento humano, solicitudes internas y recursos corporativos asociados al colaborador.",
     useCases: [
       "Gestionar solicitudes de RRHH",
       "Acceder a recursos del colaborador",
@@ -52,7 +54,7 @@ export const TICKET_SYSTEMS: TicketSystem[] = [
     ],
     url: "https://lively-coast-08111f510.3.azurestaticapps.net/",
     icon: Users,
-    accent: "emerald",
+    accent: "violet",
     external: true,
   },
 
@@ -71,7 +73,7 @@ export const TICKET_SYSTEMS: TicketSystem[] = [
   ],
   url: "https://victorious-field-074e1b00f.7.azurestaticapps.net/",
   icon: Mail,
-  accent: "sky",
+  accent: "violet",
   external: true,
   },
   {
@@ -89,7 +91,25 @@ export const TICKET_SYSTEMS: TicketSystem[] = [
     ],
     url: "https://proud-mushroom-00b1ea00f.1.azurestaticapps.net/",
     icon: Car,
-    accent: "amber",
+    accent: "violet",
+    external: true,
+  },
+   {
+    id: "prisma",
+    name: "Prisma",
+    description:
+      "Plataforma de gestión de solicitudes correspondientes al área de Proyectos y Soluciones",
+    details:
+      "Prisma permite solicitar y administrar tickets relacionados con proyectos y soluciones tecnológicas para los equipos.",
+    useCases: [
+      "Solicitar proyectos y soluciones tecnológicas",
+      "Consultar estado de solicitudes",
+      "Gestionar asignaciones",
+    ],
+    url: "https://prisma-edm.netlify.app/",
+    logo: "/brand/favicon.svg",
+    icon: Hexagon,
+    accent: "violet",
     external: true,
   },
 ];
