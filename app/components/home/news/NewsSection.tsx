@@ -9,8 +9,7 @@
 
 "use client";
 
-import { Newspaper, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { Newspaper} from "lucide-react";
 import { NewsCarousel }       from "./NewsCarousel";
 import { KnowUsCard }         from "@/app/components/home/KnowUsCard";
 import { PoliciesCardAside }  from "@/app/components/home/PoliciesCard";
@@ -72,14 +71,8 @@ export function NewsSection({ announcements }: Props) {
             Noticias y Comunicados
           </h2>
         </div>
-        <Link
-          href="/noticias"
-          className="flex items-center gap-1 text-[11px] font-medium transition-colors
-                     text-slate-400 hover:text-violet-600
-                     dark:text-[#545d68] dark:hover:text-violet-400"
-        >
-          Ver todas <ArrowRight className="h-3 w-3" />
-        </Link>
+      
+          
       </div>
 
       {/* Grid principal */}

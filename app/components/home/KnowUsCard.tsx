@@ -145,18 +145,13 @@ export function KnowUsCard({
 
       {/* Contenido inferior */}
       <div className="relative z-10 p-5 pt-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-fuchsia-200/90">
-          Nuestra organización
-        </p>
-
-        <h3
-          className="mt-1 text-[26px] font-black leading-[1.05] text-white"
-          style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
-        >
-          Descubre
-          <br />
-          EDM
-        </h3>
+      <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-violet-100/80">
+       Nuestra
+      </p>
+      <p
+      className="text-[11px] font-medium uppercase tracking-[0.28em] text-violet-100/80">
+      Organización
+      </p>
 
         <ul className="mt-4 flex flex-col gap-2 overflow-hidden transition-all duration-500 max-h-0 opacity-0 group-hover:max-h-40 group-hover:opacity-100">
           {HIGHLIGHTS.map(({ icon: Icon, label }) => (
