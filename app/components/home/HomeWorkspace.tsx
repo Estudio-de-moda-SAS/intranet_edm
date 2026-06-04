@@ -148,14 +148,13 @@ useEffect(() => {
       </div>
 
       {/* Acciones internas de la intranet */}
-      <div className="p-3 flex-1 flex">
+      <div className="p-3">
   <QuickLinksSection
     quickLinks={homeWorkspaceLinks}
     title="Acciones rápidas"
     subtitle="Accede a los módulos principales de la intranet"
     badgeLabel={`${homeWorkspaceLinks.length} módulos`}
     showFavorites={false}
-    fillHeight
   />
 </div>
     </section>
