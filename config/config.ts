@@ -34,6 +34,10 @@
  * construcción o con acceso restringido que aún no están listos para
  * todos los colaboradores.
  */
+
+import { House } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 export type Department = {
   /**
    * Identificador único del departamento en minúsculas sin espacios
@@ -55,6 +59,8 @@ export type Department = {
    * (ej. `"/departments/finance"`).
    */
   href: string;
+
+  icon?: LucideIcon;
 
   /**
    * Controla si el departamento aparece en la navegación principal.
@@ -114,6 +120,13 @@ export const DEV_DISABLE_ROLES = true; // TODO: asignar false antes de producci�
  * | `documentos`              | Documentos               | ❌      |
  */
 export const DEPARTMENTS: Department[] = [
+  {
+  id: "home",
+  label: "Home",
+  href: "/",
+  icon: House,
+  show: true,
+  },
   {
     id:    "finanzas",
     label: "Finanzas",

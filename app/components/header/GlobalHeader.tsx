@@ -18,7 +18,7 @@ import { useGlobalSearch }   from '@/app/hooks/useGlobalSearch';
 import GlobalSearchResults   from '../ui/search/GlobalSearchResults';
 import type { AccessLevel }  from '@/lib/roles';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ElementType } from 'react';
 import Image       from 'next/image';
 import Link        from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -36,6 +36,56 @@ const EXPAND_AT  = 60;
 const TRANSITION = { duration: 0.3, ease: 'easeInOut' } as const;
 const EMPTY_USER = { name: '', role: '', email: '' };
 
+/**
+ * Extiende el modelo de departamento para soportar íconos opcionales.
+ *
+ * @remarks
+ * Se usa para permitir que elementos especiales de navegación, como Home,
+ * puedan mostrarse con ícono en lugar de texto sin romper los demás items.
+ */
+type DepartmentWithIcon = Department & {
+  icon?: ElementType;
+};
+
+/**
+ * Determina si un item de navegación está activo según la ruta actual.
+ *
+ * @param pathname Ruta actual.
+ * @param href Ruta del item de navegación.
+ * @returns `true` si la ruta corresponde al item activo.
+ *
+ * @remarks
+ * El Home usa `href: "/"`, por lo que debe compararse con igualdad exacta.
+ * Si se usara `startsWith("/")`, Home quedaría activo en todas las rutas.
+ */
+function isDepartmentActive(pathname: string, href: string) {
+  return href === '/' ? pathname === '/' : pathname.startsWith(href);
+}
+
+/**
+ * Renderiza el contenido visual de un item de navegación.
+ *
+ * @param dept Departamento o item de navegación.
+ * @returns Ícono cuando existe; de lo contrario, texto del label.
+ *
+ * @remarks
+ * Permite que el item Home se muestre como ícono y que los demás módulos
+ * continúen usando su texto normal.
+ */
+function renderDepartmentLabel(dept: DepartmentWithIcon) {
+  const Icon = dept.icon;
+
+  if (Icon) {
+    return (
+      <span className="flex items-center justify-center" aria-label={dept.label} title={dept.label}>
+        <Icon className="h-4 w-4" />
+      </span>
+    );
+  }
+
+  return dept.label;
+}
+
 // -- Componente ----------------------------------------------------------------
 
 /**
@@ -47,24 +97,26 @@ export default function GlobalHeader() {
   const hasLogo  = Boolean((BRAND as any).logoUrl);
   const pathname = usePathname();
 
-  const [isScrolled,    setIsScrolled]    = useState(false);
-  const [searchOpen,    setSearchOpen]    = useState(false);
+  const [isScrolled,     setIsScrolled]     = useState(false);
+  const [searchOpen,     setSearchOpen]     = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const searchInputRef      = useRef<HTMLInputElement>(null);
-  const searchContainerRef  = useRef<HTMLDivElement>(null);
-  const ticking             = useRef(false);
-  const scrolledRef         = useRef(false);
-  const stateRef            = useRef(false);
-  const lockRef             = useRef(false);
+  const searchInputRef     = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const ticking            = useRef(false);
+  const scrolledRef        = useRef(false);
+  const stateRef           = useRef(false);
+  const lockRef            = useRef(false);
 
   const { user: sessionUser, isLoading } = useAppSession();
-console.log('SESSION:', {
-  isAuthed: !!sessionUser,
-  isLoading,
-  level: sessionUser?.accessLevel,
-  email: sessionUser?.email,
-});
+
+  console.log('SESSION:', {
+    isAuthed: !!sessionUser,
+    isLoading,
+    level: sessionUser?.accessLevel,
+    email: sessionUser?.email,
+  });
+
   /**
    * Usuario adaptado al formato esperado por {@link UserMenu}.
    */
@@ -214,22 +266,25 @@ console.log('SESSION:', {
                 className="overflow-hidden border-t border-slate-100 bg-white dark:border-[#21262d] dark:bg-[#161b22]"
               >
                 <div className="px-3 py-2 flex flex-col">
-                  {DEPARTMENTS.map((dept: Department) => {
-                    const isActive = pathname.startsWith(dept.href);
-                    return (
-                      <Link
-                        key={dept.id}
-                        href={dept.href}
-                        className={`flex items-center px-3 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
-                          isActive
-                            ? 'text-violet-700 bg-violet-50 dark:text-violet-400 dark:bg-violet-500/[0.10]'
-                            : 'text-slate-600 dark:text-[#adbac7] hover:text-violet-700 dark:hover:text-violet-400 hover:bg-slate-50 dark:hover:bg-[#21262d]'
-                        }`}
-                      >
-                        {dept.label}
-                      </Link>
-                    );
-                  })}
+                  {DEPARTMENTS
+                    .filter((dept: Department) => dept.show)
+                    .map((dept: DepartmentWithIcon) => {
+                      const isActive = isDepartmentActive(pathname, dept.href);
+
+                      return (
+                        <Link
+                          key={dept.id}
+                          href={dept.href}
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
+                            isActive
+                              ? 'text-violet-700 bg-violet-50 dark:text-violet-400 dark:bg-violet-500/[0.10]'
+                              : 'text-slate-600 dark:text-[#adbac7] hover:text-violet-700 dark:hover:text-violet-400 hover:bg-slate-50 dark:hover:bg-[#21262d]'
+                          }`}
+                        >
+                          {renderDepartmentLabel(dept)}
+                        </Link>
+                      );
+                    })}
                 </div>
               </motion.nav>
             )}
@@ -264,12 +319,13 @@ console.log('SESSION:', {
                         <Image src={(BRAND as any).logoUrl} alt="Logo" fill className="object-contain" priority />
                       </motion.div>
                     ) : (
-<motion.div
-  layout
-  animate={{ paddingTop: isScrolled ? 16 : 32, paddingBottom: isScrolled ? 16 : 32 }}
-  transition={TRANSITION}
-  style={{ paddingTop: isScrolled ? 16 : 32, paddingBottom: isScrolled ? 16 : 32 }}
-/>                    )}
+                      <motion.div
+                        layout
+                        animate={{ paddingTop: isScrolled ? 16 : 32, paddingBottom: isScrolled ? 16 : 32 }}
+                        transition={TRANSITION}
+                        style={{ paddingTop: isScrolled ? 16 : 32, paddingBottom: isScrolled ? 16 : 32 }}
+                      />
+                    )}
                   </Link>
 
                   <div className="flex flex-col justify-center min-w-0">
@@ -297,7 +353,6 @@ console.log('SESSION:', {
                   transition={TRANSITION}
                   className={`flex shrink-0 ${isScrolled ? 'flex-row items-center gap-3' : 'flex-col items-end gap-3'}`}
                 >
-
                   <div className="flex items-center gap-3">
                     <motion.div
                       ref={searchContainerRef}
@@ -344,33 +399,35 @@ console.log('SESSION:', {
             : 'bg-slate-50 dark:bg-[#0d1117] border-slate-100 dark:border-[#21262d]'
         }`}>
           <nav className="w-full px-8 flex items-center gap-0.5">
-  {DEPARTMENTS
-    .filter((dept: Department) => dept.show)
-    .map((dept: Department) => {
+            {DEPARTMENTS
+              .filter((dept: Department) => dept.show)
+              .map((dept: DepartmentWithIcon) => {
+                const isActive = isDepartmentActive(pathname, dept.href);
+                const hasIcon = Boolean(dept.icon);
 
-      const isActive = pathname.startsWith(dept.href);
-
-      return (
-        <Link
-          key={dept.id}
-          href={dept.href}
-                  className={`group relative px-3 py-3 text-[13px] font-medium transition-colors duration-150 whitespace-nowrap rounded-md ${
-                    isActive
-                      ? 'text-violet-700 dark:text-violet-400'
-                      : 'text-slate-500 dark:text-[#768390] hover:text-violet-700 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-[#21262d]'
-                  }`}
-                >
-                  {dept.label}
-                  <span
-                    aria-hidden
-                    className={`absolute bottom-0 left-3 right-3 h-[2px] rounded-full transition-all duration-200 ease-out
-                                bg-violet-600 dark:bg-violet-400 ${
-                      isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'
-                    }`}
-                  />
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={dept.id}
+                    href={dept.href}
+                    aria-label={hasIcon ? dept.label : undefined}
+                    title={hasIcon ? dept.label : undefined}
+                    className={`group relative flex items-center justify-center px-3 py-3 text-[13px] font-medium transition-colors duration-150 whitespace-nowrap rounded-md ${
+                      isActive
+                        ? 'text-violet-700 dark:text-violet-400'
+                        : 'text-slate-500 dark:text-[#768390] hover:text-violet-700 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-[#21262d]'
+                    } ${hasIcon ? 'min-w-10' : ''}`}
+                  >
+                    {renderDepartmentLabel(dept)}
+                    <span
+                      aria-hidden
+                      className={`absolute bottom-0 left-3 right-3 h-[2px] rounded-full transition-all duration-200 ease-out
+                                  bg-violet-600 dark:bg-violet-400 ${
+                        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'
+                      }`}
+                    />
+                  </Link>
+                );
+              })}
           </nav>
         </div>
 

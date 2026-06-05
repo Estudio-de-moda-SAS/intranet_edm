@@ -106,7 +106,7 @@ export const TICKET_SYSTEMS: TicketSystem[] = [
       "Consultar estado de solicitudes",
       "Gestionar asignaciones",
     ],
-    url: "https://prisma-edm.netlify.app/",
+    url: "https://white-coast-0bebe6a0f.7.azurestaticapps.net/",
     logo: "/brand/favicon.svg",
     icon: Hexagon,
     accent: "violet",

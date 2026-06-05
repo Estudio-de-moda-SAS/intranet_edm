@@ -58,6 +58,14 @@ interface LeadersSectionProps {
    */
   leaders: Leader[];
 }
+/**
+ * Controla la visibilidad del acceso al directorio corporativo.
+ *
+ * @remarks
+ * Se mantiene oculto mientras no exista una integración real con
+ * Microsoft Graph o un directorio corporativo funcional.
+ */
+const SHOW_DIRECTORY_LINK = false;
 
 /**
  * Genera iniciales a partir del nombre.
@@ -65,6 +73,8 @@ interface LeadersSectionProps {
  * @param name Nombre completo.
  * @returns Iniciales en mayúscula.
  */
+
+
 function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 }
@@ -203,34 +213,36 @@ export function LeadersSection({ leaders }: LeadersSectionProps) {
           ))}
         </div>
 
-        <div className="flex justify-end mt-4">
-          <Link
-            href="/directory"
-            className="group inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200
-                       text-slate-600 hover:text-violet-700
-                       dark:text-[#768390] dark:hover:text-violet-400"
-          >
-            <span className="border-b transition-colors duration-200
-                             border-slate-300 group-hover:border-violet-500
-                             dark:border-[#30363d] dark:group-hover:border-violet-500/50">
-              Ver directorio completo
-            </span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-4 h-4 transition-all duration-200
-                        text-slate-400 group-hover:text-violet-500 group-hover:translate-x-0.5
-                        dark:text-[#545d68] dark:group-hover:text-violet-400"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </Link>
-        </div>
+        {SHOW_DIRECTORY_LINK && (
+  <div className="flex justify-end mt-4">
+    <Link
+      href="/directory"
+      className="group inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200
+                 text-slate-600 hover:text-violet-700
+                 dark:text-[#768390] dark:hover:text-violet-400"
+    >
+      <span className="border-b transition-colors duration-200
+                       border-slate-300 group-hover:border-violet-500
+                       dark:border-[#30363d] dark:group-hover:border-violet-500/50">
+        Ver directorio completo
+      </span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-4 h-4 transition-all duration-200
+                  text-slate-400 group-hover:text-violet-500 group-hover:translate-x-0.5
+                  dark:text-[#545d68] dark:group-hover:text-violet-400"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+      >
+        <path
+          fillRule="evenodd"
+          d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+          clipRule="evenodd"
+        />
+      </svg>
+    </Link>
+  </div>
+)}
       </div>
     </section>
   );

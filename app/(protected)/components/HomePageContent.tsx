@@ -103,6 +103,16 @@ export function HomePageContent({ data }: HomePageContentProps) {
   const SHOW_RECOGNITIONS_CARD = false;
   const SHOW_EVENTS_SECTION = false;
   const SHOW_TASKS_CARD = false;
+  const SHOW_FAVORITES_CARD = false;
+ 
+
+  const SHOW_SIDEBAR =
+  SHOW_FAVORITES_CARD ||
+  SHOW_TASKS_CARD ||
+  SHOW_RECOGNITIONS_CARD ||
+  SHOW_EVENTS_SECTION ||
+  SHOW_BIRTHDYAS_CARD;
+
   return (
     <main
       className="min-h-screen w-full"
@@ -133,8 +143,12 @@ export function HomePageContent({ data }: HomePageContentProps) {
           {/* -------------------------------------------------------- */}
           {/* Columna izquierda: noticias + solicitudes                */}
           {/* -------------------------------------------------------- */}
-          <div className="flex flex-col gap-6 lg:col-span-9 lg:w-[96%] order-1 lg:order-none">
-
+          <div
+  className={`
+    flex flex-col gap-6 order-1 lg:order-none
+    ${SHOW_SIDEBAR ? "lg:col-span-9 lg:w-[96%]" : "lg:col-span-12"}
+  `}
+>
             <AnimatedCard delay={0}>
               <NewsSection announcements={data.announcements} />
             </AnimatedCard>
@@ -149,13 +163,14 @@ export function HomePageContent({ data }: HomePageContentProps) {
           {/* -------------------------------------------------------- */}
           {/* Sidebar                                                  */}
           {/* -------------------------------------------------------- */}
-          <aside className="lg:col-span-3 flex flex-col gap-5 lg:w-[112%] lg:-ml-[12%] order-2 lg:order-none">
+          {SHOW_SIDEBAR && (<aside className="lg:col-span-3 flex flex-col gap-5 lg:w-[112%] lg:-ml-[12%] order-2 lg:order-none">
 
-            {/* Favoritos */}
-            <AnimatedCard delay={0.08}>
-              <FavoritesCard />
-            </AnimatedCard>
-
+           {/* Favoritos */}
+{SHOW_FAVORITES_CARD && (
+  <AnimatedCard delay={0.08}>
+    <FavoritesCard />
+  </AnimatedCard>
+)}
             {/* Tareas */}
             {SHOW_TASKS_CARD && (
               <AnimatedCard delay={0.20}>
@@ -187,6 +202,7 @@ export function HomePageContent({ data }: HomePageContentProps) {
             )}
 
           </aside>
+          )}
         </div>
 
         {/* ========================================================== */}

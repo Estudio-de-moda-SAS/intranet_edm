@@ -27,6 +27,7 @@ import {
 import { logout }              from '@/app/api/auth/msal';
 import { NotificationsPanel }  from './NotificationsModal';
 import { PrivacyModal }        from './PrivacyModal';
+import { useMicrosoftProfilePhoto } from "@/app/hooks/useMicrosoftProfilePhoto";
 
 // -- Tipos --------------------------------------------------------------------
 
@@ -89,12 +90,21 @@ export default function UserMenu({ user }: Props) {
   const [dropdownPos,  setDropdownPos]  = useState({ top: 0, right: 0 });
   const [unreadCount,  setUnreadCount]  = useState(0);
   const [loggingOut,   setLoggingOut]   = useState(false);
+  const {
+  photoUrl,
+  loadProfilePhoto,
+} = useMicrosoftProfilePhoto();
 
   const buttonRef   = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const panelRef    = useRef<HTMLDivElement>(null);
 
   const hue = nameToHue(user.name);
+  const resolvedAvatarUrl = photoUrl ?? user.avatarUrl;
+
+  useEffect(() => {
+  loadProfilePhoto();
+}, [loadProfilePhoto]);
 
   const updatePos = useCallback(() => {
     if (!buttonRef.current) return;
@@ -183,9 +193,9 @@ export default function UserMenu({ user }: Props) {
               style={{ background: `hsl(${hue}, 70%, 55%)` }}
             />
             <div className="flex items-center gap-3">
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
+             {resolvedAvatarUrl ? (
+             <img
+             src={resolvedAvatarUrl}
                   alt={user.name}
                   className="h-12 w-12 rounded-xl object-cover ring-2 ring-violet-100 dark:ring-violet-500/20"
                 />
@@ -316,9 +326,9 @@ export default function UserMenu({ user }: Props) {
                      focus:outline-none focus:ring-2 focus:ring-violet-500/20"
         >
           <div className="relative">
-            {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
+           {resolvedAvatarUrl ? (
+           <img
+           src={resolvedAvatarUrl}
                 alt={user.name}
                 className="h-8 w-8 rounded-full object-cover ring-2 ring-violet-100 dark:ring-violet-500/20"
               />
