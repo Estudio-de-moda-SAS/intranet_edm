@@ -27,23 +27,25 @@ import { companyValues } from "../config/edmValues";
 /**
  * Sección de valores corporativos.
  *
- * @returns Lista visual de valores con icono, título y descripción.
+ * @returns Grid visual de valores con icono, título y descripción.
  *
  * @remarks
  * La sección se compone de:
  *
  * 1. **Header**
  *    - etiqueta contextual (misión, visión y valores)
+ *    - descripción breve de apoyo
  *
- * 2. **Listado de valores**
+ * 2. **Grid de valores**
  *    - icono representativo
  *    - título del valor
  *    - descripción breve
  *
  * Características:
  * - Render dinámico basado en `companyValues`
- * - Separadores visuales entre ítems
+ * - Cards internas para mejorar jerarquía visual
  * - Hover states para mejorar la experiencia visual
+ * - Tipografía heredada del sistema visual global de la intranet
  *
  * @example
  * ```tsx
@@ -52,48 +54,55 @@ import { companyValues } from "../config/edmValues";
  */
 export function CompanyValuesSection() {
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white dark:bg-gray-900">
-
+    <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white dark:border-[#30363d] dark:bg-gray-900">
       {/* ============================================================ */}
       {/* Header                                                       */}
       {/* ============================================================ */}
-      <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
-        <span className="h-[6px] w-[6px] flex-shrink-0 rounded-full bg-violet-600" />
-        <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-          Misión, visión y valores
+      <div className="flex flex-col gap-2 border-b border-slate-100 px-6 py-5 dark:border-[#21262d]">
+        <div className="flex items-center gap-3">
+          <span className="h-[6px] w-[6px] flex-shrink-0 rounded-full bg-violet-600" />
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Misión, visión y valores
+          </p>
+        </div>
+
+        <p className="max-w-3xl text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+          Principios que guían la cultura, el crecimiento y la forma en que EDM
+          construye relaciones con sus equipos, marcas y clientes.
         </p>
       </div>
 
       {/* ============================================================ */}
-      {/* Lista de valores                                             */}
+      {/* Grid de valores                                              */}
       {/* ============================================================ */}
-      <div className="flex flex-col">
-        {companyValues.map((v, i) => (
-          <div
+      <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+        {companyValues.map((v) => (
+          <article
             key={v.title}
-            className="flex items-start gap-3 px-6 py-4 transition-colors hover:bg-violet-50/50 dark:hover:bg-gray-800"
-            style={{
-              borderBottom:
-                i < companyValues.length - 1
-                  ? "0.5px solid rgb(226 232 240)"
-                  : "none",
-            }}
+            className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/60 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-100 hover:bg-white hover:shadow-sm dark:border-[#30363d] dark:bg-[#161b22] dark:hover:border-violet-500/30 dark:hover:bg-[#1c2128]"
           >
+            {/* Decoración sutil */}
+            <div className="pointer-events-none absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-violet-500/[0.05] transition-opacity group-hover:opacity-100 dark:bg-violet-500/[0.08]" />
+
             {/* Icono */}
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-violet-50 text-[15px]">
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-lg shadow-sm ring-1 ring-violet-100 dark:bg-violet-500/[0.12] dark:ring-violet-500/20">
               {v.icon}
             </div>
 
             {/* Contenido */}
-            <div>
-              <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-200">
+            <div className="relative">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 {v.title}
-              </p>
-              <p className="mt-0.5 text-[12px] leading-[1.5] text-slate-400">
+              </h3>
+
+              <p className="mt-2 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
                 {v.description}
               </p>
             </div>
-          </div>
+
+            {/* Línea inferior de acento */}
+            <div className="absolute bottom-0 left-0 h-[3px] w-0 bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-300 group-hover:w-full" />
+          </article>
         ))}
       </div>
     </section>

@@ -35,6 +35,7 @@ export type CompanyHistoryItem = {
   year: string;
   title: string;
   description: string;
+  image?: string;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -61,38 +62,101 @@ export type CompanyHistoryItem = {
 export const companyHistory: readonly CompanyHistoryItem[] = [
   {
     year: "1980",
-    title: "Nace Estudio de Moda",
+    title: "Fundación de Estudio de Moda",
     description:
-      "Clara Restrepo y Jaime Álvarez fundan EDM en Medellín con una visión transformadora: innovar en la moda colombiana y ofrecer alternativas únicas para vestirse.",
+      "Nace la compañía en los años 80's en una casa en Medellín, marcando el inicio de una iniciativa que se convertiría en referente de la moda colombiana.",
   },
+
+  {
+    year: "1981",
+    title: "Creación de US Wear",
+    description:
+      "En 1981, Estudio de Moda dio un paso clave en su evolución al crear la marca US Wear. Ese mismo año, trasladó su sede a una nueva casa en Medellín, afirmando así una etapa de crecimiento y expansión.",
+  },
+
+  {
+    year: "1982",
+    title: "Comercialización Chopper",
+    description:
+      "Chopper, marca brasilera, fue la primera licencia internacional obtenida. Se inaugura la tienda multimarca, estableciendo un modelo comercial innovador en el país. Ese mismo año, la compañía realizó un nuevo cambio de sede, acompañando su crecimiento y potenciando su operación.",
+  image: "/images/history/Chopper.png",
+    },
+
+  {
+    year: "1984",
+    title: "Creación de Pilatos",
+    description:
+      "Se inaugura la tienda multimarca Pilatos, cimentando un modelo comercial innovador en el país.",
+    image: "/images/history/Pilatos.jpg",
+  },
+
   {
     year: "1985",
-    title: "Llega Marithé + François Girbaud",
+    title: "Llegada de Marithé + François Girbaud",
     description:
-      "EDM trae a Colombia el dúo francés que revolucionaba la industria del jean, dando inicio a su apuesta por marcas internacionales premium.",
+      "Se incorpora al portafolio Marithé + François Girbaud, aportando una visión vanguardista que eleva el reconocimiento de la compañía en el mercado de la moda en Colombia.",
+    image: "/images/history/MGirbaud.webp",
   },
+
   {
     year: "1989",
-    title: "DIESEL llega a Colombia",
+    title: "Llegada de Diesel",
     description:
-      "La marca italiana más disruptiva del portafolio consolida la apuesta de EDM por la moda premium con el respaldo del diseño italiano.",
+      "Un hito estratégico que amplía la oferta del portafolio con la incorporación de Diesel, potenciando el liderazgo de la compañía y elevando el estándar de la moda en Colombia con una oferta global.",
+    image: "/images/history/Diesel.png",
   },
+
   {
-    year: "2000s",
-    title: "Expansión del portafolio",
+    year: "1991",
+    title: "Comercialización de Soviet",
     description:
-      "Se incorporan Kipling, Custo Barcelona y Agua Bendita, ampliando las opciones y consolidando a EDM como la multimarca de moda premium en Colombia.",
+      "Se da inicio a la comercialización de Soviet, sumando una nueva alternativa al portafolio que refuerza el lugar de la compañía y aporta frescura e innovación al mercado de la moda.",
+    image: "/images/history/Soviet.webp",
   },
+
   {
-    year: "2010s",
-    title: "Nace la marca propia Pilatos",
+    year: "2000",
+    title: "Llegan Kipling y Custo Barcelona",
     description:
-      "Con el conocimiento acumulado, EDM lanza Pilatos: una propuesta urbana, divertida y exclusiva que hoy es referente en el mercado colombiano.",
+      "Se inició la comercialización de las marcas Kipling y Custo Barcelona, enriqueciendo el portafolio de la organización e impulsando su crecimiento con alternativas globales de alto valor y reconocimiento internacional.",
+    image: "/images/history/Kipling.webp",
   },
+
   {
-    year: "Hoy",
-    title: "EDM: familia, pasión y moda",
+    year: "2006",
+    title: "Creación de New Project",
     description:
-      "Con más de 4 canales de distribución, presencia en más de 30 ciudades y los principales marketplaces del país, EDM sigue transformando la moda en Colombia.",
+      "EDM desarrolla su marca propia New Project, demostrando capacidad para crear y gestionar iniciativas de moda propias.",
+    image: "/images/history/project.jpeg",
+  },
+
+  {
+    year: "2011",
+    title: "Llegan Celio y Superdry",
+    description:
+      "Se amplía el portafolio con nuevas marcas internacionales, afianzando el perfil como distribuidor de moda premium.",
+    image: "/images/history/Superdry.png",
+  },
+
+  {
+    year: "2018",
+    title: "Expansión Nacional",
+    description:
+      "Apertura de más de 15 tiendas a nivel nacional, ampliando la presencia de la compañía en el país.",
+  },
+
+  {
+    year: "2019",
+    title: "Nueva Sede Corporativa",
+    description:
+      "Traslado a nuevas oficinas en Medellín, reflejando el crecimiento y madurez de EDM.",
+  },
+
+  {
+  year: "Hoy",
+  title: "Más de 45 años transformando la moda",
+  description:
+    "La incorporación de marcas internacionales representó un punto de inflexión para EDM, ampliando su portafolio, elevando los estándares del negocio y consolidando su reconocimiento como referente de la moda en Colombia. Con el tiempo, la organización evolucionó hacia una estructura más sólida y sostenible, con unidades de negocio definidas y una visión enfocada en maximizar el valor de sus marcas. Hoy, ese legado continúa impulsando el crecimiento, la innovación y el compromiso de seguir transformando la moda en el país.",
+  image: "/brand/edmicon.png",
   },
 ];

@@ -12,7 +12,7 @@
  * - hero corporativo
  * - historia de la compañía
  * - valores organizacionales
- * - equipo directivo
+ * - equipo directivo (opcional)
  * - marcas
  * - canales de distribución
  * - footer institucional
@@ -39,6 +39,25 @@ import { AnimatedCard } from "@/app/components/ui/animated/AnimatedCard";
 import { AnimatedViewCard } from "@/app/components/ui/animated/AnimatedViewCard";
 
 /* -------------------------------------------------------------------------- */
+/* Configuración de visibilidad                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Controla la visualización de la sección de directivos.
+ *
+ * @remarks
+ * Mientras no se disponga de información definitiva o validada
+ * para esta sección, puede mantenerse oculta.
+ *
+ * Cuando se habilite nuevamente:
+ *
+ * ```ts
+ * const SHOW_LEADERS_SECTION = true;
+ * ```
+ */
+const SHOW_LEADERS_SECTION = false;
+
+/* -------------------------------------------------------------------------- */
 /* Componente principal                                                        */
 /* -------------------------------------------------------------------------- */
 
@@ -52,10 +71,11 @@ import { AnimatedViewCard } from "@/app/components/ui/animated/AnimatedViewCard"
  *
  * 1. Hero principal de identidad corporativa
  * 2. Historia de la empresa
- * 3. Grid de valores y liderazgo
- * 4. Sección de marcas
- * 5. Sección de canales
- * 6. Footer institucional
+ * 3. Valores organizacionales
+ * 4. Liderazgo corporativo (opcional)
+ * 5. Sección de marcas
+ * 6. Sección de canales
+ * 7. Footer institucional
  *
  * También aplica contenedores animados para mantener consistencia visual
  * con el resto de la intranet.
@@ -84,7 +104,6 @@ export function CompanyPageContent() {
       <CompanyHeroBanner />
 
       <div className="flex flex-col gap-6 px-4 pb-12 pt-6 lg:px-14">
-
         {/* ---------------------------------------------------------- */}
         {/* Historia de la empresa                                     */}
         {/* ---------------------------------------------------------- */}
@@ -95,14 +114,20 @@ export function CompanyPageContent() {
         {/* ---------------------------------------------------------- */}
         {/* Valores + liderazgo                                        */}
         {/* ---------------------------------------------------------- */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div
+          className={`grid grid-cols-1 gap-6 ${
+            SHOW_LEADERS_SECTION ? "lg:grid-cols-2" : ""
+          }`}
+        >
           <AnimatedCard delay={0.08}>
             <CompanyValuesSection />
           </AnimatedCard>
 
-          <AnimatedCard delay={0.14}>
-            <CompanyLeadersSection />
-          </AnimatedCard>
+          {SHOW_LEADERS_SECTION && (
+            <AnimatedCard delay={0.14}>
+              <CompanyLeadersSection />
+            </AnimatedCard>
+          )}
         </div>
 
         {/* ---------------------------------------------------------- */}
@@ -126,11 +151,11 @@ export function CompanyPageContent() {
           <p className="text-[12px] text-violet-300/70">
             Estudio de Moda S.A.S. · Medellín, Colombia · Fundada 1980
           </p>
+
           <p className="text-[13px] font-semibold tracking-wide text-violet-200">
             #EDMBeHappy
           </p>
         </footer>
-
       </div>
     </main>
   );

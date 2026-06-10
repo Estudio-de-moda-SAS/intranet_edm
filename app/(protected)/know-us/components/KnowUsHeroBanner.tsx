@@ -58,7 +58,7 @@ const BRANDS = [
  *    - breadcrumb contextual
  *
  * 2. **Mensaje principal**
- *    - título destacado con tipografía serif
+ *    - título destacado alineado con la tipografía global del proyecto
  *    - descripción corporativa
  *
  * 3. **Marcas**
@@ -117,11 +117,10 @@ export function CompanyHeroBanner() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18, duration: 0.5 }}
-          className="mb-5 max-w-2xl text-[40px] font-black leading-[1.08] tracking-tight text-white lg:text-[50px]"
-          style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+          className="mb-5 max-w-2xl text-[40px] font-extrabold leading-[1.08] tracking-tight text-white lg:text-[50px]"
         >
           Más de 45 años{" "}
-          <em className="font-black italic text-fuchsia-300">
+          <em className="font-extrabold italic text-fuchsia-300">
             transformando
           </em>{" "}
           la moda en Colombia
@@ -132,9 +131,9 @@ export function CompanyHeroBanner() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.28, duration: 0.4 }}
-          className="mb-7 max-w-xl text-[15px] leading-relaxed text-violet-200/80"
+          className="mb-7 max-w-xl text-[15px] leading-relaxed text-violet-100/85"
         >
-          Somos una empresa familiar nacida en Medellín con una pasión: inspirar
+          Somos una empresa de moda nacida en Medellín con una pasión: inspirar
           al consumidor a verse y sentirse especial.
         </motion.p>
 
@@ -150,7 +149,7 @@ export function CompanyHeroBanner() {
           {BRANDS.map((brand) => (
             <span
               key={brand}
-              className="rounded-full border border-violet-400/30 bg-white/10 px-4 py-1 text-[11px] font-medium tracking-wide text-white/80 backdrop-blur-sm"
+              className="rounded-full border border-violet-400/30 bg-white/10 px-4 py-1 text-[11px] font-medium tracking-wide text-white/90 backdrop-blur-sm"
             >
               {brand}
             </span>
@@ -178,13 +177,10 @@ export function CompanyHeroBanner() {
                     : "none",
               }}
             >
-              <p
-                className="text-[30px] font-bold leading-none text-white"
-                style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
-              >
+              <p className="text-[30px] font-extrabold leading-none text-white">
                 {stat.value}
               </p>
-              <p className="mt-1 text-[11px] tracking-[0.04em] text-violet-300/70">
+              <p className="mt-1 text-[11px] tracking-[0.04em] text-violet-200/80">
                 {stat.label}
               </p>
             </div>
