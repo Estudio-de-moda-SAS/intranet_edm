@@ -58,10 +58,10 @@ export const microsoft365QuickLinks: QuickLinkItem[] = [
   external: true,
 },
 {
-  label: "Planner",
-  href: "https://planner.cloud.microsoft",
+  label: "Excel",
+  href: "https://excel.cloud.microsoft/",
   icon: "ClipboardList",
-  description: "Gestión de tareas",
+  description: "Hojas de cálculo",
   color: "purple",
   external: true,
 },

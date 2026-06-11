@@ -7,14 +7,20 @@
  *
  * Layout:
  * - Tab strip — filters dashboards by operational area
- * - Two-column panel — sidebar list (left) + {@link PowerBIViewer} (right)
+ * - Two-column panel — sidebar list (left) + viewer / preview panel (right)
  *
  * On mobile the grid collapses to a single column: list above, viewer below.
  */
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, ChevronRight, ExternalLink } from "lucide-react";
+import {
+  LayoutGrid,
+  ChevronRight,
+  ExternalLink,
+  ShieldCheck,
+  BarChart3,
+} from "lucide-react";
 import { PowerBIViewer } from "./PowerBIViewer";
 import {
   POWERBI_DASHBOARDS,
@@ -22,7 +28,6 @@ import {
   type PowerBIDashboard,
   type PowerBIArea,
 } from "@/config/powerbi.catalog";
-
 
 // ---------------------------------------------------------------------------
 // Props
@@ -61,7 +66,22 @@ const AREA_COLORS: Record<string, string> = {
     "bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300",
   "Servicios Administrativos":
     "bg-teal-100 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300",
+  Corporativo:
+    "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300",
 };
+
+// ---------------------------------------------------------------------------
+// Feature flags
+// ---------------------------------------------------------------------------
+
+/**
+ * Temporarily disables embedded dashboard rendering.
+ *
+ * Keep {@link PowerBIViewer} available for the future, but while the organization
+ * defines the final embed strategy, the boards section works as a clean catalog
+ * that redirects users to the official Microsoft 365 / SharePoint view.
+ */
+const ENABLE_DASHBOARD_EMBED = false;
 
 // ---------------------------------------------------------------------------
 // Tab navigation
@@ -88,9 +108,7 @@ function TabNav({ areas, active, counts, onChange }: TabNavProps) {
       {tabs.map((tab) => {
         const isActive = active === tab;
         const count =
-          tab === "Todos"
-            ? POWERBI_DASHBOARDS.length
-            : (counts[tab] ?? 0);
+          tab === "Todos" ? POWERBI_DASHBOARDS.length : counts[tab] ?? 0;
 
         return (
           <button
@@ -111,6 +129,7 @@ function TabNav({ areas, active, counts, onChange }: TabNavProps) {
                 transition={{ type: "spring", stiffness: 500, damping: 35 }}
               />
             )}
+
             <span className="relative z-10 flex items-center gap-1.5">
               {tab}
               <span
@@ -170,10 +189,13 @@ function DashboardCard({ dashboard, isSelected, onClick }: DashboardCardProps) {
           >
             {dashboard.title}
           </p>
+
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed line-clamp-2">
-            {dashboard.description}
+            {dashboard.description ||
+              ""}
           </p>
         </div>
+
         <ChevronRight
           className={`w-3.5 h-3.5 mt-0.5 shrink-0 transition-all duration-200 ${
             isSelected
@@ -183,30 +205,136 @@ function DashboardCard({ dashboard, isSelected, onClick }: DashboardCardProps) {
         />
       </div>
 
-     <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-  <span
-    className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${colorClass}`}
-  >
-    {dashboard.area}
-  </span>
+      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+        <span
+          className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${colorClass}`}
+        >
+          {dashboard.area}
+        </span>
 
-  {dashboard.openMode === "external" && (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
-      <ExternalLink className="w-3 h-3" />
-      SharePoint
-    </span>
-  )}
+        {dashboard.openMode === "external" && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
+            <ExternalLink className="w-3 h-3" />
+            SharePoint
+          </span>
+        )}
 
-  {dashboard.tags?.map((tag) => (
-    <span
-      key={tag}
-      className="inline-block px-2 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full"
-    >
-      {tag}
-    </span>
-  ))}
-</div>
+        {dashboard.tags?.map((tag) => (
+          <span
+            key={tag}
+            className="inline-block px-2 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
     </motion.button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard preview panel
+// ---------------------------------------------------------------------------
+
+function DashboardPreview({ dashboard }: { dashboard: PowerBIDashboard }) {
+  const hasValidUrl =
+    dashboard.reportUrl &&
+    dashboard.reportUrl.trim() !== "" &&
+    dashboard.reportUrl.trim() !== "t";
+
+  return (
+    <div className="flex flex-col rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-700/60">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900/60">
+                <BarChart3 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              </span>
+
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
+                <ExternalLink className="w-3 h-3" />
+                SharePoint
+              </span>
+            </div>
+
+            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+              {dashboard.title}
+            </h2>
+
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed max-w-2xl">
+              {dashboard.description ||
+                "Este tablero se encuentra disponible desde el entorno corporativo de Microsoft 365."}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 bg-slate-50 dark:bg-slate-950">
+        <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">
+          <div className="flex flex-col gap-4 max-w-2xl">
+            <div className="flex items-start gap-3">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/60 shrink-0">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  Acceso protegido
+                </p>
+
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  Puedes abrir el tablero en su ubicación oficial de
+                  SharePoint, conservando los permisos definidos por Microsoft 365.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap pt-2">
+              <span
+                className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${
+                  AREA_COLORS[dashboard.area] ??
+                  "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                }`}
+              >
+                {dashboard.area}
+              </span>
+
+              {dashboard.tags?.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-block px-2 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <div className="pt-2">
+              {hasValidUrl ? (
+                <a
+                  href={dashboard.reportUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-violet-600 hover:bg-violet-700 text-white transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Abrir tablero
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                >
+                  URL pendiente
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -222,10 +350,12 @@ function EmptyState({ area }: { area: FilterArea }) {
       className="flex flex-col items-center justify-center py-12 gap-3 text-center"
     >
       <LayoutGrid className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+
       <div>
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
           Sin tableros en {area === "Todos" ? "esta sección" : area}
         </p>
+
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
           Agrega reportes en{" "}
           <code className="font-mono text-violet-500">
@@ -257,9 +387,11 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
 
   const counts = useMemo(() => {
     const map: Record<string, number> = {};
+
     POWERBI_AREAS.forEach((area) => {
       map[area] = POWERBI_DASHBOARDS.filter((d) => d.area === area).length;
     });
+
     return map;
   }, []);
 
@@ -268,10 +400,12 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
 
   const handleAreaChange = (area: FilterArea) => {
     setActiveArea(area);
+
     const first =
       area === "Todos"
         ? POWERBI_DASHBOARDS[0]
         : POWERBI_DASHBOARDS.find((d) => d.area === area);
+
     if (first) setSelectedId(first.id);
   };
 
@@ -287,7 +421,6 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
-
         {/* Left: dashboard list */}
         <aside className="flex flex-col gap-2 pt-1 max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
           <AnimatePresence mode="popLayout">
@@ -300,20 +433,15 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
                   dashboard={dashboard}
                   isSelected={selected?.id === dashboard.id}
                   onClick={() => {
-                  if (dashboard.openMode === "external") {
-                  window.open(dashboard.reportUrl, "_blank", "noopener,noreferrer");
-                  return;
-              }
-
-  setSelectedId(dashboard.id);
-}}
+                    setSelectedId(dashboard.id);
+                  }}
                 />
               ))
             )}
           </AnimatePresence>
         </aside>
 
-        {/* Right: viewer */}
+        {/* Right: viewer / preview */}
         <main className="min-w-0 pt-1">
           <AnimatePresence mode="wait">
             {selected ? (
@@ -324,7 +452,11 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.2 }}
               >
-                <PowerBIViewer dashboard={selected} />
+                {ENABLE_DASHBOARD_EMBED && selected.openMode !== "external" ? (
+                  <PowerBIViewer dashboard={selected} />
+                ) : (
+                  <DashboardPreview dashboard={selected} />
+                )}
               </motion.div>
             ) : (
               <motion.div

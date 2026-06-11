@@ -177,4 +177,14 @@ export const COMPANY_APPS: CompanyAppItem[] = [
   color: "indigo",
   category: "Corporativo",
 },
+{
+  id: "alerta-tiendas",
+  label: "Alerta Tiendas",
+  description: "Seguimientos tiendas",
+  href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/49c6eaee-6e1d-4642-8075-1b951b27132b?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=5efb1bbc-9062-49f0-aaa9-97755f04f77c&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+  embedUrl: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/49c6eaee-6e1d-4642-8075-1b951b27132b?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=5efb1bbc-9062-49f0-aaa9-97755f04f77c&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
+  icon: "bell",
+  color: "purple",
+  category: "Corporativo",
+},
 ];

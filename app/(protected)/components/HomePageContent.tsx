@@ -104,7 +104,7 @@ export function HomePageContent({ data }: HomePageContentProps) {
   const SHOW_EVENTS_SECTION = false;
   const SHOW_TASKS_CARD = false;
   const SHOW_FAVORITES_CARD = false;
- 
+  const SHOW_LEADERS_SECTION = false;
 
   const SHOW_SIDEBAR =
   SHOW_FAVORITES_CARD ||
@@ -208,9 +208,11 @@ export function HomePageContent({ data }: HomePageContentProps) {
         {/* ========================================================== */}
         {/* Sección de líderes                                         */}
         {/* ========================================================== */}
-        <AnimatedViewCard className="mt-6">
-          <LeadersSection leaders={homeLeaders} />
-        </AnimatedViewCard>
+        {SHOW_LEADERS_SECTION && (
+          <AnimatedViewCard className="mt-6">
+            <LeadersSection leaders={homeLeaders} />
+          </AnimatedViewCard>
+        )}
 
         {/* ========================================================== */}
         {/* Panel de feedback                                          */}

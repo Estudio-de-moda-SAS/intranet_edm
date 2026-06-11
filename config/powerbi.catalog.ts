@@ -39,7 +39,8 @@ export type PowerBIArea =
   | "Jurídico"
   | "Producto"
   | "Servicios Administrativos"
-  | "Corporativo";
+  | "Corporativo"
+  | "CRM";
 
 export interface PowerBIDashboard {
   /** Unique slug — used as React key and DOM anchor. */
@@ -75,15 +76,15 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
     tags: [],
     openMode: "external",
   },
-  {
-    id:"tablero-activacion-comercial",
-    title: "Tablero Activación Comercial",
-    description: "",
-    area: "Comercial",
-    reportUrl:
-      "t",
-    tags: [],
-  },
+// {
+//  id:"tablero-activacion-comercial",
+//   title: "Tablero Activación Comercial",
+//  description: "",
+//   area: "Comercial",
+//  reportUrl:
+//    "t",
+//  tags: [],
+// },
   {
     id:"tablero-panorama",
     title: "Tablero Panorama",
@@ -94,25 +95,26 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
     tags: [],
     openMode: "external",
   },
-  {
-    id: "tablero-nacionalizacion",
-    title: "Tablero Nacionalización ZF",
-    description: "",
-    area: "Corporativo",
-    reportUrl:
-      "t",
-    tags: [],
-  },
-  {
-    id:"tablero-wholesale",
-    title: "Tablero Wholesale",
-    description: "",
-    area: "Corporativo",
-    reportUrl:
-      "t",
-    tags: [],
+//{
+//   id: "tablero-nacionalizacion",
+// title: "Tablero Nacionalización ZF",
+//description: "",
+// area: "Corporativo",
+// reportUrl:
+// "t",
+// tags: [],
+// },
 
-  },
+// {
+// id:"tablero-wholesale",
+// title: "Tablero Wholesale",
+// description: "",
+// area: "Corporativo",
+// reportUrl:
+// "t",
+// tags: [],
+//},
+
    {
     id: "tablero-indicadores",
     title: "Tablero de Indicadores",
@@ -163,6 +165,61 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
     openMode: "external",
     tags: [],
   },
+  {
+    id: "tablero-seguimiento-presupuestal",
+    title: "Tablero Seguimiento Presupuestal",
+    description: "",
+    area: "Finanzas",
+    reportUrl: "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/SP/SitePages/Tablero-de-Seguimiento-Presupuestal.aspx",
+    tags: [],
+    openMode: "external",
+  },
+  {
+    id: "tablero-lanzamiento-capsulas",
+    title: "Tablero Lanzamiento y Cápsulas",
+    description: "",
+    area: "Corporativo",
+    reportUrl: "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/lyc/SitePages/Tablero-de-Lanzamientos-y-Capsulas.aspx",
+    tags: [],
+    openMode: "external",
+  },
+  {
+    id: "tablero-incentivos",
+    title: "Tablero Incentivos",
+    description: "",
+    area: "Corporativo",
+    reportUrl: "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/IN/SitePages/Tablero-de-Incentivos.aspx",
+    tags: [],
+    openMode: "external",
+  },
+   {
+    id: "tablero-producto",
+    title: "Tablero Producto",
+    description: "",
+    area: "Corporativo",
+    reportUrl: "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/TablerosEDM/tpr/SitePages/Tablero-Producto.aspx",
+    tags: [],
+    openMode: "external",
+  },
+     {
+    id: "tablero-performance-nps",
+    title: "Tablero Performance NPS",
+    description: "",
+    area: "CRM",
+    reportUrl: "https://estudiodemoda.sharepoint.com/sites/TablerosEDM/SitePages/Performace-Encuestas-NPS.aspx",
+    tags: [],
+    openMode: "external",
+  },
+    {
+    id: "tablero-mystery-shopping",
+    title: "Tablero Mystery Shopping",
+    description: "",
+    area: "Comercial",
+    reportUrl: "https://estudiodemoda.sharepoint.com/sites/TablerosEDM/SitePages/Informe-Final-MS-EDM-2026.aspx",
+    tags: [],
+    openMode: "external",
+  },
+
   // Agrega los demás tableros cuando tengas sus URLs:
   // {
   //   id: "tablero",
