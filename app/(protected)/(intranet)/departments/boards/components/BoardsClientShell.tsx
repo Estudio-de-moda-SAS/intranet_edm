@@ -6,7 +6,7 @@
  * Full client shell for the `/boards` route.
  *
  * Layout:
- * - Tab strip — filters dashboards by operational area
+ * - Search and filter toolbar — filters dashboards by name, description, tags and operational area
  * - Two-column panel — sidebar list (left) + viewer / preview panel (right)
  *
  * On mobile the grid collapses to a single column: list above, viewer below.
@@ -20,6 +20,8 @@ import {
   ExternalLink,
   ShieldCheck,
   BarChart3,
+  Search,
+  SlidersHorizontal,
 } from "lucide-react";
 import { PowerBIViewer } from "./PowerBIViewer";
 import {
@@ -84,68 +86,94 @@ const AREA_COLORS: Record<string, string> = {
 const ENABLE_DASHBOARD_EMBED = false;
 
 // ---------------------------------------------------------------------------
-// Tab navigation
+// Boards search and filters
 // ---------------------------------------------------------------------------
 
 type FilterArea = PowerBIArea | "Todos";
 
-interface TabNavProps {
+interface BoardsToolbarProps {
   areas: PowerBIArea[];
   active: FilterArea;
-  counts: Record<string, number>;
-  onChange: (area: FilterArea) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onAreaChange: (area: FilterArea) => void;
 }
 
-function TabNav({ areas, active, counts, onChange }: TabNavProps) {
-  const tabs: FilterArea[] = ["Todos", ...areas];
+function BoardsToolbar({
+  areas,
+  active,
+  search,
+  onSearchChange,
+  onAreaChange,
+}: BoardsToolbarProps) {
+  const filters: FilterArea[] = ["Todos", ...areas];
 
   return (
-    <nav
-      className="flex gap-1 flex-wrap"
-      role="tablist"
-      aria-label="Filtrar tableros por área"
-    >
-      {tabs.map((tab) => {
-        const isActive = active === tab;
-        const count =
-          tab === "Todos" ? POWERBI_DASHBOARDS.length : counts[tab] ?? 0;
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Centro de tableros
+          </h2>
 
-        return (
-          <button
-            key={tab}
-            role="tab"
-            aria-selected={isActive}
-            onClick={() => onChange(tab)}
-            className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-              isActive
-                ? "text-white"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
-          >
-            {isActive && (
-              <motion.span
-                layoutId="boards-tab-bg"
-                className="absolute inset-0 bg-violet-600 rounded-lg"
-                transition={{ type: "spring", stiffness: 500, damping: 35 }}
-              />
-            )}
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Busca por nombre, descripción o filtra por área para encontrar el tablero que necesitas.
+          </p>
+        </div>
 
-            <span className="relative z-10 flex items-center gap-1.5">
-              {tab}
-              <span
-                className={`inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                {count}
-              </span>
-            </span>
-          </button>
-        );
-      })}
-    </nav>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+            <input
+              value={search}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Buscar tablero..."
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-violet-700 dark:focus:bg-slate-900 sm:w-72"
+            />
+          </div>
+
+          <div className="relative">
+            <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+            <select
+              value={active}
+              onChange={(event) =>
+                onAreaChange(event.target.value as FilterArea)
+              }
+              className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-8 text-sm text-slate-700 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-violet-700 dark:focus:bg-slate-900 sm:w-52"
+            >
+              {filters.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {filters.map((item) => {
+          const isActive = active === item;
+
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onAreaChange(item)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                isActive
+                  ? "border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300"
+                  : "border-slate-200 bg-white text-slate-500 hover:border-violet-200 hover:text-violet-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-violet-800 dark:hover:text-violet-300"
+              }`}
+            >
+              {item}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -191,8 +219,7 @@ function DashboardCard({ dashboard, isSelected, onClick }: DashboardCardProps) {
           </p>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed line-clamp-2">
-            {dashboard.description ||
-              ""}
+            {dashboard.description}
           </p>
         </div>
 
@@ -284,8 +311,8 @@ function DashboardPreview({ dashboard }: { dashboard: PowerBIDashboard }) {
                 </p>
 
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  Puedes abrir el tablero en su ubicación oficial de
-                  SharePoint, conservando los permisos definidos por Microsoft 365.
+                  Puedes abrir el tablero en su ubicación oficial de SharePoint,
+                  conservando los permisos definidos por Microsoft 365.
                 </p>
               </div>
             </div>
@@ -357,10 +384,7 @@ function EmptyState({ area }: { area: FilterArea }) {
         </p>
 
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-          Agrega reportes en{" "}
-          <code className="font-mono text-violet-500">
-            config/powerbi.catalog.ts
-          </code>
+          Intenta ajustar la búsqueda o seleccionar otra área.
         </p>
       </div>
     </motion.div>
@@ -372,28 +396,30 @@ function EmptyState({ area }: { area: FilterArea }) {
 // ---------------------------------------------------------------------------
 
 export function BoardsClientShell({}: BoardsClientShellProps) {
+  const [search, setSearch] = useState("");
   const [activeArea, setActiveArea] = useState<FilterArea>("Todos");
   const [selectedId, setSelectedId] = useState<string>(
     POWERBI_DASHBOARDS[0]?.id ?? ""
   );
 
-  const filtered = useMemo(
-    () =>
-      activeArea === "Todos"
-        ? POWERBI_DASHBOARDS
-        : POWERBI_DASHBOARDS.filter((d) => d.area === activeArea),
-    [activeArea]
-  );
+  const filtered = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
 
-  const counts = useMemo(() => {
-    const map: Record<string, number> = {};
+    return POWERBI_DASHBOARDS.filter((dashboard) => {
+      const matchesSearch =
+        dashboard.title.toLowerCase().includes(normalizedSearch) ||
+        dashboard.description?.toLowerCase().includes(normalizedSearch) ||
+        dashboard.area.toLowerCase().includes(normalizedSearch) ||
+        dashboard.tags?.some((tag) =>
+          tag.toLowerCase().includes(normalizedSearch)
+        );
 
-    POWERBI_AREAS.forEach((area) => {
-      map[area] = POWERBI_DASHBOARDS.filter((d) => d.area === area).length;
+      const matchesArea =
+        activeArea === "Todos" || dashboard.area === activeArea;
+
+      return matchesSearch && matchesArea;
     });
-
-    return map;
-  }, []);
+  }, [search, activeArea]);
 
   const selected =
     filtered.find((d) => d.id === selectedId) ?? filtered[0] ?? null;
@@ -403,20 +429,32 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
 
     const first =
       area === "Todos"
-        ? POWERBI_DASHBOARDS[0]
-        : POWERBI_DASHBOARDS.find((d) => d.area === area);
+        ? POWERBI_DASHBOARDS.find((dashboard) => {
+            const normalizedSearch = search.trim().toLowerCase();
+
+            return (
+              dashboard.title.toLowerCase().includes(normalizedSearch) ||
+              dashboard.description?.toLowerCase().includes(normalizedSearch) ||
+              dashboard.area.toLowerCase().includes(normalizedSearch) ||
+              dashboard.tags?.some((tag) =>
+                tag.toLowerCase().includes(normalizedSearch)
+              )
+            );
+          })
+        : POWERBI_DASHBOARDS.find((dashboard) => dashboard.area === area);
 
     if (first) setSelectedId(first.id);
   };
 
   return (
     <div className="flex flex-col gap-6 px-4 md:px-6 py-6">
-      {/* Tab filter */}
-      <TabNav
+      {/* Search and filter toolbar */}
+      <BoardsToolbar
         areas={POWERBI_AREAS}
         active={activeArea}
-        counts={counts}
-        onChange={handleAreaChange}
+        search={search}
+        onSearchChange={setSearch}
+        onAreaChange={handleAreaChange}
       />
 
       {/* Two-column layout */}

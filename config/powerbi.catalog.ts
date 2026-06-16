@@ -211,8 +211,8 @@ export const POWERBI_DASHBOARDS: PowerBIDashboard[] = [
     openMode: "external",
   },
     {
-    id: "tablero-mystery-shopping",
-    title: "Tablero Mystery Shopping",
+    id: "tablero-mystery-shopper",
+    title: "Tablero Mystery Shopper",
     description: "",
     area: "Comercial",
     reportUrl: "https://estudiodemoda.sharepoint.com/sites/TablerosEDM/SitePages/Informe-Final-MS-EDM-2026.aspx",
