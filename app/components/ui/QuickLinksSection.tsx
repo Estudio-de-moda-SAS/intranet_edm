@@ -8,8 +8,9 @@
  * - colores temáticos por tarjeta,
  * - enlaces deshabilitados,
  * - acciones personalizadas,
- * - integración con favoritos mediante `FavoritesContext`,
- * - y apertura de `AddFavoriteModal` para guardar accesos.
+ * - integración opcional con favoritos mediante `FavoritesContext`,
+ * - apertura opcional de `AddFavoriteModal` para guardar accesos,
+ * - personalización del título, subtítulo y badge del encabezado.
  */
 
 "use client";
@@ -27,6 +28,7 @@ import {
   Award, KeyRound, GitBranch, Package, Activity,
   UserPlus, CalendarDays, PhoneCall, UserCheck,
   FolderOpen, Landmark, Scale, FileSignature,
+  Mail, Cloud, ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFavorites } from "@/features/favorites/FavoritesContext";
@@ -41,6 +43,9 @@ import type { AppColor } from "@/app/components/ui/AppsGrid";
  * @remarks
  * Permite convertir un `iconKey` en el componente visual correspondiente
  * para cada acceso rápido.
+ *
+ * Se incluyen íconos generales de navegación interna y herramientas
+ * corporativas como Outlook, OneDrive y demás accesos de Microsoft 365.
  */
 const ICON_MAP: Record<string, React.ElementType> = {
   FileText, LayoutDashboard, Users, Calendar,
@@ -52,6 +57,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Award, KeyRound, GitBranch, Package, Activity,
   UserPlus, CalendarDays, PhoneCall, UserCheck,
   FolderOpen, Landmark, Scale, FileSignature,
+  Mail, Cloud,
 };
 
 /**
@@ -101,7 +107,11 @@ export type QuickLinkItem = {
    * Color visual del item.
    */
   color?: QuickLinkColor;
-
+ /**
+  
+   * Define si el enlace debe abrirse en una nueva pestaña.
+   */
+  external?: boolean;
   /**
    * Indica si el acceso está deshabilitado.
    */
@@ -136,6 +146,39 @@ type QuickLinksSectionProps = {
    * @defaultValue "Accesos rápidos"
    */
   title?: string;
+
+  /**
+   * Texto secundario visible debajo del título.
+   *
+   * @remarks
+   * Permite adaptar el componente a distintos contextos.
+   * Por ejemplo, en el Home puede usarse para mostrar:
+   * "Accede a tus herramientas corporativas".
+   *
+   * @defaultValue "Accede directamente a lo que más usas"
+   */
+  subtitle?: string;
+
+  /**
+   * Texto personalizado para el badge del encabezado.
+   *
+   * @remarks
+   * Si no se define, se muestra automáticamente la cantidad de enlaces activos.
+   * Ejemplo: "8 herramientas".
+   */
+  badgeLabel?: string;
+
+  /**
+   * Define si se debe mostrar la integración con favoritos.
+   *
+   * @remarks
+   * Cuando está en `false`, no se muestra el botón de estrella ni el modal
+   * para agregar accesos a favoritos. Es útil para secciones como el Home
+   * de Microsoft 365, donde los accesos funcionan como herramientas fijas.
+   *
+   * @defaultValue true
+   */
+  showFavorites?: boolean;
 
   /**
    * Indica si la sección debe ocupar toda la altura disponible.
@@ -256,11 +299,14 @@ function activeItemClasses(c: typeof DEFAULT_COLOR) {
 // ─── QuickLinksSection ────────────────────────────────────────────────────────
 
 /**
- * Renderiza una sección de accesos rápidos con soporte para favoritos.
+ * Renderiza una sección de accesos rápidos con soporte opcional para favoritos.
  *
  * @param props Propiedades del componente.
  * @param props.quickLinks Lista de accesos.
  * @param props.title Título visible de la sección.
+ * @param props.subtitle Texto descriptivo debajo del título.
+ * @param props.badgeLabel Texto personalizado del badge del encabezado.
+ * @param props.showFavorites Define si se muestran estrellas y modal de favoritos.
  * @param props.fillHeight Define si ocupa todo el alto disponible.
  * @param props.columns Número de columnas de la grilla.
  * @returns Sección visual con items navegables o accionables.
@@ -272,15 +318,19 @@ function activeItemClasses(c: typeof DEFAULT_COLOR) {
  * 2. **Acción personalizada**: ejecuta `link.action`.
  * 3. **Item deshabilitado**: muestra estado bloqueado y no interactúa.
  *
- * Además, se integra con favoritos:
- * - si el acceso ya existe en favoritos, lo elimina;
- * - si no existe, abre `AddFavoriteModal` con el item preseleccionado.
+ * Además, la integración con favoritos es configurable:
+ * - si `showFavorites` está activo, permite agregar o quitar favoritos;
+ * - si `showFavorites` está inactivo, oculta la estrella y no renderiza
+ *   el modal `AddFavoriteModal`.
  */
 export function QuickLinksSection({
   quickLinks,
-  title      = "Accesos rápidos",
-  fillHeight = false,
-  columns    = 2,
+  title         = "Accesos rápidos",
+  subtitle      = "Accede directamente a lo que más usas",
+  badgeLabel,
+  showFavorites = true,
+  fillHeight    = false,
+  columns       = 2,
 }: QuickLinksSectionProps) {
   const { favoriteHrefs, addFavorite, removeFavorite, getFavoriteByHref } = useFavorites();
 
@@ -310,6 +360,15 @@ export function QuickLinksSection({
    * Cantidad de enlaces activos, excluyendo deshabilitados.
    */
   const activeCount = quickLinks.filter((l) => !l.disabled).length;
+
+  /**
+   * Texto visible del badge del encabezado.
+   *
+   * @remarks
+   * Si se recibe `badgeLabel`, se usa ese texto personalizado.
+   * De lo contrario, se muestra el conteo automático de enlaces activos.
+   */
+  const headerBadge = badgeLabel ?? `${activeCount} enlaces`;
 
   /**
    * Contenido visual interno de un item habilitado.
@@ -343,15 +402,23 @@ export function QuickLinksSection({
             </span>
           )}
         </span>
+<div className="shrink-0 flex items-center gap-1">
+  {link.external && (
+    <ExternalLink
+      size={10}
+      className="text-slate-400 dark:text-[#545d68]"
+    />
+  )}
 
-        <ChevronRight
-          size={12}
-          className={cn(
-            "shrink-0 transition-all duration-200",
-            "group-hover:translate-x-0.5 group-hover:opacity-0",
-            c.arrow,
-          )}
-        />
+  <ChevronRight
+    size={12}
+    className={cn(
+      "transition-all duration-200",
+      "group-hover:translate-x-0.5 group-hover:opacity-0",
+      c.arrow,
+    )}
+  />
+</div>
       </>
     );
   }
@@ -378,16 +445,19 @@ export function QuickLinksSection({
                             text-slate-800 dark:text-[#e6edf3]">
                 {title}
               </p>
-              <p className="text-[11px] mt-0.5 leading-none
-                            text-slate-400 dark:text-[#545d68]">
-                Accede directamente a lo que más usas
-              </p>
+              {subtitle && (
+                <p className="text-[11px] mt-0.5 leading-none
+                              text-slate-400 dark:text-[#545d68]">
+                  {subtitle}
+                </p>
+              )}
             </div>
           </div>
+
           <span className="text-[11px] font-medium px-2 py-0.5 rounded-full
                            bg-violet-50 text-violet-600
                            dark:bg-violet-500/[0.12] dark:text-violet-400">
-            {activeCount} enlaces
+            {headerBadge}
           </span>
         </div>
 
@@ -472,38 +542,45 @@ export function QuickLinksSection({
                   >
                     <ItemContent link={link} c={c} />
                   </button>
-                  {StarButton}
+                  {showFavorites && StarButton}
                 </li>
               );
             }
 
             // ── Navegación normal ─────────────────────────────
-            return (
-              <li key={link.href} className="relative group min-h-0">
-                <Link href={link.href} className={activeItemClasses(c)}>
-                  <ItemContent link={link} c={c} />
-                </Link>
-                {StarButton}
-              </li>
-            );
+return (
+  <li key={link.href} className="relative group min-h-0">
+    <Link
+      href={link.href}
+      className={activeItemClasses(c)}
+      target={link.external ? "_blank" : undefined}
+      rel={link.external ? "noopener noreferrer" : undefined}
+    >
+      <ItemContent link={link} c={c} />
+    </Link>
+    {showFavorites && StarButton}
+  </li>
+);
           })}
         </ul>
       </section>
 
       {/* Modal de agregar a favoritos */}
-      <AddFavoriteModal
-        open={pendingLink !== null}
-        onClose={() => setPendingLink(null)}
-        existingHrefs={favoriteHrefs}
-        preselectedApp={pendingLink ? {
-          href:  pendingLink.href,
-          label: pendingLink.label,
-          icon:  pendingLink.icon,
-          ...(pendingLink.description !== undefined && { description: pendingLink.description }),
-          ...(pendingLink.color       !== undefined && { color: pendingLink.color as AppColor }),
-        } : null}
-        onAdd={addFavorite}
-      />
+      {showFavorites && (
+        <AddFavoriteModal
+          open={pendingLink !== null}
+          onClose={() => setPendingLink(null)}
+          existingHrefs={favoriteHrefs}
+          preselectedApp={pendingLink ? {
+            href:  pendingLink.href,
+            label: pendingLink.label,
+            icon:  pendingLink.icon,
+            ...(pendingLink.description !== undefined && { description: pendingLink.description }),
+            ...(pendingLink.color       !== undefined && { color: pendingLink.color as AppColor }),
+          } : null}
+          onAdd={addFavorite}
+        />
+      )}
     </>
   );
 }

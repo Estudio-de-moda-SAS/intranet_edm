@@ -65,6 +65,7 @@ export type DeptKpiItem = {
    * Clase de color para el icono.
    */
   iconColor: string;
+  enabled?: boolean;
 };
 
 /**

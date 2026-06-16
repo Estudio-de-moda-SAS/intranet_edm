@@ -175,18 +175,6 @@ className="relative border-b border-violet-100/80 dark:border-violet-500/15"
 
             <UserGreetingWrapper fallbackUser={user} />
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="rounded-full border px-3 py-1 text-[12px] font-medium
-                               bg-violet-50 border-violet-200 text-violet-500
-                               dark:bg-violet-500/15 dark:border-violet-400/25 dark:text-violet-300">
-                6 eventos esta semana
-              </span>
-              <span className="rounded-full border px-3 py-1 text-[12px] font-medium
-                               bg-amber-50 border-amber-200 text-amber-600
-                               dark:bg-amber-500/15 dark:border-amber-400/25 dark:text-amber-300">
-                13 noticias sin leer
-              </span>
-            </div>
           </motion.div>
 
           <motion.div variants={fadeUp} initial="hidden" animate="show">

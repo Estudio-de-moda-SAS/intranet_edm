@@ -1,45 +1,136 @@
 /**
  * @module useGlobalSearch
- * Hook para gestionar la búsqueda global de aplicaciones dentro de la intranet.
+ * Hook para gestionar la búsqueda global de navegación dentro de la intranet.
  *
  * @remarks
- * Este hook permite:
+ * Este hook permite buscar accesos principales disponibles dentro de la
+ * primera versión de la intranet.
  *
- * - filtrar aplicaciones según el nivel de acceso del usuario
- * - buscar dinámicamente por texto (label, descripción o departamento)
- * - rankear resultados por relevancia (score)
+ * A diferencia de una búsqueda global de contenido, esta implementación está
+ * enfocada en navegación controlada. Es decir, no indexa módulos mock,
+ * funcionalidades futuras, dashboards internos ni secciones que todavía no
+ * forman parte del alcance real de la V1.
+ *
+ * Actualmente permite:
+ *
+ * - buscar secciones principales disponibles para V1
+ * - filtrar dinámicamente por texto (`label`, `description` o `department`)
+ * - rankear resultados por relevancia (`score`)
  * - limitar la cantidad de resultados mostrados
  *
  * Es utilizado típicamente en componentes de tipo:
  *
- * - buscador global (header)
+ * - buscador global del header
  * - command palette
  * - quick access launcher
+ *
+ * @example
+ * ```tsx
+ * const { query, setQuery, results } = useGlobalSearch(accessLevel);
+ *
+ * setQuery('aplicaciones');
+ *
+ * results.map(item => console.log(item.label));
+ * ```
  */
 
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { filterCatalogByAccess } from '@/config/apps.catalog';
-import type { AccessLevel } from '@/lib/roles';
+import { useMemo, useState } from "react";
+import type { AccessLevel } from "@/lib/roles";
 
 /**
- * Mapeo de identificadores de departamento a etiquetas legibles.
+ * Representa un elemento navegable disponible para búsqueda global.
  *
  * @remarks
- * Se utiliza para mostrar categorías amigables en los resultados
- * de búsqueda.
+ * Este catálogo está limitado intencionalmente a las secciones visibles
+ * y soportadas en la primera versión de la intranet.
  */
-const DEPARTMENT_LABELS: Record<string, string> = {
-  hr: 'RRHH',
-  finance: 'Finanzas',
-  it: 'IT',
-  'administrative-services': 'Administración',
-  legal: 'Legal',
-  logistics: 'Logística',
-  retail: 'Retail',
-  documents: 'Documentos',
+type SearchableNavItem = {
+  /**
+   * Identificador único del resultado.
+   */
+  id: string;
+
+  /**
+   * Nombre visible del resultado.
+   */
+  label: string;
+
+  /**
+   * Descripción breve usada en el panel de resultados.
+   */
+  description: string;
+
+  /**
+   * Ruta interna de navegación.
+   */
+  href: string;
+
+  /**
+   * Categoría interna usada para búsqueda y agrupación.
+   */
+  department: string;
+
+  /**
+   * Categoría amigable mostrada en el panel de resultados.
+   */
+  category: string;
+
+  /**
+   * Indica si el resultado debe ser indexado por el buscador.
+   *
+   * @defaultValue true
+   */
+  enabled?: boolean;
 };
+
+/**
+ * Elementos disponibles para la búsqueda global en V1.
+ *
+ * @remarks
+ * Este listado reemplaza temporalmente el catálogo global de aplicaciones
+ * para evitar que el buscador muestre módulos mock, rutas futuras o
+ * funcionalidades que no estarán disponibles en la primera versión.
+ */
+const SEARCHABLE_NAV_ITEMS: SearchableNavItem[] = [
+  {
+    id: "applications",
+    label: "Aplicaciones",
+    description: "Accede a las aplicaciones corporativas disponibles.",
+    href: "/departments/applications",
+    department: "applications",
+    category: "Módulos disponibles",
+    enabled: true,
+  },
+  {
+    id: "ticket-systems",
+    label: "Sistemas de Tickets",
+    description: "Consulta y accede a las plataformas de tickets y soporte.",
+    href: "/departments/ticket-systems",
+    department: "tickets",
+    category: "Módulos disponibles",
+    enabled: true,
+  },
+  {
+    id: "documents",
+    label: "Documentos",
+    description: "Consulta documentos corporativos disponibles.",
+    href: "/departments/documents",
+    department: "documents",
+    category: "Módulos disponibles",
+    enabled: true,
+  },
+  {
+    id: "boards",
+    label: "Tableros",
+    description: "Accede a tableros corporativos y reportes disponibles.",
+    href: "/departments/boards",
+    department: "boards",
+    category: "Módulos disponibles",
+    enabled: true,
+  },
+];
 
 /**
  * Hook principal de búsqueda global.
@@ -48,72 +139,73 @@ const DEPARTMENT_LABELS: Record<string, string> = {
  * @returns Estado de búsqueda y resultados filtrados.
  *
  * @remarks
+ * `accessLevel` se mantiene como parámetro por compatibilidad con la firma
+ * anterior del hook y para permitir una futura evolución hacia búsqueda
+ * condicionada por permisos.
+ *
+ * En esta versión, la búsqueda se limita a navegación V1 y no depende del
+ * catálogo general de aplicaciones.
+ *
  * Flujo de funcionamiento:
  *
- * 1. Filtra el catálogo de aplicaciones según el nivel de acceso.
- * 2. Aplica búsqueda basada en texto (`query`).
- * 3. Calcula un `score` por relevancia:
- *    - +3 si coincide con el nombre (label)
+ * 1. Usa un catálogo controlado de secciones disponibles en V1.
+ * 2. Filtra elementos deshabilitados (`enabled: false`).
+ * 3. Aplica búsqueda basada en texto (`query`).
+ * 4. Calcula un `score` por relevancia:
+ *    - +3 si coincide con el nombre (`label`)
  *    - +2 si coincide con la descripción
- *    - +1 si coincide con el departamento
- * 4. Ordena los resultados por score descendente.
- * 5. Limita a los 8 resultados más relevantes.
+ *    - +1 si coincide con la categoría interna (`department`)
+ * 5. Ordena los resultados por score descendente.
+ * 6. Limita a los 8 resultados más relevantes.
  *
  * Optimización:
  *
  * - Usa `useMemo` para evitar recomputaciones innecesarias.
- *
- * @example
- * ```tsx
- * const { query, setQuery, results } = useGlobalSearch(accessLevel);
- *
- * setQuery('finanzas');
- *
- * results.map(app => console.log(app.label));
- * ```
  */
 export function useGlobalSearch(accessLevel: AccessLevel) {
   /**
    * Query de búsqueda ingresada por el usuario.
    */
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
   /**
-   * Catálogo de aplicaciones filtrado por nivel de acceso.
+   * Catálogo navegable filtrado para V1.
+   *
+   * @remarks
+   * Se referencia `accessLevel` para conservar compatibilidad y evitar
+   * warnings si más adelante se decide filtrar por permisos.
    */
-  const apps = useMemo(() => {
-    return filterCatalogByAccess(accessLevel);
+  const navItems = useMemo(() => {
+    void accessLevel;
+
+    return SEARCHABLE_NAV_ITEMS.filter((item) => item.enabled !== false);
   }, [accessLevel]);
 
   /**
    * Resultados de búsqueda procesados y rankeados.
    */
   const results = useMemo(() => {
-    if (!query.trim()) return [];
+    const normalizedQuery = query.trim().toLowerCase();
 
-    const q = query.toLowerCase();
+    if (!normalizedQuery) return [];
 
-    return apps
-      .map(app => {
+    return navItems
+      .map((item) => {
         let score = 0;
 
-        if (app.label.toLowerCase().includes(q)) score += 3;
-        if (app.description.toLowerCase().includes(q)) score += 2;
-        if (app.department.toLowerCase().includes(q)) score += 1;
+        if (item.label.toLowerCase().includes(normalizedQuery)) score += 3;
+        if (item.description.toLowerCase().includes(normalizedQuery)) score += 2;
+        if (item.department.toLowerCase().includes(normalizedQuery)) score += 1;
 
         return {
-          ...app,
+          ...item,
           score,
-          /**
-           * Categoría amigable derivada del departamento.
-           */
-          category: DEPARTMENT_LABELS[app.department] || 'Otros',
         };
       })
-      .filter(a => a.score > 0)
+      .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
-  }, [query, apps]);
+  }, [query, navItems]);
 
   return {
     query,

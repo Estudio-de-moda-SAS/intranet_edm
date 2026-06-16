@@ -308,12 +308,12 @@ export function CorporateInfoCard({
   /**
    * Filas de información corporativa a renderizar.
    */
-  const rows = [
-    { label: "Departamento", value: profile.department },
-    { label: "Cargo", value: profile.role },
-    { label: "ID empleado", value: profile.employeeId },
-    { label: "Fecha ingreso", value: profile.joined },
-  ];
+const rows = [
+  { label: "Departamento", value: profile.department },
+  { label: "Cargo", value: profile.role },
+  { label: "ID empleado", value: profile.employeeId },
+  { label: "Fecha ingreso", value: profile.joined },
+];
 
   return (
     <SectionCard>

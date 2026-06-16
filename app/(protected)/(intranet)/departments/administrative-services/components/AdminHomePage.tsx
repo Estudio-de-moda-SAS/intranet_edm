@@ -98,6 +98,12 @@ const TEAM_ACCENT = {
   topAccent:       "from-rose-950 via-rose-800 to-rose-600",
 } as const;
 
+const SHOW_VISITORS = false;
+const SHOW_ACCESS_CARDS = false;
+const SHOW_CALENDAR = false;
+const SHOW_REQUESTS = false;
+const SHOW_ANNOUNCEMENTS = false;
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 /**
@@ -124,13 +130,16 @@ export default function AdminHomePage({ data, accessLevel }: Props) {
   /**
    * Indica si el usuario puede visualizar el registro de visitantes.
    */
-  const showVisitors = can(accessLevel, "admin_services:view_visitors");
+  const showVisitors = SHOW_VISITORS && can(accessLevel, "admin_services:view_visitors");
 
   /**
    * Indica si el usuario puede visualizar la gestión de tarjetas de acceso.
    */
-  const showAccessCards = can(accessLevel, "admin_services:view_access_cards");
+  const showAccessCards = SHOW_ACCESS_CARDS && can(accessLevel, "admin_services:view_access_cards");
 
+  const showCalendar = SHOW_CALENDAR && can(accessLevel, "admin_services:view_calendar");
+  const showRequests = SHOW_REQUESTS && can(accessLevel, "admin_services:view_requests");
+  const showAnnouncements = SHOW_ANNOUNCEMENTS && can(accessLevel, "admin_services:view_announcements");
   /**
    * Indica si existe al menos un bloque sensible visible en la columna principal.
    *
@@ -189,11 +198,12 @@ export default function AdminHomePage({ data, accessLevel }: Props) {
                 <AdminAccessCardsCard data={data} />
               </AnimatedCard>
             )}
-
+             
+             {showRequests && (
             <AnimatedCard delay={showSensitiveMain ? 0.1 : 0}>
               <AdminMyRequestsCard data={data} />
             </AnimatedCard>
-
+            )}
             <AnimatedCard delay={showSensitiveMain ? 0.14 : 0.06}>
               <AdminDocumentsCenterCard data={data} />
             </AnimatedCard>
@@ -215,14 +225,18 @@ export default function AdminHomePage({ data, accessLevel }: Props) {
                 <AdminQuickLinksSection accessLevel={accessLevel} />
               </AnimatedCard>
             )}
-
+            
+            {showCalendar && (
             <AnimatedCard delay={0.05}>
               <AdminCalendarCard data={data} />
             </AnimatedCard>
+            )}
 
+             {showAnnouncements && (
             <AnimatedCard delay={0.1}>
               <AdminAnnouncementsPanel data={data} />
             </AnimatedCard>
+            )}
           </AnimatedSection>
 
         </div>

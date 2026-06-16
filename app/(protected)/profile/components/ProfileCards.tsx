@@ -18,7 +18,7 @@
 "use client";
 
 import { useState }  from "react";
-import { User, Mail, Phone, MapPin, Globe, Clock, Info } from "lucide-react";
+import { User, Mail, MapPin, Globe, Clock, Info } from "lucide-react";
 import { SectionCard, SectionHeader, EditableField } from "@/app/components/ui/IntranetUI";
 import type { ProfileData } from "@/types/profile";
 
@@ -86,7 +86,6 @@ export function PersonalInfoCard({ profile }: PersonalInfoCardProps) {
   const fields = [
     { field: "name"     as const, label: "Nombre completo",     icon: User,   value: profile.name     ?? "" },
     { field: "email"    as const, label: "Correo corporativo",  icon: Mail,   value: profile.email    ?? "" },
-    { field: "phone"    as const, label: "Telefono / Extension",icon: Phone,  value: profile.phone    ?? "" },
     { field: "location" as const, label: "Ubicacion",           icon: MapPin, value: profile.location ?? "" },
   ];
 

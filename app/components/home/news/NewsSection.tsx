@@ -1,24 +1,36 @@
 /**
  * @module NewsSection
- * Sección principal de noticias y contenido informativo en el home.
+ * Sección principal del workspace y contenido operativo en el home.
  *
  * @remarks
- * Este componente combina un carrusel de noticias con tarjetas informativas
- * y accesos rápidos, organizados en un layout responsive tipo dashboard.
+ * Este componente organiza el espacio principal del home como un dashboard
+ * operativo para la intranet.
+ *
+ * En esta versión se reemplaza el carrusel de noticias por un bloque de
+ * workspace personal, orientado a:
+ * - búsqueda dentro de la intranet,
+ * - acciones rápidas hacia módulos internos,
+ * - tarjeta institucional de la organización,
+ * - accesos rápidos a herramientas Microsoft 365.
  */
 
 "use client";
 
-import { Newspaper, ArrowRight } from "lucide-react";
-import Link from "next/link";
-import { NewsCarousel }       from "./NewsCarousel";
-import { KnowUsCard }         from "@/app/components/home/KnowUsCard";
-import { PoliciesCardAside }  from "@/app/components/home/PoliciesCard";
-import { QuickLinksSection }  from "@/app/components/ui/QuickLinksSection";
-import { homeQuickLinks }     from "@/app/components/home/config/homeQuickLinks";
+import { Newspaper } from "lucide-react";
+import { KnowUsCard } from "@/app/components/home/KnowUsCard";
+import { PoliciesCardAside } from "@/app/components/home/PoliciesCard";
+import { QuickLinksSection } from "@/app/components/ui/QuickLinksSection";
+import {
+  microsoft365QuickLinks,
+} from "@/app/components/home/config/homeQuickLinks";
+import { HomeWorkspace } from "@/app/components/home/HomeWorkspace";
 
 /**
  * Representa una noticia o comunicado.
+ *
+ * @remarks
+ * Se mantiene por compatibilidad con la estructura previa del home,
+ * aunque en esta versión el carrusel de noticias ya no se renderiza.
  */
 interface Announcement {
   id: string;
@@ -33,27 +45,31 @@ interface Announcement {
  */
 interface Props {
   /**
-   * Lista de anuncios a mostrar en la sección.
+   * Lista de anuncios disponibles.
+   *
+   * @remarks
+   * Actualmente se conserva para no romper el contrato del componente,
+   * pero el home ya no depende de los anuncios para renderizar esta sección.
    */
   announcements: Announcement[];
 }
 
 /**
- * Renderiza la sección de noticias del home.
+ * Renderiza el bloque principal del home.
  *
  * @param props Propiedades del componente.
  * @param props.announcements Lista de noticias disponibles.
- * @returns Sección con carrusel, tarjetas informativas y accesos rápidos.
+ * @returns Sección con workspace, acciones rápidas, tarjeta institucional y accesos Microsoft 365.
  *
  * @remarks
- * - Si no hay anuncios, no renderiza nada.
- * - Incluye navegación hacia la vista completa de noticias.
- * - Distribuye el contenido en dos columnas en desktop:
- *   - Izquierda: carrusel de noticias.
- *   - Derecha: tarjetas informativas y quick links.
+ * - El carrusel de noticias fue reemplazado por un workspace operativo.
+ * - La columna izquierda concentra la búsqueda y los accesos internos.
+ * - La columna derecha conserva "Nuestra organización" y agrupa Microsoft 365.
+ * - No requiere backend, base de datos ni integración adicional con Microsoft Graph.
  */
-export function NewsSection({ announcements }: Props) {
-  if (!announcements?.length) return null;
+export function NewsSection({ announcements: _announcements }: Props) {
+  const SHOW_POLICIES_CARD_ASIDE = false; // Controla visibilidad de la tarjeta de políticas en el lado derecho
+  const SHOW_MICROSOFT_365_SECTION = true; // Controla visibilidad de accesos rápidos a herramientas Microsoft 365
 
   return (
     <section className="space-y-4">
@@ -66,34 +82,51 @@ export function NewsSection({ announcements }: Props) {
             <Newspaper className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
           </span>
           <h2 className="text-sm font-semibold text-slate-800 dark:text-[#e6edf3]">
-            Noticias y Comunicados
+            Mi espacio de trabajo
           </h2>
         </div>
-        <Link
-          href="/noticias"
-          className="flex items-center gap-1 text-[11px] font-medium transition-colors
-                     text-slate-400 hover:text-violet-600
-                     dark:text-[#545d68] dark:hover:text-violet-400"
-        >
-          Ver todas <ArrowRight className="h-3 w-3" />
-        </Link>
       </div>
 
       {/* Grid principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:h-[580px]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:h-[620px]">
 
-        {/* Carrusel */}
-        <div className="h-[340px] lg:h-full">
-          <NewsCarousel announcements={announcements} />
-        </div>
-
+        {/* Workspace principal */}
+<div className="h-auto lg:h-full">
+  <HomeWorkspace />
+</div>
         {/* Panel derecho */}
         <div className="grid grid-cols-2 grid-rows-2 gap-2 lg:h-full">
-          <KnowUsCard />
-          <PoliciesCardAside />
-          <div className="col-span-2 lg:h-full">
-            <QuickLinksSection quickLinks={homeQuickLinks} />
+          <div
+            className={`
+              ${
+                SHOW_POLICIES_CARD_ASIDE
+                  ? SHOW_MICROSOFT_365_SECTION
+                    ? "col-span-1 row-span-1"
+                    : "col-span-1 row-span-2"
+                  : SHOW_MICROSOFT_365_SECTION
+                    ? "col-span-2 row-span-1"
+                    : "col-span-2 row-span-2"
+              }
+              lg:h-full
+            `}
+          >
+            <KnowUsCard />
           </div>
+
+          {SHOW_POLICIES_CARD_ASIDE && <PoliciesCardAside />}
+
+          {SHOW_MICROSOFT_365_SECTION && (
+            <div className="col-span-2 lg:h-full">
+              <QuickLinksSection
+                quickLinks={microsoft365QuickLinks}
+                title="Microsoft 365"
+                subtitle="Accede a tus herramientas corporativas"
+                badgeLabel={`${microsoft365QuickLinks.length} herramientas`}
+                showFavorites={false}
+                fillHeight
+              />
+            </div>
+          )}
         </div>
 
       </div>

@@ -16,7 +16,7 @@
  * de la empresa como multimarca en el sector moda.
  */
 
-// ✅ SERVER COMPONENT
+ // ✅ SERVER COMPONENT
 
 /* -------------------------------------------------------------------------- */
 /* Configuración de marcas                                                     */
@@ -37,11 +37,11 @@
  * En entornos reales se recomienda usar un `id` único.
  */
 const BRANDS = [
-  { name: "Diesel",              origin: "Italia",            since: "EDM desde 1989" },
-  { name: "Kipling",             origin: "Bélgica",           since: "EDM desde 2000" },
-  { name: "Superdry",            origin: "Reino Unido",       since: "EDM portafolio" },
-  { name: "Marithé F. Girbaud",  origin: "Francia",           since: "EDM desde 1985" },
-  { name: "Pilatos",             origin: "Colombia · Propia", since: "Marca EDM"      },
+  { name: "Diesel", origin: "Italia", since: "EDM desde 1989" },
+  { name: "Kipling", origin: "Bélgica", since: "EDM desde 2000" },
+  { name: "Superdry", origin: "Reino Unido", since: "EDM desde 2011" },
+  { name: "Marithé F. Girbaud", origin: "Francia", since: "EDM desde 1985" },
+  { name: "Pilatos", origin: "Colombia · Propia", since: "Marca EDM" },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -63,7 +63,7 @@ const BRANDS = [
  *
  * Características visuales:
  *
- * - tipografía serif para reforzar branding premium
+ * - tipografía heredada del sistema visual global de la intranet
  * - alineación centrada tipo showcase
  * - separación por bordes verticales
  * - hover suave para feedback visual
@@ -96,9 +96,9 @@ const BRANDS = [
  */
 export function CompanyBrandsSection() {
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white dark:bg-gray-900">
+    <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white dark:border-[#30363d] dark:bg-gray-900">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-4 dark:border-[#21262d]">
         <span className="h-[6px] w-[6px] flex-shrink-0 rounded-full bg-violet-600" />
         <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-400">
           Portafolio de marcas
@@ -119,10 +119,7 @@ export function CompanyBrandsSection() {
             }}
           >
             {/* Nombre */}
-            <p
-              className="mb-1 text-[15px] font-bold leading-snug text-slate-700 dark:text-slate-200"
-              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
-            >
+            <p className="mb-1 text-[15px] font-bold leading-snug text-slate-700 dark:text-slate-200">
               {brand.name}
             </p>
 
@@ -132,7 +129,7 @@ export function CompanyBrandsSection() {
             </p>
 
             {/* Relación histórica */}
-            <p className="mt-1 text-[11px] font-medium text-violet-600">
+            <p className="mt-1 text-[11px] font-medium text-violet-600 dark:text-violet-400">
               {brand.since}
             </p>
           </div>

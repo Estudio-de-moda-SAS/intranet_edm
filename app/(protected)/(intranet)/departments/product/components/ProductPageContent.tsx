@@ -151,6 +151,23 @@ const TEAM_ACCENT = {
   topAccent:       "from-stone-500 via-amber-500 to-orange-400",
 } as const;
 
+const SHOW_PRODUCT_ANNOUNCEMENT = true;
+const SHOW_PRODUCT_KPIS = true;
+
+const SHOW_PRODUCT_COLLECTIONS = false;
+const SHOW_PRODUCT_SAMPLES = true;
+
+const SHOW_PRODUCT_ALERTS = false;
+const SHOW_PRODUCT_QUICK_LINKS = true;
+
+const SHOW_PRODUCT_ACTIVITY = false;
+
+const SHOW_PRODUCT_TOOLS = false;
+const SHOW_PRODUCT_CALENDAR = false;
+
+const SHOW_PRODUCT_LAUNCH_PANEL = false;
+const SHOW_PRODUCT_STORE_DISTRIBUTION = false;
+
 // ── CTAs según nivel ──────────────────────────────────────────────────────────
 
 /**
@@ -260,19 +277,19 @@ export default function ProductPageContent({ accessLevel }: Props) {
    * Se construyen dinámicamente en función del nivel de acceso del usuario.
    * Estas acciones permiten ofrecer navegación contextual desde el hero.
    */
-  const ctaLinks = buildCtaLinks(accessLevel);
+  const ctaLinks = SHOW_PRODUCT_ANNOUNCEMENT ? buildCtaLinks(accessLevel) : [];
 
   // Guards — todos existen en PERMISSION_MAP de roles.ts
 
   /**
    * Controla la visibilidad del strip de KPIs del módulo.
    */
-  const showKPIs        = can(accessLevel, "product:view_kpis");
+  const showKPIs        = SHOW_PRODUCT_KPIS && can(accessLevel, "product:view_kpis");
 
   /**
    * Controla la visibilidad de la sección de colecciones activas.
    */
-  const showCollections = can(accessLevel, "product:view_collections");
+  const showCollections = SHOW_PRODUCT_COLLECTIONS && can(accessLevel, "product:view_collections");
 
   /**
    * Controla la disponibilidad de funcionalidades relacionadas con fichas técnicas.
@@ -287,27 +304,27 @@ export default function ProductPageContent({ accessLevel }: Props) {
   /**
    * Controla la visibilidad del bloque de muestras y aprobaciones.
    */
-  const showSamples     = can(accessLevel, "product:view_samples");
+  const showSamples     = SHOW_PRODUCT_SAMPLES && can(accessLevel, "product:view_samples");
 
   /**
    * Controla la visibilidad del bloque de alertas o bloqueos.
    */
-  const showAlerts      = can(accessLevel, "product:view_alerts");
+  const showAlerts      = SHOW_PRODUCT_ALERTS && can(accessLevel, "product:view_alerts");
 
   /**
    * Controla la visibilidad de la sección de accesos rápidos.
    */
-  const showQuickLinks  = can(accessLevel, "product:view_quicklinks");
+  const showQuickLinks  = SHOW_PRODUCT_QUICK_LINKS && can(accessLevel, "product:view_quicklinks");
 
   /**
    * Controla la visibilidad de herramientas especializadas del módulo.
    */
-  const showTools       = can(accessLevel, "product:view_tools");
+  const showTools       = SHOW_PRODUCT_TOOLS && can(accessLevel, "product:view_tools");
 
   /**
    * Controla la visibilidad del calendario de temporadas.
    */
-  const showCalendar    = can(accessLevel, "product:view_calendar");
+  const showCalendar    = SHOW_PRODUCT_CALENDAR && can(accessLevel, "product:view_calendar");
 
   /**
    * Controla la visibilidad del panel ejecutivo de dashboard.
@@ -315,12 +332,12 @@ export default function ProductPageContent({ accessLevel }: Props) {
    * @remarks
    * Este permiso habilita la sección de panel de lanzamientos.
    */
-  const showPanel       = can(accessLevel, "product:view_dashboard");
+  const showPanel       = SHOW_PRODUCT_LAUNCH_PANEL && can(accessLevel, "product:view_dashboard");
 
   /**
    * Controla la visibilidad del bloque de distribución por tiendas.
    */
-  const showStores      = can(accessLevel, "product:view_stores");
+  const showStores      = SHOW_PRODUCT_STORE_DISTRIBUTION && can(accessLevel, "product:view_stores");
 
   /**
    * Controla la visibilidad del feed de actividad.
@@ -328,7 +345,7 @@ export default function ProductPageContent({ accessLevel }: Props) {
    * @remarks
    * Actualmente reutiliza el mismo permiso asociado al dashboard general.
    */
-  const showActivity    = can(accessLevel, "product:view_dashboard");
+  const showActivity    = SHOW_PRODUCT_ACTIVITY && can(accessLevel, "product:view_dashboard");
 
   /**
    * Controla la disponibilidad de exportación de reportes.

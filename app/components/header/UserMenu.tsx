@@ -1,6 +1,6 @@
 /**
  * @module UserMenu
- * Componente cliente que renderiza el menu de usuario en la interfaz
+ * Componente cliente que renderiza el menu de usuario en la interfaz intranet
  * y gestiona accesos rapidos a perfil, notificaciones, privacidad y
  * cierre de sesion.
  *
@@ -27,6 +27,7 @@ import {
 import { logout }              from '@/app/api/auth/msal';
 import { NotificationsPanel }  from './NotificationsModal';
 import { PrivacyModal }        from './PrivacyModal';
+import { useMicrosoftProfilePhoto } from "@/app/hooks/useMicrosoftProfilePhoto";
 
 // -- Tipos --------------------------------------------------------------------
 
@@ -52,15 +53,21 @@ interface MenuItem {
   action:  MenuAction;
 }
 
+
+const SHOW_PROFILE = true;
+const SHOW_NOTIFICATIONS = false;
+const SHOW_SETTINGS = false;
+const SHOW_PRIVACY = false;
+const SHOW_HELP = false;
 // -- Configuracion del menu ---------------------------------------------------
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: 'profile',       label: 'Mi perfil',      icon: User,       href: '/profile',   action: 'navigate' },
-  { id: 'notifications', label: 'Notificaciones', icon: Bell,                            action: 'panel'    },
-  { id: 'settings',      label: 'Configuracion',  icon: Settings,   href: '/settings',  action: 'navigate' },
-  { id: 'privacy',       label: 'Privacidad',     icon: Shield,                          action: 'modal'    },
-  { id: 'help',          label: 'Ayuda',          icon: HelpCircle, href: '/help',       action: 'navigate' },
-];
+  SHOW_PROFILE && { id: 'profile',       label: 'Mi perfil',      icon: User,       href: '/profile',   action: 'navigate' },
+  SHOW_NOTIFICATIONS && { id: 'notifications', label: 'Notificaciones', icon: Bell,                            action: 'panel'    },
+  SHOW_SETTINGS && { id: 'settings',      label: 'Configuracion',  icon: Settings,   href: '/settings',  action: 'navigate' },
+  SHOW_PRIVACY && { id: 'privacy',       label: 'Privacidad',     icon: Shield,                          action: 'modal'    },
+  SHOW_HELP && { id: 'help',          label: 'Ayuda',          icon: HelpCircle, href: '/help',       action: 'navigate' },
+].filter(Boolean) as MenuItem[];
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -83,12 +90,21 @@ export default function UserMenu({ user }: Props) {
   const [dropdownPos,  setDropdownPos]  = useState({ top: 0, right: 0 });
   const [unreadCount,  setUnreadCount]  = useState(0);
   const [loggingOut,   setLoggingOut]   = useState(false);
+  const {
+  photoUrl,
+  loadProfilePhoto,
+} = useMicrosoftProfilePhoto();
 
   const buttonRef   = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const panelRef    = useRef<HTMLDivElement>(null);
 
   const hue = nameToHue(user.name);
+  const resolvedAvatarUrl = photoUrl ?? user.avatarUrl;
+
+  useEffect(() => {
+  loadProfilePhoto();
+}, [loadProfilePhoto]);
 
   const updatePos = useCallback(() => {
     if (!buttonRef.current) return;
@@ -177,9 +193,9 @@ export default function UserMenu({ user }: Props) {
               style={{ background: `hsl(${hue}, 70%, 55%)` }}
             />
             <div className="flex items-center gap-3">
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
+             {resolvedAvatarUrl ? (
+             <img
+             src={resolvedAvatarUrl}
                   alt={user.name}
                   className="h-12 w-12 rounded-xl object-cover ring-2 ring-violet-100 dark:ring-violet-500/20"
                 />
@@ -310,9 +326,9 @@ export default function UserMenu({ user }: Props) {
                      focus:outline-none focus:ring-2 focus:ring-violet-500/20"
         >
           <div className="relative">
-            {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
+           {resolvedAvatarUrl ? (
+           <img
+           src={resolvedAvatarUrl}
                 alt={user.name}
                 className="h-8 w-8 rounded-full object-cover ring-2 ring-violet-100 dark:ring-violet-500/20"
               />

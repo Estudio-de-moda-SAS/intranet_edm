@@ -79,6 +79,9 @@ export type AppsGridProps = {
   cols?: 2 | 3 | 4;
   variant?: AppsGridVariant;
   showFavorites?: boolean;
+  showFrequentControls?: boolean;
+  isFrequentApp?: (appId?: string) => boolean;
+  onToggleFrequentApp?: (appId?: string) => void;
   favoriteHrefs?: string[];
   onToggleFavorite?: (item: AppItem) => void;
 };
@@ -238,6 +241,9 @@ interface AppCardProps {
   onPreviewClick: (item: AppItem) => void;
   variant?: AppsGridVariant;
   showFavorites?: boolean;
+  showFrequentControls?: boolean;
+  isFrequentApp?: (appId?: string) => boolean;
+  onToggleFrequentApp?: (appId?: string) => void;
 }
 
 function AppCard({
@@ -247,6 +253,9 @@ function AppCard({
   onPreviewClick,
   variant = "compact",
   showFavorites = true,
+  showFrequentControls = false,
+  isFrequentApp,
+  onToggleFrequentApp,
 }: AppCardProps) {
   const c = COLOR_MAP[item.color ?? "purple"] ?? COLOR_MAP.purple;
   const Icon = resolveIcon(item.icon);
@@ -269,7 +278,7 @@ function AppCard({
           c.hoverBorder,
         )}
       >
-        <div className="relative z-10 flex min-w-0 items-center gap-3">
+        <div className="relative z-10 flex min-w-0 items-center gap-3 pr-10">
           <span
             className={cn(
               "flex shrink-0 items-center justify-center",
@@ -337,9 +346,36 @@ function AppCard({
               />
             </button>
           )}
+        {showFrequentControls && (
+  <button
+    type="button"
+    onClick={() => onToggleFrequentApp?.(item.id)}
+    title={
+      isFrequentApp?.(item.id)
+        ? "Quitar de mis frecuentes"
+        : "Añadir a mis frecuentes"
+    }
+    className={cn(
+      "absolute right-4 top-4 z-20 flex items-center justify-center rounded-full border bg-white shadow-sm backdrop-blur-sm transition-all duration-200",
+      "hover:-translate-y-0.5 hover:shadow-md",
+      isFrequentApp?.(item.id)
+        ? "border-amber-200 text-amber-500"
+        : "border-slate-200 text-slate-400 hover:border-amber-200 hover:text-amber-500",
+      isLauncher ? "h-9 w-9" : "h-7 w-7",
+    )}
+  >
+    <Star
+      className={cn(
+        isLauncher ? "h-4 w-4" : "h-3.5 w-3.5",
+        isFrequentApp?.(item.id) ? "fill-amber-400 text-amber-400" : "fill-none",
+      )}
+    />
+  </button>
+)}
         </div>
 
         <div className="relative z-10 mt-auto flex flex-wrap items-center gap-2">
+       
           {item.embedUrl && (
             <button
               type="button"
@@ -381,6 +417,9 @@ export function AppsGrid({
   cols = 3,
   variant = "compact",
   showFavorites = true,
+  showFrequentControls = false,
+  isFrequentApp = () => false,
+  onToggleFrequentApp = () => {},
 }: AppsGridProps) {
   const { favoriteHrefs, addFavorite, removeFavorite, getFavoriteByHref } =
     useFavorites();
@@ -493,6 +532,9 @@ export function AppsGrid({
               onPreviewClick={setPreviewApp}
               variant={variant}
               showFavorites={showFavorites}
+              showFrequentControls={showFrequentControls}
+              isFrequentApp={isFrequentApp}
+              onToggleFrequentApp={onToggleFrequentApp}
             />
           ))}
         </ul>
