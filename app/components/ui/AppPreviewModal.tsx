@@ -36,14 +36,22 @@ export function AppPreviewModal({
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-            aria-label="Cerrar vista previa"
-          >
-            <X className="h-4 w-4" />
-          </button>
+         <button
+  type="button"
+  onClick={onClose}
+  className="
+    flex h-10 w-10 items-center justify-center rounded-full
+    border border-slate-200 bg-white text-slate-500 shadow-sm
+    transition-all duration-200
+    hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50
+    hover:text-slate-900 hover:shadow-md
+    focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2
+  "
+  aria-label="Cerrar aplicación integrada"
+  title="Cerrar aplicación integrada"
+>
+  <X className="h-5 w-5" />
+</button>
         </div>
       </header>
 

@@ -73,7 +73,7 @@ export default function DocumentHomePage({ accessLevel }: Props) {
    * de clasificación y departamento propietario.
    */
   const authorizedDocs = filterDocsByAccess(DOCUMENTS, accessLevel);
-
+  
   /**
    * Indica si debe mostrarse la columna de clasificación documental.
    *
@@ -85,9 +85,11 @@ export default function DocumentHomePage({ accessLevel }: Props) {
   /**
    * Permisos funcionales del módulo documental.
    */
+
+  const SHOW_RECENT = false;
   const showCreate    = can(accessLevel, "docs:create");
   const showApprovals = can(accessLevel, "docs:review_approvals");
-  const showRecent    = can(accessLevel, "docs:view_recent");
+  const showRecent    = SHOW_RECENT && can(accessLevel, "docs:view_recent");
   const showOwners    = can(accessLevel, "docs:view_owners");
 
   /**

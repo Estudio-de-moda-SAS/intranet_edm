@@ -101,9 +101,9 @@ const CANALES = [
  */
 export function CompanyCanalesSection() {
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white dark:bg-gray-900">
+    <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white dark:border-[#30363d] dark:bg-gray-900">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-4 dark:border-[#21262d]">
         <span className="h-[6px] w-[6px] flex-shrink-0 rounded-full bg-violet-600" />
         <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-400">
           Canales de distribución
@@ -124,10 +124,7 @@ export function CompanyCanalesSection() {
             }}
           >
             {/* Número */}
-            <p
-              className="mb-1 text-[36px] font-black leading-none text-violet-900"
-              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
-            >
+            <p className="mb-1 text-[36px] font-extrabold leading-none text-violet-700 dark:text-violet-400">
               {canal.num}
             </p>
 
@@ -137,7 +134,7 @@ export function CompanyCanalesSection() {
             </p>
 
             {/* Descripción */}
-            <p className="text-[11px] leading-[1.45] text-slate-400">
+            <p className="text-[11px] leading-[1.45] text-slate-400 dark:text-slate-500">
               {canal.desc}
             </p>
           </div>

@@ -6,7 +6,8 @@
  * Este componente presenta la identidad visual principal del usuario
  * dentro del módulo de perfil, incluyendo:
  *
- * - avatar o fallback por iniciales
+ * - avatar corporativo obtenido desde Microsoft Graph
+ * - fallback por imagen local o iniciales
  * - nombre completo
  * - estado visual de actividad
  * - cargo y departamento
@@ -20,9 +21,11 @@
 // components/perfil/ProfileHeader.tsx
 "use client";
 
+import { useEffect } from "react";
 import { Building2, Calendar, MapPin } from "lucide-react";
 import { getInitials, nameToHue } from "@/lib/avatar";
 import type { ProfileData } from "@/types/profile";
+import { useMicrosoftProfilePhoto } from "@/app/hooks/useMicrosoftProfilePhoto";
 
 /* -------------------------------------------------------------------------- */
 /* Tipos                                                                      */
@@ -38,6 +41,19 @@ interface ProfileHeaderProps {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Configuración                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Controla la visibilidad de la fecha de ingreso.
+ *
+ * @remarks
+ * Se mantiene deshabilitada mientras no exista una fuente confiable
+ * para este dato dentro del perfil corporativo.
+ */
+const SHOW_JOINED_DATE = false;
+
+/* -------------------------------------------------------------------------- */
 /* Componente principal                                                        */
 /* -------------------------------------------------------------------------- */
 
@@ -51,15 +67,17 @@ interface ProfileHeaderProps {
  * Este componente:
  *
  * - calcula un tono base a partir del nombre del usuario
- * - usa foto de perfil si existe
- * - usa iniciales como fallback si no hay foto
+ * - intenta cargar la foto corporativa desde Microsoft Graph
+ * - usa `profile.image` como segundo fallback si existe
+ * - usa iniciales como fallback final si no hay foto disponible
  * - muestra información resumida del usuario en una vista destacada
  *
  * Flujo visual:
  *
  * 1. Se calcula un color único con {@link nameToHue}
- * 2. Se renderiza una imagen real o un avatar con iniciales
- * 3. Se presentan nombre, rol, departamento y metadatos
+ * 2. Se consulta la foto corporativa mediante Microsoft Graph
+ * 3. Se renderiza la foto Graph, imagen local o avatar con iniciales
+ * 4. Se presentan nombre, rol, departamento y metadatos
  *
  * @example
  * ```tsx
@@ -78,6 +96,37 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
    */
   const hue = nameToHue(profile.name ?? "");
 
+  /**
+   * Foto corporativa consultada desde Microsoft Graph.
+   *
+   * @remarks
+   * Si Graph no devuelve una foto, el componente conserva el fallback
+   * actual basado en `profile.image` o iniciales.
+   */
+  const { photoUrl, loadProfilePhoto } = useMicrosoftProfilePhoto();
+
+  /**
+   * Carga la foto corporativa al montar el encabezado.
+   *
+   * @remarks
+   * La llamada es segura: si el usuario no tiene foto configurada,
+   * el hook devuelve `null` y se mantiene el fallback visual.
+   */
+  useEffect(() => {
+    loadProfilePhoto();
+  }, [loadProfilePhoto]);
+
+  /**
+   * URL final del avatar a renderizar.
+   *
+   * @remarks
+   * Prioridad:
+   * 1. Foto obtenida desde Microsoft Graph.
+   * 2. Imagen incluida en los datos del perfil.
+   * 3. Avatar generado con iniciales.
+   */
+  const resolvedAvatarUrl = photoUrl ?? profile.image;
+
   return (
     <div className="relative overflow-hidden bg-white border-b border-slate-200">
       {/* Fondo decorativo radial */}
@@ -95,9 +144,9 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
           {/* Avatar                                                   */}
           {/* -------------------------------------------------------- */}
           <div className="relative shrink-0">
-            {profile.image ? (
+            {resolvedAvatarUrl ? (
               <img
-                src={profile.image}
+                src={resolvedAvatarUrl}
                 alt={profile.name ?? ""}
                 className="h-24 w-24 rounded-2xl object-cover shadow-lg"
               />
@@ -138,10 +187,12 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
                 {profile.employeeId}
               </span>
 
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                Desde {profile.joined}
-              </span>
+              {SHOW_JOINED_DATE && profile.joined && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Desde {profile.joined}
+                </span>
+              )}
 
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />

@@ -98,6 +98,21 @@ type HomePageContentProps = {
  * ```
  */
 export function HomePageContent({ data }: HomePageContentProps) {
+  const SHOW_REQUESTS_PANEL = false;
+  const SHOW_BIRTHDYAS_CARD = false;
+  const SHOW_RECOGNITIONS_CARD = false;
+  const SHOW_EVENTS_SECTION = false;
+  const SHOW_TASKS_CARD = false;
+  const SHOW_FAVORITES_CARD = false;
+  const SHOW_LEADERS_SECTION = false;
+
+  const SHOW_SIDEBAR =
+  SHOW_FAVORITES_CARD ||
+  SHOW_TASKS_CARD ||
+  SHOW_RECOGNITIONS_CARD ||
+  SHOW_EVENTS_SECTION ||
+  SHOW_BIRTHDYAS_CARD;
+
   return (
     <main
       className="min-h-screen w-full"
@@ -128,59 +143,76 @@ export function HomePageContent({ data }: HomePageContentProps) {
           {/* -------------------------------------------------------- */}
           {/* Columna izquierda: noticias + solicitudes                */}
           {/* -------------------------------------------------------- */}
-          <div className="flex flex-col gap-6 lg:col-span-9 lg:w-[96%] order-1 lg:order-none">
-
+          <div
+  className={`
+    flex flex-col gap-6 order-1 lg:order-none
+    ${SHOW_SIDEBAR ? "lg:col-span-9 lg:w-[96%]" : "lg:col-span-12"}
+  `}
+>
             <AnimatedCard delay={0}>
               <NewsSection announcements={data.announcements} />
             </AnimatedCard>
 
+            {SHOW_REQUESTS_PANEL && (
             <AnimatedCard delay={0.08}>
               <RequestsPanel />
             </AnimatedCard>
-
+            )}
           </div>
 
           {/* -------------------------------------------------------- */}
           {/* Sidebar                                                  */}
           {/* -------------------------------------------------------- */}
-          <aside className="lg:col-span-3 flex flex-col gap-5 lg:w-[112%] lg:-ml-[12%] order-2 lg:order-none">
+          {SHOW_SIDEBAR && (<aside className="lg:col-span-3 flex flex-col gap-5 lg:w-[112%] lg:-ml-[12%] order-2 lg:order-none">
 
-            {/* Favoritos */}
-            <AnimatedCard delay={0.08}>
-              <FavoritesCard />
-            </AnimatedCard>
-
+           {/* Favoritos */}
+{SHOW_FAVORITES_CARD && (
+  <AnimatedCard delay={0.08}>
+    <FavoritesCard />
+  </AnimatedCard>
+)}
             {/* Tareas */}
-            <AnimatedCard delay={0.20}>
-              <TasksCard tasks={data.tasks} />
-            </AnimatedCard>
+            {SHOW_TASKS_CARD && (
+              <AnimatedCard delay={0.20}>
+                <TasksCard tasks={data.tasks} />
+              </AnimatedCard>
+            )}
 
             {/* Reconocimientos */}
-            <AnimatedCard delay={0.24}>
-              <RecognitionsCard
-                recognitions={data.recognitions ?? MOCK_RECOGNITIONS}
-              />
-            </AnimatedCard>
+            {SHOW_RECOGNITIONS_CARD && (
+              <AnimatedCard delay={0.24}>
+                <RecognitionsCard
+                  recognitions={data.recognitions ?? MOCK_RECOGNITIONS}
+                />
+              </AnimatedCard>
+            )}
 
             {/* Eventos */}
-            <AnimatedCard delay={0.12}>
-              <EventsSection events={data.events} />
-            </AnimatedCard>
+            {SHOW_EVENTS_SECTION && (
+              <AnimatedCard delay={0.12}>
+                <EventsSection events={data.events} />
+              </AnimatedCard>
+            )}
 
             {/* Cumpleaños */}
-            <AnimatedCard delay={0.28}>
-              <BirthdaysCard birthdays={data.birthdays} />
-            </AnimatedCard>
+            {SHOW_BIRTHDYAS_CARD && (
+              <AnimatedCard delay={0.28}>
+                <BirthdaysCard birthdays={data.birthdays} />
+              </AnimatedCard>
+            )}
 
           </aside>
+          )}
         </div>
 
         {/* ========================================================== */}
         {/* Sección de líderes                                         */}
         {/* ========================================================== */}
-        <AnimatedViewCard className="mt-6">
-          <LeadersSection leaders={homeLeaders} />
-        </AnimatedViewCard>
+        {SHOW_LEADERS_SECTION && (
+          <AnimatedViewCard className="mt-6">
+            <LeadersSection leaders={homeLeaders} />
+          </AnimatedViewCard>
+        )}
 
         {/* ========================================================== */}
         {/* Panel de feedback                                          */}
