@@ -14,13 +14,20 @@ export interface GraphOrganizationUser {
   photoUrl?: string;
 }
 
+interface GraphCollectionResponse<T> {
+  value: T[];
+}
+
 interface CacheRecord<T> {
   data: T;
   expiresAt: number;
 }
 
-function getCacheKey(type: "user" | "photo", email: string) {
-  return `organization:graph:${type}:${email.toLowerCase()}`;
+function getCacheKey(
+  type: "user" | "photo" | "manager" | "directReports",
+  key: string
+) {
+  return `organization:graph:${type}:${key.toLowerCase()}`;
 }
 
 function readCache<T>(key: string): T | null {
@@ -164,5 +171,57 @@ export async function getGraphUserPhotoUrl(
     return photoBase64;
   } catch {
     return null;
+  }
+}
+
+export async function getGraphUserManager(
+  email: string
+): Promise<GraphOrganizationUser | null> {
+  const cacheKey = getCacheKey("manager", email);
+  const cachedManager = readCache<GraphOrganizationUser>(cacheKey);
+
+  if (cachedManager) {
+    return cachedManager;
+  }
+
+  try {
+    const manager = await graphFetch<GraphOrganizationUser>(
+      `/users/${encodeURIComponent(
+        email
+      )}/manager?$select=id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation`
+    );
+
+    writeCache(cacheKey, manager);
+
+    return manager;
+  } catch {
+    return null;
+  }
+}
+
+export async function getGraphUserDirectReports(
+  email: string
+): Promise<GraphOrganizationUser[]> {
+  const cacheKey = getCacheKey("directReports", email);
+  const cachedReports = readCache<GraphOrganizationUser[]>(cacheKey);
+
+  if (cachedReports) {
+    return cachedReports;
+  }
+
+  try {
+    const response = await graphFetch<
+      GraphCollectionResponse<GraphOrganizationUser>
+    >(
+      `/users/${encodeURIComponent(
+        email
+      )}/directReports?$select=id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation`
+    );
+
+    writeCache(cacheKey, response.value);
+
+    return response.value;
+  } catch {
+    return [];
   }
 }

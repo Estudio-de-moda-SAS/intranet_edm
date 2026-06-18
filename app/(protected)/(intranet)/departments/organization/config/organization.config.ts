@@ -15,11 +15,11 @@ export const ORGANIZATION_STRUCTURE: OrganizationUnit = {
   children: [
     {
       id: "technology",
-      name: "Prcesos y TI",
+      name: "Procesos y TI",
       leader: "Gerente de Procesos y TI",
       parentName: "Gerencia General",
       employeeCount: 8,
-      contactEmail: "tecnologia@estudiodemoda.com",
+      contactEmail: "mballen@estudiodemoda.com",
       graphUserEmail: "mballen@estudiodemoda.com.co",
       teamsUrl:
         "https://teams.microsoft.com/l/chat/0/0?users=tecnologia@estudiodemoda.com",

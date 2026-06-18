@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import type { OrganizationUnit } from "../types/organization.types";
 import {
   getGraphUserByEmail,
+  getGraphUserDirectReports,
+  getGraphUserManager,
   getGraphUserPhotoUrl,
   type GraphOrganizationUser,
 } from "../services/organizationGraph.service";
@@ -11,6 +13,8 @@ import {
 interface UseOrganizationGraphProfileResult {
   enrichedUnit: OrganizationUnit;
   graphUser: GraphOrganizationUser | null;
+  manager: GraphOrganizationUser | null;
+  directReports: GraphOrganizationUser[];
   loading: boolean;
   error: string | null;
 }
@@ -20,6 +24,10 @@ export function useOrganizationGraphProfile(
 ): UseOrganizationGraphProfileResult {
   const [graphUser, setGraphUser] = useState<GraphOrganizationUser | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [manager, setManager] = useState<GraphOrganizationUser | null>(null);
+  const [directReports, setDirectReports] = useState<GraphOrganizationUser[]>(
+    []
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,35 +35,62 @@ export function useOrganizationGraphProfile(
 
   useEffect(() => {
     let cancelled = false;
-    let objectUrl: string | null = null;
 
     async function loadGraphProfile() {
+      setGraphUser(null);
+      setPhotoUrl(null);
+      setManager(null);
+      setDirectReports([]);
+      setError(null);
+
       if (!graphEmail) {
-        setGraphUser(null);
-        setPhotoUrl(null);
-        setError(null);
+        setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        setError(null);
 
-        const user = await getGraphUserByEmail(graphEmail);
+        /**
+         * Carga principal.
+         *
+         * Esta parte alimenta la ficha visible del panel:
+         * - nombre,
+         * - cargo,
+         * - correo,
+         * - ubicación,
+         * - foto.
+         *
+         * Se resuelve primero para que el cambio de nodo se sienta inmediato,
+         * especialmente cuando los datos ya existen en sessionStorage.
+         */
+        const [user, photo] = await Promise.all([
+          getGraphUserByEmail(graphEmail),
+          getGraphUserPhotoUrl(graphEmail),
+        ]);
 
         if (cancelled) return;
 
         setGraphUser(user);
-
-        const photo = await getGraphUserPhotoUrl(graphEmail);
-
-        if (cancelled) {
-          if (photo) URL.revokeObjectURL(photo);
-          return;
-        }
-
-        objectUrl = photo;
         setPhotoUrl(photo);
+        setLoading(false);
+
+        /**
+         * Carga secundaria.
+         *
+         * Manager y directReports pueden tardar más o devolver 403 si la app
+         * aún no tiene permisos adicionales en Entra ID. No deben bloquear la
+         * ficha principal del colaborador.
+         */
+        const [graphManager, reports] = await Promise.all([
+          getGraphUserManager(graphEmail),
+          getGraphUserDirectReports(graphEmail),
+        ]);
+
+        if (cancelled) return;
+
+        setManager(graphManager);
+        setDirectReports(reports);
       } catch (err) {
         if (cancelled) return;
 
@@ -63,10 +98,9 @@ export function useOrganizationGraphProfile(
         setError("No se pudo cargar la información desde Microsoft Graph.");
         setGraphUser(null);
         setPhotoUrl(null);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setManager(null);
+        setDirectReports([]);
+        setLoading(false);
       }
     }
 
@@ -74,32 +108,31 @@ export function useOrganizationGraphProfile(
 
     return () => {
       cancelled = true;
-
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
     };
   }, [graphEmail]);
 
-const enrichedUnit: OrganizationUnit = {
-  ...unit,
-  ...(graphUser?.id && { graphUserId: graphUser.id }),
-  ...(graphUser?.displayName && { graphDisplayName: graphUser.displayName }),
-  ...(graphUser?.jobTitle && { graphJobTitle: graphUser.jobTitle }),
-  ...(graphUser?.department && { graphDepartment: graphUser.department }),
-  ...(graphUser?.officeLocation && {
-    graphOfficeLocation: graphUser.officeLocation,
-    location: graphUser.officeLocation,
-  }),
-  ...(photoUrl && { graphPhotoUrl: photoUrl }),
-  ...((graphUser?.mail ?? graphUser?.userPrincipalName ?? unit.contactEmail) && {
-    contactEmail: graphUser?.mail ?? graphUser?.userPrincipalName ?? unit.contactEmail,
-  }),
-};
+  const contactEmail =
+    graphUser?.mail ?? graphUser?.userPrincipalName ?? unit.contactEmail;
+
+  const enrichedUnit: OrganizationUnit = {
+    ...unit,
+    ...(graphUser?.id && { graphUserId: graphUser.id }),
+    ...(graphUser?.displayName && { graphDisplayName: graphUser.displayName }),
+    ...(graphUser?.jobTitle && { graphJobTitle: graphUser.jobTitle }),
+    ...(graphUser?.department && { graphDepartment: graphUser.department }),
+    ...(graphUser?.officeLocation && {
+      graphOfficeLocation: graphUser.officeLocation,
+      location: graphUser.officeLocation,
+    }),
+    ...(photoUrl && { graphPhotoUrl: photoUrl }),
+    ...(contactEmail && { contactEmail }),
+  };
 
   return {
     enrichedUnit,
     graphUser,
+    manager,
+    directReports,
     loading,
     error,
   };
