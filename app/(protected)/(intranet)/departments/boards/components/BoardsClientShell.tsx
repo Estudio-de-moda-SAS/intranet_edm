@@ -6,6 +6,7 @@
  * Full client shell for the `/boards` route.
  *
  * Layout:
+ * - Hero banner — introduces the boards module
  * - Search and filter toolbar — filters dashboards by name, description, tags and operational area
  * - Two-column panel — sidebar list (left) + viewer / preview panel (right)
  *
@@ -23,6 +24,7 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
+import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHeroBanner";
 import { PowerBIViewer } from "./PowerBIViewer";
 import {
   POWERBI_DASHBOARDS,
@@ -447,68 +449,86 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6 px-4 md:px-6 py-6">
-      {/* Search and filter toolbar */}
-      <BoardsToolbar
-        areas={POWERBI_AREAS}
-        active={activeArea}
-        search={search}
-        onSearchChange={setSearch}
-        onAreaChange={handleAreaChange}
+    <>
+      {/* Hero banner */}
+      <DepartmentHeroBanner
+        title="Tableros"
+        subtitle="Consulta tableros corporativos protegidos por Microsoft 365 y SharePoint. El acceso se valida según los permisos asignados a cada usuario."
+        gradientFrom="from-violet-950"
+        gradientVia="via-slate-900"
+        gradientTo="to-purple-800"
+        dotPatternId="boards-hero-pattern"
+        pills={[
+          { type: "status", text: "Acceso protegido" },
+          { type: "info", text: "Power BI" },
+          { type: "info", text: "SharePoint" },
+        ]}
       />
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
-        {/* Left: dashboard list */}
-        <aside className="flex flex-col gap-2 pt-1 max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
-          <AnimatePresence mode="popLayout">
-            {filtered.length === 0 ? (
-              <EmptyState key="empty" area={activeArea} />
-            ) : (
-              filtered.map((dashboard) => (
-                <DashboardCard
-                  key={dashboard.id}
-                  dashboard={dashboard}
-                  isSelected={selected?.id === dashboard.id}
-                  onClick={() => {
-                    setSelectedId(dashboard.id);
-                  }}
-                />
-              ))
-            )}
-          </AnimatePresence>
-        </aside>
+      <div className="flex flex-col gap-6 px-4 py-6 md:px-6">
+        {/* Search and filter toolbar */}
+        <BoardsToolbar
+          areas={POWERBI_AREAS}
+          active={activeArea}
+          search={search}
+          onSearchChange={setSearch}
+          onAreaChange={handleAreaChange}
+        />
 
-        {/* Right: viewer / preview */}
-        <main className="min-w-0 pt-1">
-          <AnimatePresence mode="wait">
-            {selected ? (
-              <motion.div
-                key={selected.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.2 }}
-              >
-                {ENABLE_DASHBOARD_EMBED && selected.openMode !== "external" ? (
-                  <PowerBIViewer dashboard={selected} />
-                ) : (
-                  <DashboardPreview dashboard={selected} />
-                )}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="no-selection"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex items-center justify-center h-64 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 text-sm"
-              >
-                Selecciona un tablero para visualizarlo
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </main>
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[280px_1fr]">
+          {/* Left: dashboard list */}
+          <aside className="flex max-h-[calc(100vh-180px)] flex-col gap-2 overflow-y-auto pr-1 pt-1">
+            <AnimatePresence mode="popLayout">
+              {filtered.length === 0 ? (
+                <EmptyState key="empty" area={activeArea} />
+              ) : (
+                filtered.map((dashboard) => (
+                  <DashboardCard
+                    key={dashboard.id}
+                    dashboard={dashboard}
+                    isSelected={selected?.id === dashboard.id}
+                    onClick={() => {
+                      setSelectedId(dashboard.id);
+                    }}
+                  />
+                ))
+              )}
+            </AnimatePresence>
+          </aside>
+
+          {/* Right: viewer / preview */}
+          <main className="min-w-0 pt-1">
+            <AnimatePresence mode="wait">
+              {selected ? (
+                <motion.div
+                  key={selected.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {ENABLE_DASHBOARD_EMBED &&
+                  selected.openMode !== "external" ? (
+                    <PowerBIViewer dashboard={selected} />
+                  ) : (
+                    <DashboardPreview dashboard={selected} />
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="no-selection"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-slate-200 text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500"
+                >
+                  Selecciona un tablero para visualizarlo
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

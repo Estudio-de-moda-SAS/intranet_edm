@@ -20,7 +20,7 @@ export const COMPANY_APPS: CompanyAppItem[] = [
     embedUrl: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/e507ada7-0412-4ccc-95d9-d6e26e45a162?tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c&source=portal",
     icon: "shoppingCart",
     color: "purple",
-    category: "Corporativo",
+    category: "RRHH",
   },
   {
     id: "day-off",
@@ -59,7 +59,7 @@ export const COMPANY_APPS: CompanyAppItem[] = [
     embedUrl: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/a5d3bda3-b4f7-4164-9f3d-5c9d86a3468d?source=teamsopenwebsite&screenColor=rgba(10%2C%2034%2C%2057%2C%201)&hint=6fbd58b4-412c-4c6c-bfed-eecc9dd154d7&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
     icon: "globe",
     color: "coral", 
-    category: "Corporativo",
+    category: "RRHH",
   },
   {
     id: "gestion-f",
@@ -69,7 +69,7 @@ export const COMPANY_APPS: CompanyAppItem[] = [
     embedUrl: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/286622c2-98db-45ee-b0e0-41a6c0034a49?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=ca7a8f9f-c0d1-42e3-aa47-704e9ec1236f&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
     icon: "briefcase",
     color: "blue",
-    category: "Administrativo",
+    category: "RRHH",
   },
   {
     id: "pch",
@@ -79,7 +79,7 @@ export const COMPANY_APPS: CompanyAppItem[] = [
     embedUrl: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/0c5d9b32-1269-4eac-9f03-b2e9f0985849?source=teamsopenwebsite&screenColor=rgba(10%2C%2034%2C%2057%2C%201)&hint=ce26d49f-0a09-4c99-94d8-56b739347525&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
     icon: "layoutDashboard",
     color: "indigo",
-    category: "Corporativo",
+    category: "RRHH",
   },
   {
     id: "head-talent",
@@ -117,7 +117,7 @@ export const COMPANY_APPS: CompanyAppItem[] = [
     embedUrl: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/f8a15d03-1d85-4663-8493-8bcafede41db?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=701eb79c-5d96-4ec6-bc1f-fadadb3db70d&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
     icon: "shieldCheck",
     color: "green",
-    category: "Administrativo",
+    category: "RRHH",
   },
   {
     id: "360-talent",
@@ -145,7 +145,7 @@ export const COMPANY_APPS: CompanyAppItem[] = [
     href: "https://estudiodemoda.sharepoint.com/sites/FS/Tecnologia/PR/GC/GD/Datos%20Admin/Forms/AllItems.aspx",
     icon: "briefcase",
     color: "teal",
-    category: "Corporativo",
+    category: "RRHH",
   },
 {
   id: "you-v2",
@@ -175,7 +175,7 @@ export const COMPANY_APPS: CompanyAppItem[] = [
   embedUrl: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/b10b1d75-1252-4a90-ba24-b10d161419d2?source=teamsopenwebsite&screenColor=rgba(46%2C%20196%2C%20182%2C%201)&hint=52fc3ecb-98c0-496e-b91e-9a21d78f4459&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
   icon: "barChart3",
   color: "indigo",
-  category: "Corporativo",
+  category: "RRHH",
 },
 {
   id: "alerta-tiendas",
@@ -185,6 +185,6 @@ export const COMPANY_APPS: CompanyAppItem[] = [
   embedUrl: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/49c6eaee-6e1d-4642-8075-1b951b27132b?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=5efb1bbc-9062-49f0-aaa9-97755f04f77c&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
   icon: "bell",
   color: "purple",
-  category: "Corporativo",
+  category: "RRHH",
 },
 ];

@@ -19,11 +19,6 @@ type AppFilter = AppCategory | "Todas" | "Mis frecuentes";
 const CATEGORIES: AppFilter[] = [
   "Todas",
   "Mis frecuentes",
-  "RRHH",
-  "TI",
-  "Administrativo",
-  "Operaciones",
-  "Corporativo",
 ];
 
 export function ApplicationsPageContent() {
