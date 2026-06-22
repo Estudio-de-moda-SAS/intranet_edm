@@ -243,10 +243,12 @@ export async function getAccessToken(opts?: {
 
     if (e instanceof InteractionRequiredAuthError) {
       try {
+
         const res = await msal.acquireTokenPopup({
-          scopes: [...SCOPES],
-          ...(silentReq.account && { account: silentReq.account }),
-        });
+   scopes: [...SCOPES, ...(opts?.silentExtraScopesToConsent ?? [])],    //fragmento modificado para agregar scopes adicionales en el popup
+  ...(silentReq.account && { account: silentReq.account }),
+});
+
         return res.accessToken;
       } catch (popupErr) {
         console.warn("[MSAL] acquireTokenPopup falló:", popupErr);

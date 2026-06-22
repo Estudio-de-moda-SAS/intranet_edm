@@ -193,6 +193,12 @@ export const DEPARTMENTS: Department[] = [
     href:  "/departments/boards",
     show:  true,
   },
+  {
+  id: "organization",
+  label: "Organigrama",
+  href: "/departments/organization",
+  show: true,
+ }
 ];
 
 // ── Marca ─────────────────────────────────────────────────────────────────────
