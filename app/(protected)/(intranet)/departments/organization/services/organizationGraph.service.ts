@@ -3,6 +3,11 @@ import { getAccessToken } from "@/app/api/auth/msal";
 const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
 const CACHE_TTL_MS = 1000 * 60 * 30;
 
+const GRAPH_ORGANIZATION_SCOPES = [
+  "User.Read.All",
+  "Directory.Read.All",
+] as const;
+
 export interface GraphOrganizationUser {
   id: string;
   displayName?: string;
@@ -92,14 +97,19 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-async function graphFetch<T>(path: string): Promise<T> {
-  const token = await getAccessToken({
-    silentExtraScopesToConsent: ["User.ReadBasic.All"],
+async function getGraphToken() {
+  return getAccessToken({
+    silentExtraScopesToConsent: [...GRAPH_ORGANIZATION_SCOPES],
   });
+}
+
+async function graphFetch<T>(path: string): Promise<T> {
+  const token = await getGraphToken();
 
   const response = await fetch(`${GRAPH_BASE_URL}${path}`, {
     headers: {
       Authorization: `Bearer ${token}`,
+      ConsistencyLevel: "eventual",
     },
   });
 
@@ -108,6 +118,16 @@ async function graphFetch<T>(path: string): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+async function graphPhotoFetch(path: string): Promise<Response> {
+  const token = await getGraphToken();
+
+  return fetch(`${GRAPH_BASE_URL}${path}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }
 
 export async function getGraphUserByEmail(
@@ -130,7 +150,13 @@ export async function getGraphUserByEmail(
     writeCache(cacheKey, user);
 
     return user;
-  } catch {
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudo obtener usuario:",
+      email,
+      error
+    );
+
     return null;
   }
 }
@@ -146,17 +172,8 @@ export async function getGraphUserPhotoUrl(
   }
 
   try {
-    const token = await getAccessToken({
-      silentExtraScopesToConsent: ["User.ReadBasic.All"],
-    });
-
-    const response = await fetch(
-      `${GRAPH_BASE_URL}/users/${encodeURIComponent(email)}/photo/$value`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+    const response = await graphPhotoFetch(
+      `/users/${encodeURIComponent(email)}/photo/$value`
     );
 
     if (!response.ok) {
@@ -169,7 +186,9 @@ export async function getGraphUserPhotoUrl(
     writeCache(cacheKey, photoBase64);
 
     return photoBase64;
-  } catch {
+  } catch (error) {
+    console.warn("[Organization Graph] No se pudo obtener foto:", email, error);
+
     return null;
   }
 }
@@ -194,7 +213,13 @@ export async function getGraphUserManager(
     writeCache(cacheKey, manager);
 
     return manager;
-  } catch {
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudo obtener manager:",
+      email,
+      error
+    );
+
     return null;
   }
 }
@@ -221,7 +246,13 @@ export async function getGraphUserDirectReports(
     writeCache(cacheKey, response.value);
 
     return response.value;
-  } catch {
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudieron obtener personas a cargo:",
+      email,
+      error
+    );
+
     return [];
   }
 }
