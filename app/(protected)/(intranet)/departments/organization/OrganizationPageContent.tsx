@@ -9,8 +9,8 @@ export function OrganizationPageContent() {
   return (
     <main className="organization-page">
       <DepartmentHeroBanner
-        title="Nuestra Organización"
-        subtitle="Consulta la estructura corporativa de Estudio de Moda S.A.S., sus áreas internas y relaciones jerárquicas desde Microsoft Graph."
+        title="Organigrama"
+        subtitle="Consulta la estructura corporativa de Estudio de Moda S.A.S., sus áreas internas y relaciones jerárquicas."
         gradientFrom="from-slate-950"
         gradientVia="via-violet-950"
         gradientTo="to-violet-700"
@@ -27,9 +27,8 @@ export function OrganizationPageContent() {
         <h2>Estructura organizacional</h2>
 
         <p>
-          Explora la estructura real de la compañía a partir de Microsoft Graph,
-          consulta cargos corporativos, responsables y relaciones jerárquicas
-          basadas en la información configurada en Microsoft Entra ID.
+          Explora la estructura real de la compañía,
+          consulta cargos corporativos, responsables y relaciones jerárquicas.
         </p>
       </section>
 

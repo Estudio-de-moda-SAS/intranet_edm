@@ -8,6 +8,9 @@ const GRAPH_ORGANIZATION_SCOPES = [
   "Directory.Read.All",
 ] as const;
 
+const USER_SELECT_FIELDS =
+  "id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation";
+
 export interface GraphOrganizationUser {
   id: string;
   displayName?: string;
@@ -21,6 +24,7 @@ export interface GraphOrganizationUser {
 
 interface GraphCollectionResponse<T> {
   value: T[];
+  "@odata.nextLink"?: string;
 }
 
 interface CacheRecord<T> {
@@ -29,7 +33,7 @@ interface CacheRecord<T> {
 }
 
 function getCacheKey(
-  type: "user" | "photo" | "manager" | "directReports",
+  type: "user" | "photo" | "manager" | "directReports" | "department",
   key: string
 ) {
   return `organization:graph:${type}:${key.toLowerCase()}`;
@@ -67,12 +71,13 @@ function writeCache<T>(key: string, data: T) {
   }
 
   try {
-    const record: CacheRecord<T> = {
-      data,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    };
-
-    window.sessionStorage.setItem(key, JSON.stringify(record));
+    window.sessionStorage.setItem(
+      key,
+      JSON.stringify({
+        data,
+        expiresAt: Date.now() + CACHE_TTL_MS,
+      } satisfies CacheRecord<T>)
+    );
   } catch {
     /**
      * Session storage puede fallar por límite de cuota, modo privado
@@ -85,16 +90,27 @@ function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onloadend = () => {
-      resolve(reader.result as string);
-    };
-
-    reader.onerror = () => {
-      reject(reader.error);
-    };
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
 
     reader.readAsDataURL(blob);
   });
+}
+
+function normalizeGraphText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function escapeODataString(value: string) {
+  return value.replace(/'/g, "''");
+}
+
+function isReadableUser(user: GraphOrganizationUser) {
+  return Boolean(
+    user.id &&
+      user.displayName &&
+      (user.mail || user.userPrincipalName)
+  );
 }
 
 async function getGraphToken() {
@@ -103,10 +119,14 @@ async function getGraphToken() {
   });
 }
 
-async function graphFetch<T>(path: string): Promise<T> {
+async function graphFetch<T>(pathOrUrl: string): Promise<T> {
   const token = await getGraphToken();
 
-  const response = await fetch(`${GRAPH_BASE_URL}${path}`, {
+  const url = pathOrUrl.startsWith("https://")
+    ? pathOrUrl
+    : `${GRAPH_BASE_URL}${pathOrUrl}`;
+
+  const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
       ConsistencyLevel: "eventual",
@@ -130,6 +150,26 @@ async function graphPhotoFetch(path: string): Promise<Response> {
   });
 }
 
+async function graphFetchCollection<T>(
+  path: string,
+  maxPages = 3
+): Promise<T[]> {
+  const results: T[] = [];
+  let nextUrl: string | undefined = path;
+  let currentPage = 0;
+
+  while (nextUrl && currentPage < maxPages) {
+    const collectionResponse: GraphCollectionResponse<T> =
+      await graphFetch<GraphCollectionResponse<T>>(nextUrl);
+
+    results.push(...collectionResponse.value);
+    nextUrl = collectionResponse["@odata.nextLink"];
+    currentPage += 1;
+  }
+
+  return results;
+}
+
 export async function getGraphUserByEmail(
   email: string
 ): Promise<GraphOrganizationUser | null> {
@@ -142,9 +182,7 @@ export async function getGraphUserByEmail(
 
   try {
     const user = await graphFetch<GraphOrganizationUser>(
-      `/users/${encodeURIComponent(
-        email
-      )}?$select=id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation`
+      `/users/${encodeURIComponent(email)}?$select=${USER_SELECT_FIELDS}`
     );
 
     writeCache(cacheKey, user);
@@ -205,9 +243,7 @@ export async function getGraphUserManager(
 
   try {
     const manager = await graphFetch<GraphOrganizationUser>(
-      `/users/${encodeURIComponent(
-        email
-      )}/manager?$select=id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation`
+      `/users/${encodeURIComponent(email)}/manager?$select=${USER_SELECT_FIELDS}`
     );
 
     writeCache(cacheKey, manager);
@@ -240,16 +276,81 @@ export async function getGraphUserDirectReports(
     >(
       `/users/${encodeURIComponent(
         email
-      )}/directReports?$select=id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation`
+      )}/directReports?$select=${USER_SELECT_FIELDS}`
     );
 
-    writeCache(cacheKey, response.value);
+    const reports = response.value.filter(isReadableUser);
 
-    return response.value;
+    writeCache(cacheKey, reports);
+
+    return reports;
   } catch (error) {
     console.warn(
       "[Organization Graph] No se pudieron obtener personas a cargo:",
       email,
+      error
+    );
+
+    return [];
+  }
+}
+
+export async function getGraphUsersByDepartment(
+  department: string
+): Promise<GraphOrganizationUser[]> {
+  const normalizedDepartment = normalizeGraphText(department);
+  const cacheKey = getCacheKey("department", normalizedDepartment);
+  const cachedUsers = readCache<GraphOrganizationUser[]>(cacheKey);
+
+  if (cachedUsers) {
+    return cachedUsers;
+  }
+
+  try {
+    const escapedDepartment = escapeODataString(department.trim());
+
+    const users = await graphFetchCollection<GraphOrganizationUser>(
+      `/users?$select=${USER_SELECT_FIELDS}&$filter=department eq '${escapedDepartment}'&$top=999`,
+      20
+    );
+
+    const filteredUsers = users
+      .filter(isReadableUser)
+      .filter(
+        (user) =>
+          user.department &&
+          normalizeGraphText(user.department) === normalizedDepartment
+      );
+
+    writeCache(cacheKey, filteredUsers);
+
+    return filteredUsers;
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudieron obtener usuarios por departamento:",
+      department,
+      error
+    );
+
+    return [];
+  }
+}
+
+/**
+ * Función temporal para revisar qué valores reales existen en el campo
+ * department dentro de Microsoft Entra ID.
+ */
+export async function getGraphUsersSample(): Promise<GraphOrganizationUser[]> {
+  try {
+    const users = await graphFetchCollection<GraphOrganizationUser>(
+      `/users?$select=${USER_SELECT_FIELDS}&$top=999`,
+      20
+    );
+
+    return users.filter(isReadableUser);
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudo obtener muestra de usuarios:",
       error
     );
 

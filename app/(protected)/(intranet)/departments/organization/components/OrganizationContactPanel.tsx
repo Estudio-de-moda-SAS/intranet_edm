@@ -63,7 +63,6 @@ export function OrganizationContactPanel({
     enrichedUnit.location;
 
   const displayEmail = node?.email ?? enrichedUnit.contactEmail;
-
   const displayPhoto = node?.photoUrl ?? enrichedUnit.graphPhotoUrl;
 
   const reports = graphMode
@@ -118,8 +117,20 @@ export function OrganizationContactPanel({
             <>
               <h3>{displayName}</h3>
               {displayRole && <p>{displayRole}</p>}
+              {displayDepartment && (
+                <span className="organization-contact-panel__department-badge">
+                  {displayDepartment}
+                </span>
+              )}
             </>
           )}
+        </div>
+
+        <div className="organization-contact-panel__stats">
+          <div>
+            <strong>{reports.length}</strong>
+            <span>Reportes directos</span>
+          </div>
         </div>
       </section>
 

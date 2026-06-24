@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { GraphOrganizationTreeNode } from "../types/organization.types";
+import { getGraphUsersSample } from "../services/organizationGraph.service";
 import { getGraphOrganizationTree } from "../services/organizationGraphTree.service";
-import { OrganizationNode } from "./OrganizationNode";
+import { OrganizationFlowChart } from "./OrganizationFlowChart";
 import { OrganizationContactPanel } from "./OrganizationContactPanel";
 
 interface OrganizationChartProps {
@@ -37,6 +38,13 @@ function findParentNode(
   return null;
 }
 
+function getExpandableNodeIds(node: GraphOrganizationTreeNode): string[] {
+  return [
+    ...(node.children.length > 0 ? [node.id] : []),
+    ...node.children.flatMap(getExpandableNodeIds),
+  ];
+}
+
 export function OrganizationChart({
   rootUserEmail,
   maxDepth = 5,
@@ -56,6 +64,21 @@ export function OrganizationChart({
         setLoading(true);
         setError(null);
 
+        const sampleUsers = await getGraphUsersSample();
+
+        if (!cancelled) {
+          const departmentCounts = sampleUsers.reduce(
+            (acc, user) => {
+              const department = user.department?.trim() || "SIN_DEPARTAMENTO";
+              acc[department] = (acc[department] ?? 0) + 1;
+              return acc;
+            },
+            {} as Record<string, number>
+          );
+
+          console.table(departmentCounts);
+        }
+
         const graphTree = await getGraphOrganizationTree(
           rootUserEmail,
           maxDepth
@@ -74,7 +97,7 @@ export function OrganizationChart({
         }
 
         setTree(graphTree);
-        setSelectedNodeId(graphTree.id);
+        setSelectedNodeId(null);
         setExpandedIds(new Set([graphTree.id]));
       } catch {
         if (cancelled) {
@@ -99,28 +122,27 @@ export function OrganizationChart({
     };
   }, [rootUserEmail, maxDepth]);
 
-  const allNodes = useMemo(
-    () => (tree ? flattenNodes(tree) : []),
+  const allNodes = useMemo(() => (tree ? flattenNodes(tree) : []), [tree]);
+
+  const selectedNode = selectedNodeId
+    ? allNodes.find((node) => node.id === selectedNodeId) ?? null
+    : null;
+
+  const parentNode =
+    tree && selectedNode ? findParentNode(tree, selectedNode.id) : null;
+
+  const allExpandableIds = useMemo(
+    () => (tree ? getExpandableNodeIds(tree) : []),
     [tree]
   );
 
-  const selectedNode =
-    allNodes.find((node) => node.id === selectedNodeId) ?? tree;
+  const handleSelect = (nodeId: string) => {
+    setSelectedNodeId(nodeId);
+  };
 
-  const parentNode =
-    tree && selectedNode
-      ? findParentNode(tree, selectedNode.id)
-      : null;
-
-  const allExpandableIds = useMemo(
-    () =>
-      allNodes
-        .filter((node) => node.children.length > 0)
-        .map((node) => node.id),
-    [allNodes]
-  );
-
-  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const handleClosePanel = () => {
+    setSelectedNodeId(null);
+  };
 
   const handleToggle = (nodeId: string) => {
     setExpandedIds((current) => {
@@ -136,10 +158,6 @@ export function OrganizationChart({
     });
   };
 
-  const handleSelect = (nodeId: string) => {
-    setSelectedNodeId(nodeId);
-  };
-
   const handleExpandAll = () => {
     setExpandedIds(new Set(allExpandableIds));
   };
@@ -150,20 +168,20 @@ export function OrganizationChart({
     }
 
     setExpandedIds(new Set([tree.id]));
-    setSelectedNodeId(tree.id);
+    setSelectedNodeId(null);
   };
 
   if (loading) {
     return (
       <section className="organization-chart">
         <div className="organization-chart__empty">
-          Cargando estructura organizacional desde Microsoft Graph...
+          Cargando estructura organizacional...
         </div>
       </section>
     );
   }
 
-  if (error || !tree || !selectedNode) {
+  if (error || !tree) {
     return (
       <section className="organization-chart">
         <div className="organization-chart__empty">
@@ -198,23 +216,46 @@ export function OrganizationChart({
         </div>
       </div>
 
-      <div className="organization-chart__workspace">
+      <div className="organization-chart__workspace organization-chart__workspace--with-panel">
         <div className="organization-chart__canvas">
-          <OrganizationNode
-            node={tree}
-            isRoot
+          <OrganizationFlowChart
+            tree={tree}
+            selectedNodeId={selectedNode?.id ?? ""}
             expandedIds={expandedIds}
-            selectedUnitId={selectedNode.id}
-            searchTerm={normalizedSearch}
-            onToggle={handleToggle}
             onSelect={handleSelect}
+            onToggle={handleToggle}
           />
         </div>
 
-        <OrganizationContactPanel
-          node={selectedNode}
-          parentNode={parentNode}
-        />
+        <div className="organization-chart__panel-shell">
+          {selectedNode ? (
+            <>
+              <button
+                type="button"
+                className="organization-chart__panel-close"
+                onClick={handleClosePanel}
+                aria-label="Cerrar panel de detalle"
+              >
+                ×
+              </button>
+
+              <OrganizationContactPanel
+                node={selectedNode}
+                parentNode={parentNode}
+              />
+            </>
+          ) : (
+            <aside className="organization-contact-panel organization-contact-panel--empty">
+              <div className="organization-contact-panel__empty-state">
+                <strong>Selecciona una persona</strong>
+                <p>
+                  Haz clic sobre una tarjeta del organigrama para consultar su
+                  cargo, correo, ubicación y relaciones organizacionales.
+                </p>
+              </div>
+            </aside>
+          )}
+        </div>
       </div>
     </section>
   );
