@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  Maximize2,
+  Minimize2,
+  MinusSquare,
+  PlusSquare,
+} from "lucide-react";
 import type { GraphOrganizationTreeNode } from "../types/organization.types";
 import { getGraphUsersSample } from "../services/organizationGraph.service";
 import { getGraphOrganizationTree } from "../services/organizationGraphTree.service";
 import { OrganizationFlowChart } from "./OrganizationFlowChart";
 import { OrganizationContactPanel } from "./OrganizationContactPanel";
+import { ToolbarIconButton } from "./ToolbarIconButton";
 
 interface OrganizationChartProps {
   rootUserEmail: string;
@@ -23,16 +30,11 @@ function findParentNode(
   targetId: string,
   parentNode: GraphOrganizationTreeNode | null = null
 ): GraphOrganizationTreeNode | null {
-  if (currentNode.id === targetId) {
-    return parentNode;
-  }
+  if (currentNode.id === targetId) return parentNode;
 
   for (const child of currentNode.children) {
     const result = findParentNode(child, targetId, currentNode);
-
-    if (result) {
-      return result;
-    }
+    if (result) return result;
   }
 
   return null;
@@ -45,6 +47,48 @@ function getExpandableNodeIds(node: GraphOrganizationTreeNode): string[] {
   ];
 }
 
+function getAncestorIds(
+  currentNode: GraphOrganizationTreeNode,
+  targetId: string,
+  path: string[] = []
+): string[] | null {
+  if (currentNode.id === targetId) {
+    return path;
+  }
+
+  for (const child of currentNode.children) {
+    const result = getAncestorIds(child, targetId, [...path, currentNode.id]);
+
+    if (result) {
+      return result;
+    }
+  }
+
+  return null;
+}
+
+function normalizeSearchValue(value?: string) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function nodeMatchesSearch(node: GraphOrganizationTreeNode, searchTerm: string) {
+  const normalizedSearch = normalizeSearchValue(searchTerm);
+
+  if (!normalizedSearch) return false;
+
+  const searchableValues = [
+    node.displayName,
+    node.jobTitle,
+    node.email,
+    node.department,
+    node.officeLocation,
+  ];
+
+  return searchableValues.some((value) =>
+    normalizeSearchValue(value).includes(normalizedSearch)
+  );
+}
+
 export function OrganizationChart({
   rootUserEmail,
   maxDepth = 5,
@@ -55,6 +99,8 @@ export function OrganizationChart({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,9 +130,7 @@ export function OrganizationChart({
           maxDepth
         );
 
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
         if (!graphTree) {
           setTree(null);
@@ -100,18 +144,14 @@ export function OrganizationChart({
         setSelectedNodeId(null);
         setExpandedIds(new Set([graphTree.id]));
       } catch {
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
         setTree(null);
         setSelectedNodeId(null);
         setExpandedIds(new Set());
         setError("No se pudo cargar la estructura organizacional.");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -121,6 +161,22 @@ export function OrganizationChart({
       cancelled = true;
     };
   }, [rootUserEmail, maxDepth]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsFullscreen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFullscreen]);
 
   const allNodes = useMemo(() => (tree ? flattenNodes(tree) : []), [tree]);
 
@@ -136,23 +192,28 @@ export function OrganizationChart({
     [tree]
   );
 
-  const handleSelect = (nodeId: string) => {
-    setSelectedNodeId(nodeId);
-  };
+  const searchResults = useMemo(() => {
+    const normalizedSearch = searchTerm.trim();
 
-  const handleClosePanel = () => {
-    setSelectedNodeId(null);
-  };
+    if (!normalizedSearch) return [];
+
+    return allNodes
+      .filter((node) => nodeMatchesSearch(node, normalizedSearch))
+      .slice(0, 8);
+  }, [allNodes, searchTerm]);
+
+  const hasSearchTerm = searchTerm.trim().length > 0;
+
+  const handleSelect = (nodeId: string) => setSelectedNodeId(nodeId);
+
+  const handleClosePanel = () => setSelectedNodeId(null);
 
   const handleToggle = (nodeId: string) => {
     setExpandedIds((current) => {
       const next = new Set(current);
 
-      if (next.has(nodeId)) {
-        next.delete(nodeId);
-      } else {
-        next.add(nodeId);
-      }
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
 
       return next;
     });
@@ -163,12 +224,35 @@ export function OrganizationChart({
   };
 
   const handleCollapseAll = () => {
-    if (!tree) {
-      return;
-    }
+    if (!tree) return;
 
     setExpandedIds(new Set([tree.id]));
     setSelectedNodeId(null);
+    setSearchTerm("");
+    setIsSearchOpen(false);
+  };
+
+  const handleToggleFullscreen = () => {
+    setIsFullscreen((current) => !current);
+  };
+
+  const handleSearchSelect = (nodeId: string) => {
+    if (!tree) return;
+
+    const ancestorIds = getAncestorIds(tree, nodeId) ?? [];
+
+    setExpandedIds((current) => {
+      const next = new Set(current);
+
+      ancestorIds.forEach((ancestorId) => {
+        next.add(ancestorId);
+      });
+
+      return next;
+    });
+
+    setSelectedNodeId(nodeId);
+    setIsSearchOpen(false);
   };
 
   if (loading) {
@@ -192,27 +276,96 @@ export function OrganizationChart({
   }
 
   return (
-    <section className="organization-chart">
+    <section
+      className={[
+        "organization-chart",
+        isFullscreen ? "organization-chart--fullscreen" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="organization-chart__toolbar">
-        <label className="organization-chart__search">
+        <div className="organization-chart__search">
           <span>Buscar</span>
 
-          <input
-            type="search"
-            placeholder="Buscar persona, cargo, correo o departamento..."
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-          />
-        </label>
+          <div className="organization-chart__search-control">
+            <input
+              type="search"
+              placeholder="Buscar persona, cargo, correo o departamento..."
+              value={searchTerm}
+              onFocus={() => setIsSearchOpen(true)}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setIsSearchOpen(true);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setIsSearchOpen(false);
+                }
+
+                if (event.key === "Enter" && searchResults[0]) {
+                  handleSearchSelect(searchResults[0].id);
+                }
+              }}
+            />
+
+            {isSearchOpen && hasSearchTerm && (
+              <div className="organization-chart__search-results">
+                {searchResults.length > 0 ? (
+                  searchResults.map((node) => (
+                    <button
+                      key={node.id}
+                      type="button"
+                      className="organization-chart__search-result"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        handleSearchSelect(node.id);
+                      }}
+                    >
+                      <strong>{node.displayName}</strong>
+
+                      <span>
+                        {node.jobTitle ||
+                          node.department ||
+                          node.email ||
+                          "Sin cargo registrado"}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="organization-chart__search-empty">
+                    No se encontraron coincidencias.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="organization-chart__actions">
-          <button type="button" onClick={handleExpandAll}>
-            Expandir todo
-          </button>
+          <ToolbarIconButton
+            label="Expandir todo"
+            icon={<PlusSquare />}
+            onClick={handleExpandAll}
+          />
 
-          <button type="button" onClick={handleCollapseAll}>
-            Contraer todo
-          </button>
+          <ToolbarIconButton
+            label="Contraer todo"
+            icon={<MinusSquare />}
+            onClick={handleCollapseAll}
+          />
+
+          <ToolbarIconButton
+            label={
+              isFullscreen
+                ? "Salir de pantalla completa"
+                : "Pantalla completa"
+            }
+            icon={isFullscreen ? <Minimize2 /> : <Maximize2 />}
+            onClick={handleToggleFullscreen}
+            active={isFullscreen}
+            variant="primary"
+          />
         </div>
       </div>
 
