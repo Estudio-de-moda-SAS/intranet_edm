@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Mail, MapPin } from "lucide-react";
+import { Building2, ChevronRight, Mail, MapPin } from "lucide-react";
 import type {
   GraphOrganizationTreeNode,
   OrganizationUnit,
@@ -11,6 +11,7 @@ interface OrganizationContactPanelProps {
   unit?: OrganizationUnit;
   node?: GraphOrganizationTreeNode;
   parentNode?: GraphOrganizationTreeNode | null;
+  onNavigate?: (nodeId: string) => void;
 }
 
 function getInitials(value: string) {
@@ -40,6 +41,7 @@ export function OrganizationContactPanel({
   unit,
   node,
   parentNode = null,
+  onNavigate,
 }: OrganizationContactPanelProps) {
   const fallbackUnit = unit ?? buildFallbackUnit(node);
 
@@ -95,6 +97,8 @@ export function OrganizationContactPanel({
         displayEmail
       )}`
     : null;
+
+  const canNavigate = Boolean(onNavigate);
 
   return (
     <aside className="organization-contact-panel">
@@ -193,7 +197,12 @@ export function OrganizationContactPanel({
                   Reporta a
                 </span>
 
-                <article className="organization-contact-panel__person-row">
+                <button
+                  type="button"
+                  className="organization-contact-panel__person-row organization-contact-panel__person-row--clickable"
+                  onClick={() => onNavigate?.(displayManager.id)}
+                  disabled={!canNavigate}
+                >
                   <div className="organization-contact-panel__person-avatar">
                     {getInitials(displayManager.displayName)}
                   </div>
@@ -202,7 +211,15 @@ export function OrganizationContactPanel({
                     <strong>{displayManager.displayName}</strong>
                     {displayManager.jobTitle && <p>{displayManager.jobTitle}</p>}
                   </div>
-                </article>
+
+                  {canNavigate && (
+                    <ChevronRight
+                      className="organization-contact-panel__person-arrow"
+                      size={16}
+                      strokeWidth={2}
+                    />
+                  )}
+                </button>
               </div>
             )}
 
@@ -214,9 +231,12 @@ export function OrganizationContactPanel({
 
                 <div className="organization-contact-panel__reports">
                   {reports.map((report) => (
-                    <article
+                    <button
                       key={report.id}
-                      className="organization-contact-panel__person-row"
+                      type="button"
+                      className="organization-contact-panel__person-row organization-contact-panel__person-row--clickable"
+                      onClick={() => onNavigate?.(report.id)}
+                      disabled={!canNavigate}
                     >
                       <div className="organization-contact-panel__person-avatar">
                         {getInitials(report.displayName)}
@@ -226,7 +246,15 @@ export function OrganizationContactPanel({
                         <strong>{report.displayName}</strong>
                         {report.jobTitle && <p>{report.jobTitle}</p>}
                       </div>
-                    </article>
+
+                      {canNavigate && (
+                        <ChevronRight
+                          className="organization-contact-panel__person-arrow"
+                          size={16}
+                          strokeWidth={2}
+                        />
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>

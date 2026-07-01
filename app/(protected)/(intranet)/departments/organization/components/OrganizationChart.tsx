@@ -52,16 +52,11 @@ function getAncestorIds(
   targetId: string,
   path: string[] = []
 ): string[] | null {
-  if (currentNode.id === targetId) {
-    return path;
-  }
+  if (currentNode.id === targetId) return path;
 
   for (const child of currentNode.children) {
     const result = getAncestorIds(child, targetId, [...path, currentNode.id]);
-
-    if (result) {
-      return result;
-    }
+    if (result) return result;
   }
 
   return null;
@@ -76,17 +71,13 @@ function nodeMatchesSearch(node: GraphOrganizationTreeNode, searchTerm: string) 
 
   if (!normalizedSearch) return false;
 
-  const searchableValues = [
+  return [
     node.displayName,
     node.jobTitle,
     node.email,
     node.department,
     node.officeLocation,
-  ];
-
-  return searchableValues.some((value) =>
-    normalizeSearchValue(value).includes(normalizedSearch)
-  );
+  ].some((value) => normalizeSearchValue(value).includes(normalizedSearch));
 }
 
 export function OrganizationChart({
@@ -204,7 +195,27 @@ export function OrganizationChart({
 
   const hasSearchTerm = searchTerm.trim().length > 0;
 
-  const handleSelect = (nodeId: string) => setSelectedNodeId(nodeId);
+  const navigateToNode = (nodeId: string) => {
+    if (!tree) return;
+
+    const ancestorIds = getAncestorIds(tree, nodeId) ?? [];
+
+    setExpandedIds((current) => {
+      const next = new Set(current);
+
+      ancestorIds.forEach((ancestorId) => {
+        next.add(ancestorId);
+      });
+
+      return next;
+    });
+
+    setSelectedNodeId(nodeId);
+  };
+
+  const handleSelect = (nodeId: string) => {
+    navigateToNode(nodeId);
+  };
 
   const handleClosePanel = () => setSelectedNodeId(null);
 
@@ -237,21 +248,7 @@ export function OrganizationChart({
   };
 
   const handleSearchSelect = (nodeId: string) => {
-    if (!tree) return;
-
-    const ancestorIds = getAncestorIds(tree, nodeId) ?? [];
-
-    setExpandedIds((current) => {
-      const next = new Set(current);
-
-      ancestorIds.forEach((ancestorId) => {
-        next.add(ancestorId);
-      });
-
-      return next;
-    });
-
-    setSelectedNodeId(nodeId);
+    navigateToNode(nodeId);
     setIsSearchOpen(false);
   };
 
@@ -395,6 +392,7 @@ export function OrganizationChart({
               <OrganizationContactPanel
                 node={selectedNode}
                 parentNode={parentNode}
+                onNavigate={navigateToNode}
               />
             </>
           ) : (

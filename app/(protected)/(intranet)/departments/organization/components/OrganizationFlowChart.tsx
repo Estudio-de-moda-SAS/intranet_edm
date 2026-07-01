@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Background,
   Controls,
   MiniMap,
   ReactFlow,
+  useReactFlow,
   type Edge,
   type Node,
 } from "@xyflow/react";
@@ -21,6 +22,10 @@ interface OrganizationFlowChartProps {
   onToggle: (nodeId: string) => void;
 }
 
+interface OrganizationViewportControllerProps {
+  focusedNodeId: string;
+}
+
 interface LayoutPosition {
   x: number;
   y: number;
@@ -30,6 +35,7 @@ const NODE_WIDTH = 220;
 const NODE_HEIGHT = 96;
 const HORIZONTAL_GAP = 46;
 const VERTICAL_GAP = 118;
+const FOCUS_ANIMATION_MS = 520;
 
 function getInitials(value: string) {
   const parts = value.trim().split(/\s+/).filter(Boolean).slice(0, 2);
@@ -174,6 +180,43 @@ function createFlowElements(
   return subtreeWidth;
 }
 
+function OrganizationViewportController({
+  focusedNodeId,
+}: OrganizationViewportControllerProps) {
+  const reactFlow = useReactFlow();
+
+  useEffect(() => {
+    if (!focusedNodeId) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const focusedNode = reactFlow.getNode(focusedNodeId);
+
+      if (!focusedNode) {
+        return;
+      }
+
+      const currentZoom = reactFlow.getZoom();
+
+      reactFlow.setCenter(
+        focusedNode.position.x + NODE_WIDTH / 2,
+        focusedNode.position.y + NODE_HEIGHT / 2,
+        {
+          zoom: currentZoom,
+          duration: FOCUS_ANIMATION_MS,
+        }
+      );
+    }, 80);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [focusedNodeId, reactFlow]);
+
+  return null;
+}
+
 export function OrganizationFlowChart({
   tree,
   selectedNodeId,
@@ -223,6 +266,8 @@ export function OrganizationFlowChart({
         nodesDraggable
         onNodeClick={(_, node) => onSelect(node.id)}
       >
+        <OrganizationViewportController focusedNodeId={selectedNodeId} />
+
         <Background gap={22} size={1} />
         <Controls />
         <MiniMap pannable zoomable />
