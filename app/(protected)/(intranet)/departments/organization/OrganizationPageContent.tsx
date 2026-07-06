@@ -1,9 +1,7 @@
 "use client";
 
 import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHeroBanner";
-import {
-  ORGANIZATION_STRUCTURE,
-} from "./config/organization.config";
+import { ORGANIZATION_GRAPH_CONFIG } from "./config/organizationGraph.config";
 import { OrganizationChart } from "./components/OrganizationChart";
 import "./organization.css";
 
@@ -11,15 +9,15 @@ export function OrganizationPageContent() {
   return (
     <main className="organization-page">
       <DepartmentHeroBanner
-        title="Nuestra Organización"
-        subtitle="Consulta la estructura corporativa de Estudio de Moda S.A.S., sus principales áreas internas y líneas generales de gestión."
+        title="Organigrama"
+        subtitle="Consulta la estructura corporativa de Estudio de Moda S.A.S., sus áreas internas y relaciones jerárquicas."
         gradientFrom="from-slate-950"
         gradientVia="via-violet-950"
         gradientTo="to-violet-700"
         dotPatternId="organization-hero-pattern"
         pills={[
           { type: "status", text: "Organigrama corporativo" },
-          { type: "info", text: "Estructura interna" },
+          { type: "info", text: "Microsoft Graph" },
         ]}
       />
 
@@ -29,15 +27,14 @@ export function OrganizationPageContent() {
         <h2>Estructura organizacional</h2>
 
         <p>
-          Explora la estructura de la compañía, conoce las áreas que conforman
-          la organización, identifica responsables y comprende las relaciones
-          jerárquicas entre equipos. Esta base está preparada para futuras
-          integraciones con Microsoft Graph y directorio corporativo.
+          Explora la estructura real de la compañía,
+          consulta cargos corporativos, responsables y relaciones jerárquicas.
         </p>
       </section>
 
       <OrganizationChart
-        structure={ORGANIZATION_STRUCTURE}
+        rootUserEmail={ORGANIZATION_GRAPH_CONFIG.rootUserEmail}
+        maxDepth={ORGANIZATION_GRAPH_CONFIG.maxDepth}
       />
     </main>
   );

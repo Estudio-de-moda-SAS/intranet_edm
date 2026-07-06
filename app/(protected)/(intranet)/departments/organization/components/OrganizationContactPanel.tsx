@@ -1,11 +1,17 @@
 "use client";
 
-import { Building2, Mail, MapPin } from "lucide-react";
-import type { OrganizationUnit } from "../types/organization.types";
+import { Building2, ChevronRight, Mail, MapPin } from "lucide-react";
+import type {
+  GraphOrganizationTreeNode,
+  OrganizationUnit,
+} from "../types/organization.types";
 import { useOrganizationGraphProfile } from "../hooks/useOrganizationGraphProfile";
 
 interface OrganizationContactPanelProps {
-  unit: OrganizationUnit;
+  unit?: OrganizationUnit;
+  node?: GraphOrganizationTreeNode;
+  parentNode?: GraphOrganizationTreeNode | null;
+  onNavigate?: (nodeId: string) => void;
 }
 
 function getInitials(value: string) {
@@ -14,34 +20,99 @@ function getInitials(value: string) {
   return parts.map((part) => part.charAt(0).toUpperCase()).join("") || "ED";
 }
 
-export function OrganizationContactPanel({ unit }: OrganizationContactPanelProps) {
+function buildFallbackUnit(node?: GraphOrganizationTreeNode): OrganizationUnit {
+  return {
+    id: node?.id ?? "empty-node",
+    name: node?.displayName ?? "Sin selección",
+    leader: node?.jobTitle,
+    contactEmail: node?.email,
+    location: node?.officeLocation,
+    graphUserEmail: node?.email,
+    graphUserId: node?.id,
+    graphDisplayName: node?.displayName,
+    graphJobTitle: node?.jobTitle,
+    graphDepartment: node?.department,
+    graphOfficeLocation: node?.officeLocation,
+    graphPhotoUrl: node?.photoUrl,
+  };
+}
+
+export function OrganizationContactPanel({
+  unit,
+  node,
+  parentNode = null,
+  onNavigate,
+}: OrganizationContactPanelProps) {
+  const fallbackUnit = unit ?? buildFallbackUnit(node);
+
   const { enrichedUnit, manager, directReports, loading, error } =
-    useOrganizationGraphProfile(unit);
+    useOrganizationGraphProfile(fallbackUnit);
 
-  const hasChildren = Boolean(enrichedUnit.children?.length);
-  const hasStructureContent =
-    Boolean(manager) || hasChildren || directReports.length > 0;
+  const graphMode = Boolean(node);
 
-  const displayName = enrichedUnit.graphDisplayName ?? enrichedUnit.name;
-  const displayRole = enrichedUnit.graphJobTitle ?? enrichedUnit.leader;
-  const displayDepartment = enrichedUnit.graphDepartment ?? enrichedUnit.name;
+  const displayName =
+    node?.displayName ?? enrichedUnit.graphDisplayName ?? enrichedUnit.name;
+
+  const displayRole =
+    node?.jobTitle ?? enrichedUnit.graphJobTitle ?? enrichedUnit.leader;
+
+  const displayDepartment =
+    node?.department ?? enrichedUnit.graphDepartment ?? enrichedUnit.name;
+
   const displayLocation =
-    enrichedUnit.graphOfficeLocation ?? enrichedUnit.location;
-  const displayEmail = enrichedUnit.contactEmail;
+    node?.officeLocation ??
+    enrichedUnit.graphOfficeLocation ??
+    enrichedUnit.location;
+
+  const displayEmail = node?.email ?? enrichedUnit.contactEmail;
+  const displayPhoto = node?.photoUrl ?? enrichedUnit.graphPhotoUrl;
+
+  const reports = graphMode
+    ? node?.children ?? []
+    : directReports.map((report) => ({
+        id: report.id,
+        displayName: report.displayName ?? "Sin nombre",
+        jobTitle: report.jobTitle,
+        email: report.mail ?? report.userPrincipalName,
+        department: report.department,
+        officeLocation: report.officeLocation,
+        photoUrl: report.photoUrl,
+        children: [],
+      }));
+
+  const displayManager = graphMode
+    ? parentNode
+    : manager
+      ? {
+          id: manager.id,
+          displayName: manager.displayName ?? "Sin nombre",
+          jobTitle: manager.jobTitle,
+        }
+      : null;
+
+  const hasStructureContent = Boolean(displayManager) || reports.length > 0;
+
+  const teamsUrl = displayEmail
+    ? `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(
+        displayEmail
+      )}`
+    : null;
+
+  const canNavigate = Boolean(onNavigate);
 
   return (
     <aside className="organization-contact-panel">
       <section className="organization-contact-panel__profile">
         <div className="organization-contact-panel__photo">
-          {enrichedUnit.graphPhotoUrl ? (
-            <img src={enrichedUnit.graphPhotoUrl} alt={displayName} />
+          {displayPhoto ? (
+            <img src={displayPhoto} alt={displayName} />
           ) : (
             <span>{getInitials(displayName)}</span>
           )}
         </div>
 
         <div className="organization-contact-panel__identity">
-          {loading ? (
+          {loading && !graphMode ? (
             <>
               <span className="organization-contact-panel__skeleton organization-contact-panel__skeleton--title" />
               <span className="organization-contact-panel__skeleton organization-contact-panel__skeleton--text" />
@@ -50,12 +121,24 @@ export function OrganizationContactPanel({ unit }: OrganizationContactPanelProps
             <>
               <h3>{displayName}</h3>
               {displayRole && <p>{displayRole}</p>}
+              {displayDepartment && (
+                <span className="organization-contact-panel__department-badge">
+                  {displayDepartment}
+                </span>
+              )}
             </>
           )}
         </div>
+
+        <div className="organization-contact-panel__stats">
+          <div>
+            <strong>{reports.length}</strong>
+            <span>Reportes directos</span>
+          </div>
+        </div>
       </section>
 
-      {error && (
+      {error && !graphMode && (
         <div className="organization-contact-panel__notice">
           La información se muestra desde datos internos porque Microsoft Graph
           no respondió para este contacto.
@@ -63,8 +146,6 @@ export function OrganizationContactPanel({ unit }: OrganizationContactPanelProps
       )}
 
       <section className="organization-contact-panel__block">
-        
-
         <div className="organization-contact-panel__info-list">
           {displayEmail && (
             <div className="organization-contact-panel__info-row">
@@ -109,48 +190,71 @@ export function OrganizationContactPanel({ unit }: OrganizationContactPanelProps
 
       {hasStructureContent && (
         <section className="organization-contact-panel__block">
-        
           <div className="organization-contact-panel__structure">
-            {manager && (
+            {displayManager && (
               <div className="organization-contact-panel__structure-group">
                 <span className="organization-contact-panel__structure-label">
                   Reporta a
                 </span>
 
-                <article className="organization-contact-panel__person-row">
+                <button
+                  type="button"
+                  className="organization-contact-panel__person-row organization-contact-panel__person-row--clickable"
+                  onClick={() => onNavigate?.(displayManager.id)}
+                  disabled={!canNavigate}
+                >
                   <div className="organization-contact-panel__person-avatar">
-                    {getInitials(manager.displayName ?? "ED")}
+                    {getInitials(displayManager.displayName)}
                   </div>
 
                   <div>
-                    <strong>{manager.displayName}</strong>
-                    {manager.jobTitle && <p>{manager.jobTitle}</p>}
+                    <strong>{displayManager.displayName}</strong>
+                    {displayManager.jobTitle && <p>{displayManager.jobTitle}</p>}
                   </div>
-                </article>
+
+                  {canNavigate && (
+                    <ChevronRight
+                      className="organization-contact-panel__person-arrow"
+                      size={16}
+                      strokeWidth={2}
+                    />
+                  )}
+                </button>
               </div>
             )}
 
-            {directReports.length > 0 && (
+            {reports.length > 0 && (
               <div className="organization-contact-panel__structure-group">
                 <span className="organization-contact-panel__structure-label">
                   Personas a cargo
                 </span>
 
                 <div className="organization-contact-panel__reports">
-                  {directReports.map((report) => (
-                    <article
+                  {reports.map((report) => (
+                    <button
                       key={report.id}
-                      className="organization-contact-panel__person-row"
+                      type="button"
+                      className="organization-contact-panel__person-row organization-contact-panel__person-row--clickable"
+                      onClick={() => onNavigate?.(report.id)}
+                      disabled={!canNavigate}
                     >
                       <div className="organization-contact-panel__person-avatar">
-                        {getInitials(report.displayName ?? "ED")}
+                        {getInitials(report.displayName)}
                       </div>
 
                       <div>
                         <strong>{report.displayName}</strong>
                         {report.jobTitle && <p>{report.jobTitle}</p>}
                       </div>
-                    </article>
+
+                      {canNavigate && (
+                        <ChevronRight
+                          className="organization-contact-panel__person-arrow"
+                          size={16}
+                          strokeWidth={2}
+                        />
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -168,8 +272,8 @@ export function OrganizationContactPanel({ unit }: OrganizationContactPanelProps
           </button>
         )}
 
-        {enrichedUnit.teamsUrl ? (
-          <a href={enrichedUnit.teamsUrl} target="_blank" rel="noreferrer">
+        {teamsUrl ? (
+          <a href={teamsUrl} target="_blank" rel="noreferrer">
             Abrir Teams
           </a>
         ) : (

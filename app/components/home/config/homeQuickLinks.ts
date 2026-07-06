@@ -96,4 +96,11 @@ export const homeWorkspaceLinks: QuickLinkItem[] = [
     description: "",
     color: "pink",
   },
+    {
+    label: "Organigrama",
+    href: "/departments/organization",
+    icon: "Users",
+    description: "",
+    color: "amber",
+  },
 ];
