@@ -1,9 +1,13 @@
 "use client";
 
-import type { OrganizationUnit } from "../types/organization.types";
+import type {
+  GraphOrganizationTreeNode,
+  OrganizationUnit,
+} from "../types/organization.types";
 
 interface OrganizationNodeProps {
-  unit: OrganizationUnit;
+  unit?: OrganizationUnit;
+  node?: GraphOrganizationTreeNode;
   expandedIds: Set<string>;
   selectedUnitId: string;
   searchTerm: string;
@@ -12,47 +16,8 @@ interface OrganizationNodeProps {
   isRoot?: boolean;
 }
 
-function unitMatchesSearch(unit: OrganizationUnit, searchTerm: string) {
-  if (!searchTerm) {
-    return false;
-  }
-
-  return [
-    unit.name,
-    unit.leader,
-    unit.description,
-    unit.contactEmail,
-    unit.location,
-  ]
-    .filter(Boolean)
-    .some((value) => value?.toLowerCase().includes(searchTerm));
-}
-
 function getInitials(value: string) {
   const normalizedValue = value.trim();
-
-  const knownAcronyms: Record<string, string> = {
-    "gerencia general": "GG",
-    tecnología: "TI",
-    "talento humano": "TH",
-    comercial: "CO",
-    logística: "LG",
-    finanzas: "FI",
-    jurídico: "JU",
-    desarrollo: "DE",
-    "mesa de ayuda": "MA",
-    selección: "SE",
-    bienestar: "BI",
-    tiendas: "TD",
-    "e-commerce": "EC",
-    ecommerce: "EC",
-  };
-
-  const acronym = knownAcronyms[normalizedValue.toLowerCase()];
-
-  if (acronym) {
-    return acronym;
-  }
 
   const parts = normalizedValue
     .split(/\s+/)
@@ -62,8 +27,39 @@ function getInitials(value: string) {
   return parts.map((part) => part.charAt(0).toUpperCase()).join("") || "ED";
 }
 
+function nodeMatchesSearch(
+  value: GraphOrganizationTreeNode | OrganizationUnit,
+  searchTerm: string
+) {
+  if (!searchTerm) {
+    return false;
+  }
+
+  const searchableValues =
+    "displayName" in value
+      ? [
+          value.displayName,
+          value.jobTitle,
+          value.email,
+          value.department,
+          value.officeLocation,
+        ]
+      : [
+          value.name,
+          value.leader,
+          value.description,
+          value.contactEmail,
+          value.location,
+        ];
+
+  return searchableValues
+    .filter((item): item is string => Boolean(item))
+    .some((item) => item.toLowerCase().includes(searchTerm));
+}
+
 export function OrganizationNode({
   unit,
+  node,
   expandedIds,
   selectedUnitId,
   searchTerm,
@@ -71,11 +67,26 @@ export function OrganizationNode({
   onSelect,
   isRoot = false,
 }: OrganizationNodeProps) {
-  const hasChildren = Boolean(unit.children?.length);
-  const childrenCount = unit.children?.length ?? 0;
-  const isExpanded = expandedIds.has(unit.id);
-  const isMatched = unitMatchesSearch(unit, searchTerm);
-  const isSelected = selectedUnitId === unit.id;
+  const currentNode = node ?? unit;
+
+  if (!currentNode) {
+    return null;
+  }
+
+  const isGraphNode = "displayName" in currentNode;
+
+  const id = currentNode.id;
+  const name = isGraphNode ? currentNode.displayName : currentNode.name;
+  const role = isGraphNode ? currentNode.jobTitle : currentNode.leader;
+  const department = isGraphNode ? currentNode.department : undefined;
+  const photoUrl = isGraphNode ? currentNode.photoUrl : undefined;
+  const children = currentNode.children ?? [];
+
+  const hasChildren = children.length > 0;
+  const childrenCount = children.length;
+  const isExpanded = expandedIds.has(id);
+  const isMatched = nodeMatchesSearch(currentNode, searchTerm);
+  const isSelected = selectedUnitId === id;
 
   return (
     <div
@@ -100,28 +111,29 @@ export function OrganizationNode({
         <button
           type="button"
           className="organization-node-card__main"
-          onClick={() => onSelect(unit.id)}
-          aria-label={`Ver detalle de ${unit.name}`}
+          onClick={() => onSelect(id)}
+          aria-label={`Ver detalle de ${name}`}
         >
           <div className="organization-node-card__avatar">
-            {getInitials(unit.name)}
+            {photoUrl ? (
+              <img src={photoUrl} alt={name} />
+            ) : (
+              <span>{getInitials(name)}</span>
+            )}
           </div>
 
           <div className="organization-node-card__content">
             <div className="organization-node-card__eyebrow">
-              {isRoot ? "Dirección" : hasChildren ? "Área" : "Equipo"}
+              {isRoot ? "Dirección" : hasChildren ? "Líder" : "Colaborador"}
             </div>
 
-            <h3>{unit.name}</h3>
+            <h3>{name}</h3>
 
-            {unit.leader && <p>{unit.leader}</p>}
+            {role && <p>{role}</p>}
 
             <div className="organization-node-card__meta">
-              {typeof unit.employeeCount === "number" && (
-                <span>{unit.employeeCount} colab.</span>
-              )}
-
-              {hasChildren && <span>{childrenCount} subáreas</span>}
+              {department && <span>{department}</span>}
+              {hasChildren && <span>{childrenCount} personas</span>}
             </div>
           </div>
         </button>
@@ -132,7 +144,7 @@ export function OrganizationNode({
             className="organization-node-card__toggle"
             onClick={(event) => {
               event.stopPropagation();
-              onToggle(unit.id);
+              onToggle(id);
             }}
             aria-label={isExpanded ? "Contraer equipo" : "Ver equipo"}
           >
@@ -143,17 +155,29 @@ export function OrganizationNode({
 
       {hasChildren && isExpanded && (
         <div className="organization-node__children">
-          {unit.children?.map((child) => (
-            <OrganizationNode
-              key={child.id}
-              unit={child}
-              expandedIds={expandedIds}
-              selectedUnitId={selectedUnitId}
-              searchTerm={searchTerm}
-              onToggle={onToggle}
-              onSelect={onSelect}
-            />
-          ))}
+          {children.map((child) =>
+            isGraphNode ? (
+              <OrganizationNode
+                key={child.id}
+                node={child as GraphOrganizationTreeNode}
+                expandedIds={expandedIds}
+                selectedUnitId={selectedUnitId}
+                searchTerm={searchTerm}
+                onToggle={onToggle}
+                onSelect={onSelect}
+              />
+            ) : (
+              <OrganizationNode
+                key={child.id}
+                unit={child as OrganizationUnit}
+                expandedIds={expandedIds}
+                selectedUnitId={selectedUnitId}
+                searchTerm={searchTerm}
+                onToggle={onToggle}
+                onSelect={onSelect}
+              />
+            )
+          )}
         </div>
       )}
     </div>

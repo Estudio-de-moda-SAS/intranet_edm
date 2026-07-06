@@ -3,6 +3,14 @@ import { getAccessToken } from "@/app/api/auth/msal";
 const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
 const CACHE_TTL_MS = 1000 * 60 * 30;
 
+const GRAPH_ORGANIZATION_SCOPES = [
+  "User.Read.All",
+  "Directory.Read.All",
+] as const;
+
+const USER_SELECT_FIELDS =
+  "id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation";
+
 export interface GraphOrganizationUser {
   id: string;
   displayName?: string;
@@ -16,6 +24,7 @@ export interface GraphOrganizationUser {
 
 interface GraphCollectionResponse<T> {
   value: T[];
+  "@odata.nextLink"?: string;
 }
 
 interface CacheRecord<T> {
@@ -24,7 +33,7 @@ interface CacheRecord<T> {
 }
 
 function getCacheKey(
-  type: "user" | "photo" | "manager" | "directReports",
+  type: "user" | "photo" | "manager" | "directReports" | "department",
   key: string
 ) {
   return `organization:graph:${type}:${key.toLowerCase()}`;
@@ -62,12 +71,13 @@ function writeCache<T>(key: string, data: T) {
   }
 
   try {
-    const record: CacheRecord<T> = {
-      data,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    };
-
-    window.sessionStorage.setItem(key, JSON.stringify(record));
+    window.sessionStorage.setItem(
+      key,
+      JSON.stringify({
+        data,
+        expiresAt: Date.now() + CACHE_TTL_MS,
+      } satisfies CacheRecord<T>)
+    );
   } catch {
     /**
      * Session storage puede fallar por límite de cuota, modo privado
@@ -80,26 +90,46 @@ function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onloadend = () => {
-      resolve(reader.result as string);
-    };
-
-    reader.onerror = () => {
-      reject(reader.error);
-    };
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
 
     reader.readAsDataURL(blob);
   });
 }
 
-async function graphFetch<T>(path: string): Promise<T> {
-  const token = await getAccessToken({
-    silentExtraScopesToConsent: ["User.ReadBasic.All"],
-  });
+function normalizeGraphText(value: string) {
+  return value.trim().toLowerCase();
+}
 
-  const response = await fetch(`${GRAPH_BASE_URL}${path}`, {
+function escapeODataString(value: string) {
+  return value.replace(/'/g, "''");
+}
+
+function isReadableUser(user: GraphOrganizationUser) {
+  return Boolean(
+    user.id &&
+      user.displayName &&
+      (user.mail || user.userPrincipalName)
+  );
+}
+
+async function getGraphToken() {
+  return getAccessToken({
+    silentExtraScopesToConsent: [...GRAPH_ORGANIZATION_SCOPES],
+  });
+}
+
+async function graphFetch<T>(pathOrUrl: string): Promise<T> {
+  const token = await getGraphToken();
+
+  const url = pathOrUrl.startsWith("https://")
+    ? pathOrUrl
+    : `${GRAPH_BASE_URL}${pathOrUrl}`;
+
+  const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
+      ConsistencyLevel: "eventual",
     },
   });
 
@@ -108,6 +138,36 @@ async function graphFetch<T>(path: string): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+async function graphPhotoFetch(path: string): Promise<Response> {
+  const token = await getGraphToken();
+
+  return fetch(`${GRAPH_BASE_URL}${path}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function graphFetchCollection<T>(
+  path: string,
+  maxPages = 3
+): Promise<T[]> {
+  const results: T[] = [];
+  let nextUrl: string | undefined = path;
+  let currentPage = 0;
+
+  while (nextUrl && currentPage < maxPages) {
+    const collectionResponse: GraphCollectionResponse<T> =
+      await graphFetch<GraphCollectionResponse<T>>(nextUrl);
+
+    results.push(...collectionResponse.value);
+    nextUrl = collectionResponse["@odata.nextLink"];
+    currentPage += 1;
+  }
+
+  return results;
 }
 
 export async function getGraphUserByEmail(
@@ -122,15 +182,19 @@ export async function getGraphUserByEmail(
 
   try {
     const user = await graphFetch<GraphOrganizationUser>(
-      `/users/${encodeURIComponent(
-        email
-      )}?$select=id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation`
+      `/users/${encodeURIComponent(email)}?$select=${USER_SELECT_FIELDS}`
     );
 
     writeCache(cacheKey, user);
 
     return user;
-  } catch {
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudo obtener usuario:",
+      email,
+      error
+    );
+
     return null;
   }
 }
@@ -146,17 +210,8 @@ export async function getGraphUserPhotoUrl(
   }
 
   try {
-    const token = await getAccessToken({
-      silentExtraScopesToConsent: ["User.ReadBasic.All"],
-    });
-
-    const response = await fetch(
-      `${GRAPH_BASE_URL}/users/${encodeURIComponent(email)}/photo/$value`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+    const response = await graphPhotoFetch(
+      `/users/${encodeURIComponent(email)}/photo/$value`
     );
 
     if (!response.ok) {
@@ -169,7 +224,9 @@ export async function getGraphUserPhotoUrl(
     writeCache(cacheKey, photoBase64);
 
     return photoBase64;
-  } catch {
+  } catch (error) {
+    console.warn("[Organization Graph] No se pudo obtener foto:", email, error);
+
     return null;
   }
 }
@@ -186,15 +243,19 @@ export async function getGraphUserManager(
 
   try {
     const manager = await graphFetch<GraphOrganizationUser>(
-      `/users/${encodeURIComponent(
-        email
-      )}/manager?$select=id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation`
+      `/users/${encodeURIComponent(email)}/manager?$select=${USER_SELECT_FIELDS}`
     );
 
     writeCache(cacheKey, manager);
 
     return manager;
-  } catch {
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudo obtener manager:",
+      email,
+      error
+    );
+
     return null;
   }
 }
@@ -215,13 +276,84 @@ export async function getGraphUserDirectReports(
     >(
       `/users/${encodeURIComponent(
         email
-      )}/directReports?$select=id,displayName,jobTitle,mail,userPrincipalName,department,officeLocation`
+      )}/directReports?$select=${USER_SELECT_FIELDS}`
     );
 
-    writeCache(cacheKey, response.value);
+    const reports = response.value.filter(isReadableUser);
 
-    return response.value;
-  } catch {
+    writeCache(cacheKey, reports);
+
+    return reports;
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudieron obtener personas a cargo:",
+      email,
+      error
+    );
+
+    return [];
+  }
+}
+
+export async function getGraphUsersByDepartment(
+  department: string
+): Promise<GraphOrganizationUser[]> {
+  const normalizedDepartment = normalizeGraphText(department);
+  const cacheKey = getCacheKey("department", normalizedDepartment);
+  const cachedUsers = readCache<GraphOrganizationUser[]>(cacheKey);
+
+  if (cachedUsers) {
+    return cachedUsers;
+  }
+
+  try {
+    const escapedDepartment = escapeODataString(department.trim());
+
+    const users = await graphFetchCollection<GraphOrganizationUser>(
+      `/users?$select=${USER_SELECT_FIELDS}&$filter=department eq '${escapedDepartment}'&$top=999`,
+      20
+    );
+
+    const filteredUsers = users
+      .filter(isReadableUser)
+      .filter(
+        (user) =>
+          user.department &&
+          normalizeGraphText(user.department) === normalizedDepartment
+      );
+
+    writeCache(cacheKey, filteredUsers);
+
+    return filteredUsers;
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudieron obtener usuarios por departamento:",
+      department,
+      error
+    );
+
+    return [];
+  }
+}
+
+/**
+ * Función temporal para revisar qué valores reales existen en el campo
+ * department dentro de Microsoft Entra ID.
+ */
+export async function getGraphUsersSample(): Promise<GraphOrganizationUser[]> {
+  try {
+    const users = await graphFetchCollection<GraphOrganizationUser>(
+      `/users?$select=${USER_SELECT_FIELDS}&$top=999`,
+      20
+    );
+
+    return users.filter(isReadableUser);
+  } catch (error) {
+    console.warn(
+      "[Organization Graph] No se pudo obtener muestra de usuarios:",
+      error
+    );
+
     return [];
   }
 }
