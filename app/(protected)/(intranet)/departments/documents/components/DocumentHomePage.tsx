@@ -22,6 +22,10 @@
  * mientras que los permisos de interfaz se evalúan con {@link can} y
  * {@link atLeast}.
  */
+import { DocumentsExplorer } from "./DocumentsExplorer";
+import { DocumentWorkspace } from "./DepartmentSidebar/DocumentWorkspace";
+
+
 
 import { FileText } from "lucide-react";
 import DocumentTable from "./DocumentTable";
@@ -140,6 +144,17 @@ export default function DocumentHomePage({ accessLevel }: Props) {
 
       <div className="px-4 pb-12 lg:px-14">
         <DocumentStatBar />
+
+<AnimatedCard delay={0} className="mb-6">
+  <DocumentWorkspace/>
+</AnimatedCard>
+
+<AnimatedCard delay={0} className="mb-6">
+  <DocumentsExplorer/>
+</AnimatedCard>
+
+
+
 
         {/* Repositorio */}
         <AnimatedCard delay={0} className="mb-6">
