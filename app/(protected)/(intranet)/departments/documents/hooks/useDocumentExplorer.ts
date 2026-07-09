@@ -7,9 +7,10 @@
  *
  * @remarks
  * Administra la fuente documental activa (`my-drive`, `shared`,
- * `corporate-sites`), la navegación (breadcrumbs, carpetas), caché en
- * memoria y estados de carga/error. Delega toda la obtención de datos en
- * {@link documentSource.service}, por lo que no conoce detalles de Graph.
+ * `corporate-sites`, `teams`), la navegación (breadcrumbs, carpetas),
+ * caché en memoria y estados de carga/error. Delega toda la obtención de
+ * datos en {@link documentSource.service}, por lo que no conoce detalles
+ * de Graph.
  */
 
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -22,6 +23,10 @@ import {
   getSharePointSiteDrives,
   type SharePointDriveDiscoveryResult,
 } from "../services/sharepointDiscovery.service";
+import {
+  getMyTeamDrives,
+  type TeamDriveDiscoveryResult,
+} from "../services/teamsDriveDiscovery.service";
 import type {
   DocumentBreadcrumbItem,
   DocumentItem,
@@ -36,11 +41,23 @@ export type DocumentExplorerLoadingState =
   | "libraries"
   | "folder";
 
+/**
+ * Referencia mínima a una biblioteca/drive seleccionable (biblioteca de
+ * SharePoint o drive de un equipo), usada internamente para unificar la
+ * navegación raíz entre `corporate-sites` y `teams`.
+ */
+interface SelectableLibrary {
+  id: string;
+  name?: string;
+}
+
 export interface UseDocumentExplorerResult {
   activeSource: DocumentSourceType;
   selectedDepartment: DocumentDepartment | null;
   selectedLibrary: SharePointDriveDiscoveryResult | null;
   selectedDepartmentLibraries: readonly SharePointDriveDiscoveryResult[];
+  teamDrives: readonly TeamDriveDiscoveryResult[];
+  selectedTeamDrive: TeamDriveDiscoveryResult | null;
   currentItems: readonly DocumentItem[];
   breadcrumbs: readonly DocumentBreadcrumbItem[];
   loading: DocumentExplorerLoadingState;
@@ -49,6 +66,7 @@ export interface UseDocumentExplorerResult {
   switchSource: (source: DocumentSourceType) => Promise<void>;
   selectDepartment: (department: DocumentDepartment) => Promise<void>;
   selectLibrary: (library: SharePointDriveDiscoveryResult) => Promise<void>;
+  selectTeamDrive: (drive: TeamDriveDiscoveryResult) => Promise<void>;
   openFolder: (item: DocumentItem) => Promise<void>;
   goToRoot: () => Promise<void>;
   goToBreadcrumb: (breadcrumbId: string) => Promise<void>;
@@ -62,10 +80,7 @@ function buildFolderCacheKey(
   return `${source}:${location.driveId}:${location.itemId ?? "root"}`;
 }
 
-function buildRootCacheKey(
-  source: DocumentSourceType,
-  libraryId?: string
-) {
+function buildRootCacheKey(source: DocumentSourceType, libraryId?: string) {
   return libraryId ? `${source}:root:${libraryId}` : `${source}:root`;
 }
 
@@ -82,6 +97,12 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
   const [selectedDepartmentLibraries, setSelectedDepartmentLibraries] =
     useState<readonly SharePointDriveDiscoveryResult[]>([]);
 
+  const [teamDrives, setTeamDrives] =
+    useState<readonly TeamDriveDiscoveryResult[]>([]);
+
+  const [selectedTeamDrive, setSelectedTeamDrive] =
+    useState<TeamDriveDiscoveryResult | null>(null);
+
   const [currentItems, setCurrentItems] =
     useState<readonly DocumentItem[]>([]);
 
@@ -97,30 +118,33 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     new Map<string, readonly SharePointDriveDiscoveryResult[]>()
   );
 
+  const teamDrivesCacheRef = useRef<readonly TeamDriveDiscoveryResult[] | null>(null);
+
   const itemsCacheRef = useRef(new Map<string, readonly DocumentItem[]>());
 
   const clearError = useCallback(() => setError(null), []);
 
   const rootBreadcrumbLabel = useCallback(
-    (source: DocumentSourceType, library: SharePointDriveDiscoveryResult | null) => {
+    (source: DocumentSourceType, library: SelectableLibrary | null) => {
       if (source === "my-drive") return "Mi unidad";
       if (source === "shared") return "Compartidos conmigo";
+      if (source === "teams") return library?.name ?? "Equipo";
       return library?.name ?? "Biblioteca";
     },
     []
   );
 
   const loadRootFor = useCallback(
-    async (
-      source: DocumentSourceType,
-      library: SharePointDriveDiscoveryResult | null
-    ) => {
+    async (source: DocumentSourceType, library: SelectableLibrary | null) => {
       try {
         setLoading("root");
         setError(null);
         setCurrentItems([]);
 
-        if (source === "corporate-sites" && !library) {
+        if (
+          (source === "corporate-sites" || source === "teams") &&
+          !library
+        ) {
           setBreadcrumbs([]);
           return;
         }
@@ -154,15 +178,47 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     [rootBreadcrumbLabel]
   );
 
+  const loadTeamDrives = useCallback(async () => {
+    try {
+      setLoading("libraries");
+      setError(null);
+
+      if (teamDrivesCacheRef.current) {
+        setTeamDrives(teamDrivesCacheRef.current);
+        return;
+      }
+
+      const drives = await getMyTeamDrives();
+      teamDrivesCacheRef.current = drives;
+      setTeamDrives(drives);
+    } catch (teamsError) {
+      console.error("[Document Explorer] loadTeamDrives", teamsError);
+      setTeamDrives([]);
+      setError("No fue posible cargar tus equipos.");
+    } finally {
+      setLoading("idle");
+    }
+  }, []);
+
   const switchSource = useCallback(
     async (source: DocumentSourceType) => {
       setActiveSource(source);
       setSelectedDepartment(null);
       setSelectedLibrary(null);
       setSelectedDepartmentLibraries([]);
+      setSelectedTeamDrive(null);
+      setTeamDrives([]);
+      setBreadcrumbs([]);
+      setCurrentItems([]);
+
+      if (source === "teams") {
+        await loadTeamDrives();
+        return;
+      }
+
       await loadRootFor(source, null);
     },
-    [loadRootFor]
+    [loadRootFor, loadTeamDrives]
   );
 
   const selectDepartment = useCallback(
@@ -187,9 +243,14 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
         librariesCacheRef.current.set(department.siteId, libraries);
         setSelectedDepartmentLibraries(libraries);
       } catch (departmentError) {
-        console.error("[Document Explorer] selectDepartment", departmentError);
+        console.error(
+          "[Document Explorer] selectDepartment",
+          departmentError
+        );
         setSelectedDepartmentLibraries([]);
-        setError("No fue posible cargar las bibliotecas del área seleccionada.");
+        setError(
+          "No fue posible cargar las bibliotecas del área seleccionada."
+        );
       } finally {
         setLoading("idle");
       }
@@ -201,6 +262,14 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     async (library: SharePointDriveDiscoveryResult) => {
       setSelectedLibrary(library);
       await loadRootFor("corporate-sites", library);
+    },
+    [loadRootFor]
+  );
+
+  const selectTeamDrive = useCallback(
+    async (drive: TeamDriveDiscoveryResult) => {
+      setSelectedTeamDrive(drive);
+      await loadRootFor("teams", drive);
     },
     [loadRootFor]
   );
@@ -245,8 +314,10 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
   );
 
   const goToRoot = useCallback(async () => {
-    await loadRootFor(activeSource, selectedLibrary);
-  }, [activeSource, loadRootFor, selectedLibrary]);
+    const library =
+      activeSource === "teams" ? selectedTeamDrive : selectedLibrary;
+    await loadRootFor(activeSource, library);
+  }, [activeSource, loadRootFor, selectedLibrary, selectedTeamDrive]);
 
   const goToBreadcrumb = useCallback(
     async (breadcrumbId: string) => {
@@ -267,7 +338,10 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
 
         setBreadcrumbs(breadcrumbs.slice(0, index + 1));
 
-        const cacheKey = buildFolderCacheKey(activeSource, breadcrumb.location);
+        const cacheKey = buildFolderCacheKey(
+          activeSource,
+          breadcrumb.location
+        );
         const cached = itemsCacheRef.current.get(cacheKey);
 
         if (cached) {
@@ -275,11 +349,17 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
           return;
         }
 
-        const items = await loadFolderChildren(breadcrumb.location, activeSource);
+        const items = await loadFolderChildren(
+          breadcrumb.location,
+          activeSource
+        );
         itemsCacheRef.current.set(cacheKey, items);
         setCurrentItems(items);
       } catch (breadcrumbError) {
-        console.error("[Document Explorer] goToBreadcrumb", breadcrumbError);
+        console.error(
+          "[Document Explorer] goToBreadcrumb",
+          breadcrumbError
+        );
         setError("No fue posible navegar a la carpeta seleccionada.");
       } finally {
         setLoading("idle");
@@ -294,6 +374,8 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       selectedDepartment,
       selectedLibrary,
       selectedDepartmentLibraries,
+      teamDrives,
+      selectedTeamDrive,
       currentItems,
       breadcrumbs,
       loading,
@@ -301,6 +383,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       switchSource,
       selectDepartment,
       selectLibrary,
+      selectTeamDrive,
       openFolder,
       goToRoot,
       goToBreadcrumb,
@@ -311,6 +394,8 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       selectedDepartment,
       selectedLibrary,
       selectedDepartmentLibraries,
+      teamDrives,
+      selectedTeamDrive,
       currentItems,
       breadcrumbs,
       loading,
@@ -318,6 +403,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       switchSource,
       selectDepartment,
       selectLibrary,
+      selectTeamDrive,
       openFolder,
       goToRoot,
       goToBreadcrumb,

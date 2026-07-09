@@ -60,16 +60,5 @@ export const DOCUMENT_SITES: readonly DocumentDepartment[] = [
     order: 3,
     enabled: true,
   },
-  {
-    id: "proyectos",
-    name: "Proyectos y Soluciones",
-    siteId: "estudiodemoda.sharepoint.com,f5eff686-6ee3-4dc7-99ec-d85d3a9e5545,984824c2-c0c3-47a5-ba3f-e5e2e3e5e037",
-    siteUrl: "#",
-    description: "Manuales, procesos y documentación de proyectos.",
-    icon: "Monitor",
-    accentColor: "blue",
-    order: 3,
-    enabled: true,
-  },
 ];
 

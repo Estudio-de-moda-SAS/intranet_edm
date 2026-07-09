@@ -8,8 +8,8 @@
  * @remarks
  * Punto de entrada del Explorador Documental Corporativo. Permite alternar
  * entre las fuentes documentales soportadas (`my-drive`, `shared`,
- * `corporate-sites`), navegar carpetas mediante breadcrumbs, y previsualizar
- * documentos usando {@link PdfViewerModal}.
+ * `corporate-sites`, `teams`), navegar carpetas mediante breadcrumbs, y
+ * previsualizar documentos usando {@link PdfViewerModal}.
  */
 
 import { useEffect, useState } from "react";
@@ -21,6 +21,7 @@ import {
   HardDrive,
   Library,
   Loader2,
+  Share2,
   Users,
 } from "lucide-react";
 
@@ -40,7 +41,8 @@ interface SourceTabConfig {
 
 const SOURCE_TABS: readonly SourceTabConfig[] = [
   { id: "my-drive", label: "Mi unidad", icon: HardDrive },
-  { id: "shared", label: "Compartidos conmigo", icon: Users },
+  { id: "shared", label: "Compartidos conmigo", icon: Share2 },
+  { id: "teams", label: "Mis equipos", icon: Users },
   { id: "corporate-sites", label: "Áreas corporativas", icon: Building2 },
 ];
 
@@ -50,6 +52,8 @@ export function DocumentWorkspace() {
     selectedDepartment,
     selectedLibrary,
     selectedDepartmentLibraries,
+    teamDrives,
+    selectedTeamDrive,
     currentItems,
     breadcrumbs,
     loading,
@@ -57,6 +61,7 @@ export function DocumentWorkspace() {
     switchSource,
     selectDepartment,
     selectLibrary,
+    selectTeamDrive,
     openFolder,
     goToBreadcrumb,
   } = useDocumentExplorer();
@@ -69,27 +74,41 @@ export function DocumentWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isLoadingLibraries = loading === "libraries";
+  const isLoadingPickers = loading === "libraries";
   const isLoadingItems = loading === "root" || loading === "folder";
 
   const isCorporateSites = activeSource === "corporate-sites";
+  const isTeams = activeSource === "teams";
+
   const showLibraryPicker = isCorporateSites && selectedDepartment && !selectedLibrary;
-  const showItemsList = !isCorporateSites || (selectedDepartment && selectedLibrary);
+  const showTeamPicker = isTeams && !selectedTeamDrive;
+
+  const showItemsList =
+    activeSource === "my-drive" ||
+    activeSource === "shared" ||
+    (isCorporateSites && Boolean(selectedDepartment) && Boolean(selectedLibrary)) ||
+    (isTeams && Boolean(selectedTeamDrive));
 
   const headerTitle = isCorporateSites
     ? selectedDepartment?.name ?? "Áreas corporativas"
-    : SOURCE_TABS.find((tab) => tab.id === activeSource)?.label ?? "Documentos";
+    : isTeams
+      ? selectedTeamDrive?.name ?? "Mis equipos"
+      : SOURCE_TABS.find((tab) => tab.id === activeSource)?.label ?? "Documentos";
 
   const headerDescription = isCorporateSites
     ? selectedDepartment
       ? selectedDepartment.description ??
         "Explora las bibliotecas, carpetas y documentos disponibles para esta área."
       : "Elige un área desde el panel izquierdo para consultar sus documentos."
-    : activeSource === "my-drive"
-      ? "Tus archivos y carpetas personales en OneDrive."
-      : "Documentos y carpetas que otras personas compartieron contigo.";
+    : isTeams
+      ? selectedTeamDrive
+        ? `Documentos del equipo ${selectedTeamDrive.name ?? ""}.`
+        : "Elige un equipo para consultar sus documentos."
+      : activeSource === "my-drive"
+        ? "Tus archivos y carpetas personales en OneDrive."
+        : "Documentos y carpetas que otras personas compartieron contigo.";
 
-    const handleOpenPreview = async (item: DocumentItem) => {
+  const handleOpenPreview = async (item: DocumentItem) => {
     setPreviewItem(item);
     setPreviewUrl(undefined);
 
@@ -216,12 +235,12 @@ export function DocumentWorkspace() {
                   </p>
                 </div>
 
-                {isLoadingLibraries && (
+                {isLoadingPickers && (
                   <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
                 )}
               </div>
 
-              {isLoadingLibraries ? (
+              {isLoadingPickers ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {Array.from({ length: 6 }).map((_, index) => (
                     <div
@@ -253,6 +272,63 @@ export function DocumentWorkspace() {
 
                       <span className="mt-2 block truncate text-xs text-slate-500 dark:text-slate-400">
                         {library.webUrl ?? "SharePoint"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {showTeamPicker && (
+            <>
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                    Tus equipos
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Selecciona un equipo para ver sus documentos.
+                  </p>
+                </div>
+
+                {isLoadingPickers && (
+                  <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+                )}
+              </div>
+
+              {isLoadingPickers ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-32 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-900"
+                    />
+                  ))}
+                </div>
+              ) : teamDrives.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                  No se encontraron equipos con biblioteca de documentos.
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {teamDrives.map((drive) => (
+                    <button
+                      key={drive.id}
+                      type="button"
+                      onClick={() => selectTeamDrive(drive)}
+                      className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:-translate-y-1 hover:border-indigo-200 hover:bg-indigo-50 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10"
+                    >
+                      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm dark:bg-slate-950 dark:text-indigo-300">
+                        <Users size={21} strokeWidth={1.9} />
+                      </div>
+
+                      <strong className="block text-sm font-bold text-slate-900 dark:text-slate-100">
+                        {drive.name ?? "Equipo sin nombre"}
+                      </strong>
+
+                      <span className="mt-2 block truncate text-xs text-slate-500 dark:text-slate-400">
+                        {drive.webUrl ?? "SharePoint"}
                       </span>
                     </button>
                   ))}

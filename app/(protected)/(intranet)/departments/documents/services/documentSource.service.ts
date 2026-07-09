@@ -2,26 +2,31 @@
  * @module documentSource.service
  *
  * Facade que unifica el acceso a las fuentes documentales (`my-drive`,
- * `shared`, `corporate-sites`) bajo una única API, para que el hook
- * `useDocumentExplorer` no necesite conocer los scopes ni los detalles
- * internos de cada fuente.
+ * `shared`, `corporate-sites`, `teams`) bajo una única API, para que el
+ * hook `useDocumentExplorer` no necesite conocer los scopes ni los
+ * detalles internos de cada fuente.
  */
 
 import {
   getMyDriveFolderChildren,
-  getMyDriveRootChildren,
   getMyDrivePreviewUrl,
+  getMyDriveRootChildren,
 } from "./myDriveDiscovery.service";
 import {
   getSharedFolderChildren,
-  getSharedWithMe,
   getSharedPreviewUrl,
+  getSharedWithMe,
 } from "./sharedWithMeDiscovery.service";
 import {
   getSharePointDriveRootChildren,
   getSharePointFolderChildren,
   getSharePointPreviewUrl,
 } from "./sharepointDiscovery.service";
+import {
+  getMyTeamDriveRootChildren,
+  getMyTeamFolderChildren,
+  getMyTeamPreviewUrl,
+} from "./teamsDriveDiscovery.service";
 import type {
   DocumentItem,
   DocumentLocation,
@@ -31,13 +36,13 @@ import type {
 /**
  * Carga la vista raíz de una fuente documental.
  *
- * @param corporateLibraryDriveId - Requerido únicamente cuando
- * `source === "corporate-sites"`; es el `driveId` de la biblioteca ya
- * seleccionada por el usuario.
+ * @param libraryDriveId - Requerido para `corporate-sites` (biblioteca de
+ * SharePoint seleccionada) y `teams` (equipo seleccionado); es el
+ * `driveId` de la biblioteca/equipo ya elegido por el usuario.
  */
 export async function loadSourceRoot(
   source: DocumentSourceType,
-  corporateLibraryDriveId?: string
+  libraryDriveId?: string
 ): Promise<DocumentItem[]> {
   switch (source) {
     case "my-drive":
@@ -45,9 +50,11 @@ export async function loadSourceRoot(
     case "shared":
       return getSharedWithMe();
     case "corporate-sites":
-      return corporateLibraryDriveId
-        ? getSharePointDriveRootChildren(corporateLibraryDriveId)
+      return libraryDriveId
+        ? getSharePointDriveRootChildren(libraryDriveId)
         : [];
+    case "teams":
+      return libraryDriveId ? getMyTeamDriveRootChildren(libraryDriveId) : [];
   }
 }
 
@@ -65,6 +72,8 @@ export async function loadFolderChildren(
       return getSharedFolderChildren(location.driveId, location.itemId);
     case "corporate-sites":
       return getSharePointFolderChildren(location.driveId, location.itemId);
+    case "teams":
+      return getMyTeamFolderChildren(location.driveId, location.itemId);
   }
 }
 
@@ -84,5 +93,7 @@ export async function loadDocumentPreviewUrl(
       return getSharedPreviewUrl(item.driveId, item.id);
     case "corporate-sites":
       return getSharePointPreviewUrl(item.driveId, item.id);
+    case "teams":
+      return getMyTeamPreviewUrl(item.driveId, item.id);
   }
 }

@@ -4,11 +4,11 @@
  * Modelo documental unificado del Explorador Documental Corporativo.
  *
  * @remarks
- * Abstrae completamente las diferencias entre OneDrive, "Compartido conmigo"
- * y las bibliotecas de SharePoint (Áreas Corporativas). Ningún componente
- * de interfaz o hook debe depender de tipos crudos de Microsoft Graph
- * (`driveItem`, `site`, `drive`); toda la capa de presentación consume
- * exclusivamente los modelos definidos aquí.
+ * Abstrae completamente las diferencias entre OneDrive, "Compartido conmigo",
+ * las bibliotecas de SharePoint (Áreas Corporativas) y las bibliotecas de
+ * equipos (Mis Equipos). Ningún componente de interfaz o hook debe depender
+ * de tipos crudos de Microsoft Graph (`driveItem`, `site`, `drive`); toda la
+ * capa de presentación consume exclusivamente los modelos definidos aquí.
  */
 
 /**
@@ -18,8 +18,14 @@
  * - `my-drive`: OneDrive del usuario autenticado.
  * - `shared`: elementos compartidos con el usuario (`/me/drive/sharedWithMe`).
  * - `corporate-sites`: bibliotecas de SharePoint del catálogo de áreas.
+ * - `teams`: bibliotecas de documentos de los Microsoft 365 Groups (Teams)
+ *   a los que pertenece el usuario, descubiertas por membresía real.
  */
-export type DocumentSourceType = "my-drive" | "shared" | "corporate-sites";
+export type DocumentSourceType =
+  | "my-drive"
+  | "shared"
+  | "corporate-sites"
+  | "teams";
 
 /**
  * Referencia mínima para navegar cualquier ubicación documental mediante
@@ -35,7 +41,6 @@ export interface DocumentLocation {
   itemId: string | null;
 }
 
-/** Elemento documental unificado (archivo o carpeta). */
 /** Elemento documental unificado (archivo o carpeta). */
 export interface DocumentItem {
   id: string;
