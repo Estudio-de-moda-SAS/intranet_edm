@@ -1,4 +1,30 @@
+/**
+ * @module sharepointDiscovery.service
+ *
+ * Servicio de descubrimiento de sitios y bibliotecas de SharePoint.
+ *
+ * @remarks
+ * Se conserva para dos propósitos:
+ * - Alimentar la herramienta interna de descubrimiento (SharePoint Explorer),
+ *   utilizada únicamente en desarrollo para identificar `siteId`s.
+ * - Servir como fuente documental `corporate-sites` (Áreas Corporativas),
+ *   una vez que el catálogo oficial de sitios (`documentSites.ts`) resuelve
+ *   el `siteId` de cada área y el usuario selecciona una biblioteca.
+ *
+ * La navegación de contenido (raíz y carpetas) delega en
+ * {@link driveNavigation.service} para compartir lógica con las demás
+ * fuentes documentales del explorador.
+ *
+ * Requiere el scope `Sites.Read.All`.
+ */
+
 import { getAccessToken } from "@/app/api/auth/msal";
+import {
+  getDocumentPreviewUrl,
+  getDriveFolderChildren,
+  getDriveRootChildren,
+} from "./driveNavigation.service";
+import type { DocumentItem } from "../types/document.types";
 
 const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
 
@@ -46,21 +72,6 @@ export interface SharePointDriveDiscoveryResult {
   driveType?: string;
   createdDateTime?: string;
   lastModifiedDateTime?: string;
-}
-
-export interface SharePointDriveItemDiscoveryResult {
-  id: string;
-  name?: string;
-  webUrl?: string;
-  size?: number;
-  createdDateTime?: string;
-  lastModifiedDateTime?: string;
-  folder?: {
-    childCount?: number;
-  };
-  file?: {
-    mimeType?: string;
-  };
 }
 
 interface GraphCollectionResponse<T> {
@@ -137,19 +148,6 @@ function sortByName<T extends { name?: string; displayName?: string }>(
   );
 }
 
-function sortDriveItems(items: SharePointDriveItemDiscoveryResult[]) {
-  return [...items].sort((a, b) => {
-    const aIsFolder = Boolean(a.folder);
-    const bIsFolder = Boolean(b.folder);
-
-    if (aIsFolder !== bIsFolder) {
-      return aIsFolder ? -1 : 1;
-    }
-
-    return (a.name ?? "").localeCompare(b.name ?? "", "es");
-  });
-}
-
 export async function searchSharePointSites(
   query: string
 ): Promise<SharePointSiteDiscoveryResult[]> {
@@ -192,27 +190,45 @@ export async function getSharePointSiteDrives(
   return sortByName(drives);
 }
 
+/**
+ * Contenido raíz de una biblioteca (drive) de SharePoint.
+ *
+ * @remarks
+ * Delegado en {@link driveNavigation.service} para compartir mapeo y
+ * paginación con las demás fuentes documentales.
+ */
 export async function getSharePointDriveRootChildren(
   driveId: string
-): Promise<SharePointDriveItemDiscoveryResult[]> {
-  const items = await graphFetchCollection<SharePointDriveItemDiscoveryResult>(
-    `/drives/${encodeURIComponent(driveId)}/root/children`,
-    2
+): Promise<DocumentItem[]> {
+  return getDriveRootChildren(
+    driveId,
+    "corporate-sites",
+    SHAREPOINT_DISCOVERY_SCOPES
   );
-
-  return sortDriveItems(items);
 }
 
+/**
+ * Contenido de una carpeta dentro de una biblioteca de SharePoint.
+ *
+ * @remarks
+ * Delegado en {@link driveNavigation.service} para compartir mapeo y
+ * paginación con las demás fuentes documentales.
+ */
 export async function getSharePointFolderChildren(
   driveId: string,
   itemId: string
-): Promise<SharePointDriveItemDiscoveryResult[]> {
-  const items = await graphFetchCollection<SharePointDriveItemDiscoveryResult>(
-    `/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(
-      itemId
-    )}/children`,
-    2
+): Promise<DocumentItem[]> {
+  return getDriveFolderChildren(
+    driveId,
+    itemId,
+    "corporate-sites",
+    SHAREPOINT_DISCOVERY_SCOPES
   );
-
-  return sortDriveItems(items);
+}
+/** URL de previsualización embebible para un archivo de SharePoint. */
+export async function getSharePointPreviewUrl(
+  driveId: string,
+  itemId: string
+): Promise<string | undefined> {
+  return getDocumentPreviewUrl(driveId, itemId, SHAREPOINT_DISCOVERY_SCOPES);
 }

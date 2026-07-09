@@ -89,7 +89,7 @@ export default function DocumentHomePage({ accessLevel }: Props) {
   /**
    * Permisos funcionales del módulo documental.
    */
-
+  const SHOW_STAT_BAR= false;
   const SHOW_RECENT = false;
   const showCreate    = can(accessLevel, "docs:create");
   const showApprovals = can(accessLevel, "docs:review_approvals");
@@ -141,9 +141,9 @@ export default function DocumentHomePage({ accessLevel }: Props) {
         ]}
         ctaLinks={ctaLinks}
       />
-
+       
       <div className="px-4 pb-12 lg:px-14">
-        <DocumentStatBar />
+        {SHOW_STAT_BAR && <DocumentStatBar />}
 
 <AnimatedCard delay={0} className="mb-6">
   <DocumentWorkspace/>

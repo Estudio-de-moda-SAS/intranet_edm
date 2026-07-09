@@ -4,22 +4,49 @@
  * @module DocumentWorkspace
  *
  * Workspace principal del módulo documental.
+ *
+ * @remarks
+ * Punto de entrada del Explorador Documental Corporativo. Permite alternar
+ * entre las fuentes documentales soportadas (`my-drive`, `shared`,
+ * `corporate-sites`), navegar carpetas mediante breadcrumbs, y previsualizar
+ * documentos usando {@link PdfViewerModal}.
  */
 
+import { useEffect, useState } from "react";
 import {
-  ExternalLink,
-  FileText,
+  Building2,
+  FileText as FileIcon,
   Folder,
   FolderOpen,
+  HardDrive,
   Library,
   Loader2,
+  Users,
 } from "lucide-react";
 
 import { DepartmentSidebar } from "./DepartmentSidebar";
 import { useDocumentExplorer } from "../../hooks/useDocumentExplorer";
+import { loadDocumentPreviewUrl } from "../../services/documentSource.service";
+import { mapDocumentItemToPdfMetadata } from "../../utils/mapDocumentItemToPdfMetadata";
+import { formatFileSize, formatShortDate } from "../../utils/formatDocumentMeta";
+import type { DocumentItem, DocumentSourceType } from "../../types/document.types";
+import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
+
+interface SourceTabConfig {
+  id: DocumentSourceType;
+  label: string;
+  icon: typeof HardDrive;
+}
+
+const SOURCE_TABS: readonly SourceTabConfig[] = [
+  { id: "my-drive", label: "Mi unidad", icon: HardDrive },
+  { id: "shared", label: "Compartidos conmigo", icon: Users },
+  { id: "corporate-sites", label: "Áreas corporativas", icon: Building2 },
+];
 
 export function DocumentWorkspace() {
   const {
+    activeSource,
     selectedDepartment,
     selectedLibrary,
     selectedDepartmentLibraries,
@@ -27,37 +54,129 @@ export function DocumentWorkspace() {
     breadcrumbs,
     loading,
     error,
+    switchSource,
     selectDepartment,
     selectLibrary,
     openFolder,
     goToBreadcrumb,
   } = useDocumentExplorer();
 
+  const [previewItem, setPreviewItem] = useState<DocumentItem | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    void switchSource("my-drive");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isLoadingLibraries = loading === "libraries";
-  const isLoadingItems = loading === "items" || loading === "folder";
+  const isLoadingItems = loading === "root" || loading === "folder";
+
+  const isCorporateSites = activeSource === "corporate-sites";
+  const showLibraryPicker = isCorporateSites && selectedDepartment && !selectedLibrary;
+  const showItemsList = !isCorporateSites || (selectedDepartment && selectedLibrary);
+
+  const headerTitle = isCorporateSites
+    ? selectedDepartment?.name ?? "Áreas corporativas"
+    : SOURCE_TABS.find((tab) => tab.id === activeSource)?.label ?? "Documentos";
+
+  const headerDescription = isCorporateSites
+    ? selectedDepartment
+      ? selectedDepartment.description ??
+        "Explora las bibliotecas, carpetas y documentos disponibles para esta área."
+      : "Elige un área desde el panel izquierdo para consultar sus documentos."
+    : activeSource === "my-drive"
+      ? "Tus archivos y carpetas personales en OneDrive."
+      : "Documentos y carpetas que otras personas compartieron contigo.";
+
+    const handleOpenPreview = async (item: DocumentItem) => {
+    setPreviewItem(item);
+    setPreviewUrl(undefined);
+
+    try {
+      const url = await loadDocumentPreviewUrl(item);
+      setPreviewUrl(url);
+    } catch (previewError) {
+      console.error("[Document Workspace] preview", previewError);
+    }
+  };
 
   return (
     <section className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-      <DepartmentSidebar
-        {...(selectedDepartment ? { selectedDepartment } : {})}
-        onSelectDepartment={selectDepartment}
-      />
+      {isCorporateSites ? (
+        <DepartmentSidebar
+          {...(selectedDepartment ? { selectedDepartment } : {})}
+          onSelectDepartment={selectDepartment}
+        />
+      ) : (
+        <nav className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <span className="mb-3 block px-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Fuentes documentales
+          </span>
+
+          <ul className="flex flex-col gap-1">
+            {SOURCE_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = tab.id === activeSource;
+
+              return (
+                <li key={tab.id}>
+                  <button
+                    type="button"
+                    onClick={() => switchSource(tab.id)}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
+                    }`}
+                  >
+                    <Icon size={18} strokeWidth={1.9} />
+                    {tab.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
 
       <article className="min-h-[700px] rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <header className="border-b border-slate-200 px-8 py-6 dark:border-slate-800">
+          {isCorporateSites && (
+            <div className="mb-4 flex gap-2">
+              {SOURCE_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = tab.id === activeSource;
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => switchSource(tab.id)}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold transition ${
+                      isActive
+                        ? "bg-indigo-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-300"
+                    }`}
+                  >
+                    <Icon size={14} strokeWidth={2} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           <span className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-500">
             Gestión documental
           </span>
 
           <h2 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {selectedDepartment?.name ?? "Selecciona un área documental"}
+            {headerTitle}
           </h2>
 
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-            {selectedDepartment
-              ? selectedDepartment.description ??
-                "Explora las bibliotecas, carpetas y documentos disponibles para esta área."
-              : "Elige un área desde el panel izquierdo para consultar sus documentos reales desde SharePoint."}
+            {headerDescription}
           </p>
         </header>
 
@@ -68,7 +187,7 @@ export function DocumentWorkspace() {
             </div>
           )}
 
-          {!selectedDepartment && (
+          {isCorporateSites && !selectedDepartment && (
             <div className="flex min-h-[460px] flex-col items-center justify-center text-center">
               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
                 <FolderOpen size={34} strokeWidth={1.8} />
@@ -85,7 +204,7 @@ export function DocumentWorkspace() {
             </div>
           )}
 
-          {selectedDepartment && !selectedLibrary && (
+          {showLibraryPicker && (
             <>
               <div className="mb-5 flex items-center justify-between">
                 <div>
@@ -142,40 +261,34 @@ export function DocumentWorkspace() {
             </>
           )}
 
-          {selectedDepartment && selectedLibrary && (
+          {showItemsList && (
             <>
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                    {selectedLibrary.name ?? "Biblioteca"}
-                  </h3>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    {breadcrumbs.map((breadcrumb, index) => (
-                      <button
-                        key={breadcrumb.id}
-                        type="button"
-                        onClick={() => goToBreadcrumb(breadcrumb.id)}
-                        className="rounded-full bg-slate-100 px-3 py-1 font-medium transition hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-900 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
-                      >
-                        {index > 0 ? "/ " : ""}
-                        {breadcrumb.name}
-                      </button>
-                    ))}
-                  </div>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  {breadcrumbs.map((breadcrumb, index) => (
+                    <button
+                      key={breadcrumb.id}
+                      type="button"
+                      onClick={() => goToBreadcrumb(breadcrumb.id)}
+                      className="rounded-full bg-slate-100 px-3 py-1 font-medium transition hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-900 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                    >
+                      {index > 0 ? "/ " : ""}
+                      {breadcrumb.name}
+                    </button>
+                  ))}
                 </div>
 
                 {isLoadingItems && (
-                  <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+                  <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
                 )}
               </div>
 
               {isLoadingItems ? (
-                <div className="grid gap-3">
-                  {Array.from({ length: 7 }).map((_, index) => (
+                <div className="flex flex-col gap-1">
+                  {Array.from({ length: 8 }).map((_, index) => (
                     <div
                       key={index}
-                      className="h-16 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-900"
+                      className="h-11 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-900"
                     />
                   ))}
                 </div>
@@ -184,63 +297,91 @@ export function DocumentWorkspace() {
                   No hay elementos disponibles en esta ubicación.
                 </div>
               ) : (
-                <div className="grid gap-3">
-                  {currentItems.map((item) => {
-                    const isFolder = Boolean(item.folder);
+                <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                        <th className="px-4 py-2.5 font-semibold">Documento</th>
+                        <th className="px-4 py-2.5 font-semibold">Tamaño</th>
+                        <th className="px-4 py-2.5 font-semibold">Modificado</th>
+                        <th className="px-4 py-2.5 text-right font-semibold">Acciones</th>
+                      </tr>
+                    </thead>
 
-                    return (
-                      <article
-                        key={item.id}
-                        className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-200 hover:bg-indigo-50/60 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10"
-                      >
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-indigo-600 dark:bg-slate-900 dark:text-indigo-300">
-                          {isFolder ? (
-                            <Folder size={21} strokeWidth={1.9} />
-                          ) : (
-                            <FileText size={21} strokeWidth={1.9} />
-                          )}
-                        </div>
+                    <tbody>
+                      {currentItems.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="group border-b border-slate-100 transition last:border-0 hover:bg-indigo-50/50 dark:border-slate-900 dark:hover:bg-indigo-500/5"
+                        >
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                                {item.isFolder ? (
+                                  <Folder size={16} strokeWidth={2} className="text-indigo-500" />
+                                ) : (
+                                  <FileIcon size={16} strokeWidth={2} />
+                                )}
+                              </span>
 
-                        <div className="min-w-0 flex-1">
-                          <strong className="block truncate text-sm font-bold text-slate-900 dark:text-slate-100">
-                            {item.name ?? "Sin nombre"}
-                          </strong>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
+                                  {item.name}
+                                </p>
+                                {item.sharedBy && (
+                                  <p className="truncate text-xs text-slate-400">
+                                    Compartido por {item.sharedBy}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
 
-                          <span className="mt-1 block truncate text-xs text-slate-500 dark:text-slate-400">
-                            {isFolder
-                              ? `${item.folder?.childCount ?? 0} elementos`
-                              : item.file?.mimeType ?? "Archivo"}
-                          </span>
-                        </div>
+                          <td className="whitespace-nowrap px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+                            {item.isFolder
+                              ? `${item.childCount ?? 0} elementos`
+                              : formatFileSize(item.size)}
+                          </td>
 
-                        {isFolder ? (
-                          <button
-                            type="button"
-                            onClick={() => openFolder(item)}
-                            className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
-                          >
-                            Abrir
-                          </button>
-                        ) : item.webUrl ? (
-                          <a
-                            href={item.webUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-indigo-600 hover:text-white dark:bg-slate-900 dark:text-slate-200"
-                          >
-                            SharePoint
-                            <ExternalLink size={14} />
-                          </a>
-                        ) : null}
-                      </article>
-                    );
-                  })}
+                          <td className="whitespace-nowrap px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+                            {formatShortDate(item.lastModifiedDateTime)}
+                          </td>
+
+                          <td className="px-4 py-2.5 text-right">
+                            {item.isFolder ? (
+                              <button
+                                type="button"
+                                onClick={() => openFolder(item)}
+                                className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 opacity-0 transition group-hover:opacity-100 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 dark:text-slate-300"
+                              >
+                                Abrir
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPreview(item)}
+                                className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 opacity-0 transition group-hover:opacity-100 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 dark:text-slate-300"
+                              >
+                                Ver
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </>
           )}
         </div>
       </article>
+
+      <PdfViewerModal
+        open={Boolean(previewItem)}
+        onClose={() => setPreviewItem(null)}
+        metadata={previewItem ? mapDocumentItemToPdfMetadata(previewItem, previewUrl) : null}
+      />
     </section>
   );
 }

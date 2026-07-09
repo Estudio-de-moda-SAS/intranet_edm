@@ -18,9 +18,9 @@ import {
   getSharePointSiteDrives,
   searchSharePointSites,
   type SharePointDriveDiscoveryResult,
-  type SharePointDriveItemDiscoveryResult,
   type SharePointSiteDiscoveryResult,
 } from "../services/sharepointDiscovery.service";
+import type { DocumentItem } from "../types/document.types";
 
 function toSlug(value: string) {
   return value
@@ -51,14 +51,12 @@ export function DocumentsExplorer() {
   const [query, setQuery] = useState("");
   const [sites, setSites] = useState<SharePointSiteDiscoveryResult[]>([]);
   const [drives, setDrives] = useState<SharePointDriveDiscoveryResult[]>([]);
-  const [items, setItems] = useState<SharePointDriveItemDiscoveryResult[]>([]);
+  const [items, setItems] = useState<DocumentItem[]>([]);
   const [selectedSite, setSelectedSite] =
     useState<SharePointSiteDiscoveryResult | null>(null);
   const [selectedDrive, setSelectedDrive] =
     useState<SharePointDriveDiscoveryResult | null>(null);
-  const [folderStack, setFolderStack] = useState<
-    SharePointDriveItemDiscoveryResult[]
-  >([]);
+  const [folderStack, setFolderStack] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
@@ -156,7 +154,7 @@ ${sites.map(buildCatalogItem).join("\n")}
     }
   };
 
-  const handleOpenFolder = async (folder: SharePointDriveItemDiscoveryResult) => {
+  const handleOpenFolder = async (folder: DocumentItem) => {
     if (!selectedDrive) return;
 
     try {
@@ -395,47 +393,43 @@ ${sites.map(buildCatalogItem).join("\n")}
                 No hay elementos disponibles en esta ubicación.
               </div>
             ) : (
-              items.map((item) => {
-                const isFolder = Boolean(item.folder);
+              items.map((item) => (
+                <article key={item.id} className="documents-explorer__item">
+                  <div className="documents-explorer__item-icon">
+                    {item.isFolder ? (
+                      <Folder size={20} strokeWidth={2} />
+                    ) : (
+                      <FileText size={20} strokeWidth={2} />
+                    )}
+                  </div>
 
-                return (
-                  <article key={item.id} className="documents-explorer__item">
-                    <div className="documents-explorer__item-icon">
-                      {isFolder ? (
-                        <Folder size={20} strokeWidth={2} />
-                      ) : (
-                        <FileText size={20} strokeWidth={2} />
-                      )}
-                    </div>
+                  <div className="documents-explorer__item-main">
+                    <strong>{item.name}</strong>
+                    <span>
+                      {item.isFolder
+                        ? `${item.childCount ?? 0} elementos`
+                        : item.mimeType ?? "Archivo"}
+                    </span>
+                  </div>
 
-                    <div className="documents-explorer__item-main">
-                      <strong>{item.name ?? "Sin nombre"}</strong>
-                      <span>
-                        {isFolder
-                          ? `${item.folder?.childCount ?? 0} elementos`
-                          : item.file?.mimeType ?? "Archivo"}
-                      </span>
-                    </div>
+                  <div className="documents-explorer__item-actions">
+                    {item.isFolder && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenFolder(item)}
+                      >
+                        Abrir
+                      </button>
+                    )}
 
-                    <div className="documents-explorer__item-actions">
-                      {isFolder && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFolder(item)}
-                        >
-                          Abrir
-                        </button>
-                      )}
-
-                      {item.webUrl && (
-                        <a href={item.webUrl} target="_blank" rel="noreferrer">
-                          SharePoint
-                        </a>
-                      )}
-                    </div>
-                  </article>
-                );
-              })
+                    {item.webUrl && (
+                      <a href={item.webUrl} target="_blank" rel="noreferrer">
+                        SharePoint
+                      </a>
+                    )}
+                  </div>
+                </article>
+              ))
             )}
           </div>
         </main>
