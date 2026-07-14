@@ -15,7 +15,7 @@
 import { useEffect, useState } from "react";
 import {
   Building2,
-  FileText as FileIcon,
+  ChevronRight,
   Folder,
   FolderOpen,
   HardDrive,
@@ -30,6 +30,7 @@ import { useDocumentExplorer } from "../../hooks/useDocumentExplorer";
 import { loadDocumentPreviewUrl } from "../../services/documentSource.service";
 import { mapDocumentItemToPdfMetadata } from "../../utils/mapDocumentItemToPdfMetadata";
 import { formatFileSize, formatShortDate } from "../../utils/formatDocumentMeta";
+import { getDocumentIcon } from "../../utils/getDocumentIcon";
 import type { DocumentItem, DocumentSourceType } from "../../types/document.types";
 import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
 
@@ -117,6 +118,14 @@ export function DocumentWorkspace() {
       setPreviewUrl(url);
     } catch (previewError) {
       console.error("[Document Workspace] preview", previewError);
+    }
+  };
+
+  const handleOpenItem = (item: DocumentItem) => {
+    if (item.isFolder) {
+      openFolder(item);
+    } else {
+      void handleOpenPreview(item);
     }
   };
 
@@ -374,78 +383,70 @@ export function DocumentWorkspace() {
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                        <th className="px-4 py-2.5 font-semibold">Documento</th>
-                        <th className="px-4 py-2.5 font-semibold">Tamaño</th>
-                        <th className="px-4 py-2.5 font-semibold">Modificado</th>
-                        <th className="px-4 py-2.5 text-right font-semibold">Acciones</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {currentItems.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="group border-b border-slate-100 transition last:border-0 hover:bg-indigo-50/50 dark:border-slate-900 dark:hover:bg-indigo-500/5"
-                        >
-                          <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-                                {item.isFolder ? (
-                                  <Folder size={16} strokeWidth={2} className="text-indigo-500" />
-                                ) : (
-                                  <FileIcon size={16} strokeWidth={2} />
-                                )}
-                              </span>
-
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
-                                  {item.name}
-                                </p>
-                                {item.sharedBy && (
-                                  <p className="truncate text-xs text-slate-400">
-                                    Compartido por {item.sharedBy}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="whitespace-nowrap px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
-                            {item.isFolder
-                              ? `${item.childCount ?? 0} elementos`
-                              : formatFileSize(item.size)}
-                          </td>
-
-                          <td className="whitespace-nowrap px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
-                            {formatShortDate(item.lastModifiedDateTime)}
-                          </td>
-
-                          <td className="px-4 py-2.5 text-right">
-                            {item.isFolder ? (
-                              <button
-                                type="button"
-                                onClick={() => openFolder(item)}
-                                className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 opacity-0 transition group-hover:opacity-100 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 dark:text-slate-300"
-                              >
-                                Abrir
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenPreview(item)}
-                                className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 opacity-0 transition group-hover:opacity-100 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 dark:text-slate-300"
-                              >
-                                Ver
-                              </button>
-                            )}
-                          </td>
+                  <div className="max-h-[560px] overflow-y-auto">
+                    <table className="w-full table-fixed border-collapse text-sm">
+                      <thead className="sticky top-0 z-10">
+                        <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                          <th className="w-[52%] px-4 py-2.5 font-semibold">Documento</th>
+                          <th className="w-[16%] px-4 py-2.5 font-semibold">Tamaño</th>
+                          <th className="w-[22%] px-4 py-2.5 font-semibold">Modificado</th>
+                          <th className="w-[10%] px-4 py-2.5" aria-hidden="true" />
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+
+                      <tbody>
+                        {currentItems.map((item) => {
+                          const { icon: ItemIcon, colorClass } = item.isFolder
+                            ? { icon: Folder, colorClass: "text-indigo-500" }
+                            : getDocumentIcon(item.name);
+
+                          return (
+                            <tr
+                              key={item.id}
+                              onClick={() => handleOpenItem(item)}
+                              className="group cursor-pointer border-b border-slate-100 transition last:border-0 hover:bg-indigo-50/50 dark:border-slate-900 dark:hover:bg-indigo-500/5"
+                            >
+                              <td className="px-4 py-2.5">
+                                <div className="flex items-center gap-3">
+                                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-900">
+                                    <ItemIcon size={16} strokeWidth={2} className={colorClass} />
+                                  </span>
+
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
+                                      {item.name}
+                                    </p>
+                                    {item.sharedBy && (
+                                      <p className="truncate text-xs text-slate-400">
+                                        Compartido por {item.sharedBy}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="whitespace-nowrap px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+                                {item.isFolder
+                                  ? `${item.childCount ?? 0} elementos`
+                                  : formatFileSize(item.size)}
+                              </td>
+
+                              <td className="whitespace-nowrap px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+                                {formatShortDate(item.lastModifiedDateTime)}
+                              </td>
+
+                              <td className="px-4 py-2.5 text-right">
+                                <ChevronRight
+                                  size={16}
+                                  className="ml-auto text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-indigo-500 dark:text-slate-600"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </>

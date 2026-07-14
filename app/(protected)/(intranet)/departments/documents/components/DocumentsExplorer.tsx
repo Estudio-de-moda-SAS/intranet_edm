@@ -21,6 +21,7 @@ import {
   type SharePointSiteDiscoveryResult,
 } from "../services/sharepointDiscovery.service";
 import type { DocumentItem } from "../types/document.types";
+import "./DocumentsExplorer.css";
 
 function toSlug(value: string) {
   return value
