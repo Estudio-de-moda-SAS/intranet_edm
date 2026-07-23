@@ -19,6 +19,7 @@
 // app/(protected)/(intranet)/home/HomePageContent.tsx
 
 import { NewsSection }        from "@/app/components/home/news/NewsSection";
+import { EdmNewsSection }     from "@/app/components/home/edm-news/EdmNewsSection";
 import { EventsSection }      from "@/app/components/home/EventsSection";
 import { TasksCard }          from "@/app/components/home/TasksCard";
 import { BirthdaysCard }      from "@/app/components/home/BirthdaysCard";
@@ -85,7 +86,7 @@ type HomePageContentProps = {
  * 1. Hero banner (bienvenida)
  * 2. KPI strip
  * 3. Grid principal:
- *    - columna izquierda: noticias + solicitudes
+ *    - columna izquierda: EDM News (7/12) + Mi espacio de trabajo (5/12) + solicitudes
  *    - sidebar: favoritos, tareas, reconocimientos, eventos, cumpleaños
  * 4. Sección de líderes
  * 5. Panel de feedback
@@ -105,6 +106,8 @@ export function HomePageContent({ data }: HomePageContentProps) {
   const SHOW_TASKS_CARD = false;
   const SHOW_FAVORITES_CARD = false;
   const SHOW_LEADERS_SECTION = false;
+  const SHOW_KPI_STRIP = false;
+  const SHOW_FEEDBACK_PANEL = false;
 
   const SHOW_SIDEBAR =
   SHOW_FAVORITES_CARD ||
@@ -128,12 +131,12 @@ export function HomePageContent({ data }: HomePageContentProps) {
       {/* ============================================================ */}
       <AnimatedHeroBanner user={data.user} />
 
-<div className="px-6 pb-10">
+<div className="px-6 pb-10 pt-6 lg:pt-8">
 
         {/* ========================================================== */}
         {/* KPI Strip                                                  */}
         {/* ========================================================== */}
-        <AnimatedKPIStrip />
+        {SHOW_KPI_STRIP && <AnimatedKPIStrip />}
 
         {/* ========================================================== */}
         {/* Grid principal                                             */}
@@ -141,7 +144,7 @@ export function HomePageContent({ data }: HomePageContentProps) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
 
           {/* -------------------------------------------------------- */}
-          {/* Columna izquierda: noticias + solicitudes                */}
+          {/* Columna izquierda: EDM News + workspace + solicitudes    */}
           {/* -------------------------------------------------------- */}
           <div
   className={`
@@ -149,9 +152,21 @@ export function HomePageContent({ data }: HomePageContentProps) {
     ${SHOW_SIDEBAR ? "lg:col-span-9 lg:w-[96%]" : "lg:col-span-12"}
   `}
 >
-            <AnimatedCard delay={0}>
-              <NewsSection announcements={data.announcements} />
-            </AnimatedCard>
+            {/* ------------------------------------------------------ */}
+            {/* EDM News + Mi espacio de trabajo (lado a lado)         */}
+            {/* ------------------------------------------------------ */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-7">
+                <AnimatedCard delay={0}>
+                  <EdmNewsSection />
+                </AnimatedCard>
+              </div>
+              <div className="lg:col-span-5">
+                <AnimatedCard delay={0.04}>
+                  <NewsSection announcements={data.announcements} />
+                </AnimatedCard>
+              </div>
+            </div>
 
             {SHOW_REQUESTS_PANEL && (
             <AnimatedCard delay={0.08}>
@@ -217,9 +232,11 @@ export function HomePageContent({ data }: HomePageContentProps) {
         {/* ========================================================== */}
         {/* Panel de feedback                                          */}
         {/* ========================================================== */}
-        <AnimatedViewCard className="mt-6">
-          <FeedbackPanel />
-        </AnimatedViewCard>
+        {SHOW_FEEDBACK_PANEL && (
+          <AnimatedViewCard className="mt-6">
+            <FeedbackPanel />
+          </AnimatedViewCard>
+        )}
 
       </div>
     </main>

@@ -10,6 +10,10 @@
  * - buscador visual de la intranet,
  * - descripción contextual,
  * - accesos rápidos a módulos internos.
+ *
+ * Nota de layout: "Acciones rápidas" pasó de 2 a 3 columnas — con 5
+ * módulos, 2 columnas dejaba siempre un único item huérfano en la última
+ * fila (2+2+1). Con 3 columnas queda 3+2, visualmente más equilibrado.
  */
 
 "use client";
@@ -155,6 +159,7 @@ useEffect(() => {
     subtitle="Accede a los módulos principales de la intranet"
     badgeLabel={`${homeWorkspaceLinks.length} módulos`}
     showFavorites={false}
+    columns={3}
   />
 </div>
     </section>

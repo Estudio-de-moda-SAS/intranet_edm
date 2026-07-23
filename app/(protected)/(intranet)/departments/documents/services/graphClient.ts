@@ -117,3 +117,39 @@ export async function graphPost<T>(
 
   return response.json() as Promise<T>;
 }
+
+/**
+ * Sube el contenido binario de un archivo a Microsoft Graph (PUT).
+ *
+ * @remarks
+ * Usado para operaciones de escritura (crear/actualizar `driveItem`s).
+ * Requiere un scope de escritura, ej. `Files.ReadWrite.All`.
+ */
+export async function graphUpload<T>(
+  pathOrUrl: string,
+  file: File,
+  extraScopes: readonly string[]
+): Promise<T> {
+  const token = await getGraphToken(extraScopes);
+
+  const url = pathOrUrl.startsWith("https://")
+    ? pathOrUrl
+    : `${GRAPH_BASE_URL}${pathOrUrl}`;
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `[Graph] ${response.status} ${response.statusText} · ${url}`
+    );
+  }
+
+  return response.json() as Promise<T>;
+}

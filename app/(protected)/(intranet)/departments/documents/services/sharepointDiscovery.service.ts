@@ -11,8 +11,8 @@
  *   una vez que el catálogo oficial de sitios (`documentSites.ts`) resuelve
  *   el `siteId` de cada área y el usuario selecciona una biblioteca.
  *
- * La navegación de contenido (raíz y carpetas) delega en
- * {@link driveNavigation.service} para compartir lógica con las demás
+ * La navegación de contenido (raíz y carpetas) y la previsualización delegan
+ * en {@link driveNavigation.service} para compartir lógica con las demás
  * fuentes documentales del explorador.
  *
  * Requiere el scope `Sites.Read.All`.
@@ -23,6 +23,7 @@ import {
   getDocumentPreviewUrl,
   getDriveFolderChildren,
   getDriveRootChildren,
+  uploadFileToDriveFolder
 } from "./driveNavigation.service";
 import type { DocumentItem } from "../types/document.types";
 
@@ -179,6 +180,30 @@ export async function discoverSharePointSites(
   return sortByName(uniqueById(sites));
 }
 
+/**
+ * Resuelve un sitio de SharePoint de forma directa y determinística a
+ * partir de su URL real (no depende del índice de búsqueda de `/sites`).
+ *
+ * @remarks
+ * Equivale a `GET /sites/{hostname}:/{server-relative-path}`. Útil cuando
+ * el sitio no aparece en `searchSharePointSites`/`discoverSharePointSites`
+ * por limitaciones del índice de búsqueda de Graph.
+ *
+ * @param siteUrl - URL completa del sitio, ej.
+ * `https://estudiodemoda.sharepoint.com/sites/FS`.
+ */
+export async function resolveSharePointSiteByUrl(
+  siteUrl: string
+): Promise<SharePointSiteDiscoveryResult> {
+  const url = new URL(siteUrl.trim());
+  const hostname = url.hostname;
+  const serverRelativePath = url.pathname.replace(/\/+$/, "");
+
+  return graphFetch<SharePointSiteDiscoveryResult>(
+    `/sites/${hostname}:${serverRelativePath}`
+  );
+}
+
 export async function getSharePointSiteDrives(
   siteId: string
 ): Promise<SharePointDriveDiscoveryResult[]> {
@@ -225,10 +250,28 @@ export async function getSharePointFolderChildren(
     SHAREPOINT_DISCOVERY_SCOPES
   );
 }
+
 /** URL de previsualización embebible para un archivo de SharePoint. */
 export async function getSharePointPreviewUrl(
   driveId: string,
   itemId: string
 ): Promise<string | undefined> {
   return getDocumentPreviewUrl(driveId, itemId, SHAREPOINT_DISCOVERY_SCOPES);
+}
+
+const SHAREPOINT_WRITE_SCOPES = ["Files.ReadWrite.All"] as const;
+
+/** Sube un archivo a una carpeta de una biblioteca de SharePoint (prueba). */
+export async function uploadSharePointFile(
+  driveId: string,
+  parentItemId: string | null,
+  file: File
+): Promise<DocumentItem> {
+  return uploadFileToDriveFolder(
+    driveId,
+    parentItemId,
+    file,
+    "corporate-sites",
+    SHAREPOINT_WRITE_SCOPES
+  );
 }

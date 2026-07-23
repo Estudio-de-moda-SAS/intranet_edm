@@ -1,43 +1,30 @@
 "use client";
 
+import { LifeBuoy } from "lucide-react";
 import { TicketSystemCard } from "./components/TicketSystemCard";
 import { TICKET_SYSTEMS } from "./config/ticketSystems.config";
-import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHeroBanner";
 
 export function TicketSystemsPageContent() {
   return (
     <main className="space-y-6">
-      <DepartmentHeroBanner
-        title="Sistemas de Tickets"
-        subtitle="Accede de forma centralizada a las plataformas de tickets habilitadas por la compañía."
-        gradientFrom="from-slate-900"
-        gradientVia="via-indigo-800"
-        gradientTo="to-violet-700"
-        dotPatternId="tickets-dot-pattern"
-        pills={[
-          {
-            type: "status",
-            text: `${TICKET_SYSTEMS.length} sistemas disponibles`,
-          },
-          {
-            type: "info",
-            text: "Acceso centralizado",
-          },
-        ]}
-      />
-
       <section className="px-6 pt-10 pb-12 lg:px-14">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Plataformas disponibles
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Elige el sistema donde quieres crear o consultar tickets.
-            </p>
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+              <LifeBuoy className="h-5 w-5" />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Plataformas disponibles
+              </h2>
+              <p className="text-sm text-slate-500">
+                Elige el sistema donde quieres crear o consultar tickets.
+              </p>
+            </div>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {TICKET_SYSTEMS.map((system) => (
               <TicketSystemCard key={system.id} system={system} />
             ))}

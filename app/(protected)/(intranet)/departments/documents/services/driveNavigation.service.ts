@@ -10,7 +10,7 @@
  * las fuentes documentales no dupliquen lógica de fetch ni de mapeo.
  */
 
-import { graphFetchCollection, graphPost } from "./graphClient";
+import { graphFetchCollection, graphPost, graphUpload  } from "./graphClient";
 
 import type {
   DocumentItem,
@@ -143,4 +143,34 @@ export async function getDocumentPreviewUrl(
   );
 
   return result.getUrl;
+}
+
+/**
+ * Sube un archivo a una carpeta de un drive (o a la raíz si `parentItemId`
+ * es `null`).
+ *
+ * @remarks
+ * Usa `@microsoft.graph.conflictBehavior=rename`: si ya existe un archivo
+ * con el mismo nombre, Graph lo renombra automáticamente en vez de
+ * sobrescribirlo (ej. `informe (1).docx`), evitando pérdida de datos.
+ */
+export async function uploadFileToDriveFolder(
+  driveId: string,
+  parentItemId: string | null,
+  file: File,
+  source: DocumentSourceType,
+  extraScopes: readonly string[]
+): Promise<DocumentItem> {
+  const encodedName = encodeURIComponent(file.name);
+
+  const path = parentItemId
+    ? `/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(
+        parentItemId
+      )}:/${encodedName}:/content?@microsoft.graph.conflictBehavior=rename`
+    : `/drives/${encodeURIComponent(
+        driveId
+      )}/root:/${encodedName}:/content?@microsoft.graph.conflictBehavior=rename`;
+
+  const raw = await graphUpload<GraphDriveItem>(path, file, extraScopes);
+  return mapToDocumentItem(raw, source, driveId);
 }

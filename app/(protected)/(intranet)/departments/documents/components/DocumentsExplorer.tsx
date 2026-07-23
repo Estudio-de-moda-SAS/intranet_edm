@@ -16,12 +16,14 @@ import {
   getSharePointDriveRootChildren,
   getSharePointFolderChildren,
   getSharePointSiteDrives,
+  resolveSharePointSiteByUrl,
   searchSharePointSites,
   type SharePointDriveDiscoveryResult,
   type SharePointSiteDiscoveryResult,
 } from "../services/sharepointDiscovery.service";
 import type { DocumentItem } from "../types/document.types";
 import "./DocumentsExplorer.css";
+import { uploadSharePointFile } from "../services/sharepointDiscovery.service";
 
 function toSlug(value: string) {
   return value
@@ -50,6 +52,7 @@ function buildCatalogItem(site: SharePointSiteDiscoveryResult, index: number) {
 
 export function DocumentsExplorer() {
   const [query, setQuery] = useState("");
+  const [siteUrl, setSiteUrl] = useState("");
   const [sites, setSites] = useState<SharePointSiteDiscoveryResult[]>([]);
   const [drives, setDrives] = useState<SharePointDriveDiscoveryResult[]>([]);
   const [items, setItems] = useState<DocumentItem[]>([]);
@@ -114,6 +117,26 @@ ${sites.map(buildCatalogItem).join("\n")}
     } catch (discoverError) {
       console.error("[Documents Explorer]", discoverError);
       setError("No se pudieron descubrir sitios de SharePoint.");
+    } finally {
+      setLoading("");
+    }
+  };
+
+  const handleResolveByUrl = async () => {
+    if (!siteUrl.trim()) return;
+
+    try {
+      setLoading("Resolviendo sitio por URL...");
+      setError("");
+      resetSelection();
+
+      const site = await resolveSharePointSiteByUrl(siteUrl);
+      setSites([site]);
+    } catch (resolveError) {
+      console.error("[Documents Explorer]", resolveError);
+      setError(
+        "No se pudo resolver el sitio a partir de esa URL. Verifica que sea correcta."
+      );
     } finally {
       setLoading("");
     }
@@ -195,6 +218,32 @@ ${sites.map(buildCatalogItem).join("\n")}
     }
   };
 
+  const [uploading, setUploading] = useState(false);
+
+  const handleTestUpload = async (file: File | undefined) => {
+  if (!file || !selectedDrive) return;
+
+  const currentFolderId = folderStack.at(-1)?.id ?? null;
+
+  try {
+    setUploading(true);
+    setError("");
+
+    await uploadSharePointFile(selectedDrive.id, currentFolderId, file);
+
+    // Refresca el listado actual para ver el archivo recién subido
+    const results = currentFolderId
+      ? await getSharePointFolderChildren(selectedDrive.id, currentFolderId)
+      : await getSharePointDriveRootChildren(selectedDrive.id);
+
+    setItems(results);
+  } catch (uploadError) {
+    console.error("[Documents Explorer] upload", uploadError);
+    setError("No se pudo subir el archivo. Verifica que el permiso Files.ReadWrite.All esté aprobado.");
+  } finally {
+    setUploading(false);
+  }
+};
   return (
     <section className="documents-explorer">
       <div className="documents-explorer__toolbar">
@@ -212,6 +261,20 @@ ${sites.map(buildCatalogItem).join("\n")}
           />
         </div>
 
+        <div className="documents-explorer__search">
+          <Search size={17} strokeWidth={2} />
+
+          <input
+            type="text"
+            placeholder="Pegar URL completa del sitio..."
+            value={siteUrl}
+            onChange={(event) => setSiteUrl(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") handleResolveByUrl();
+            }}
+          />
+        </div>
+
         <div className="documents-explorer__actions">
           <button
             type="button"
@@ -219,6 +282,14 @@ ${sites.map(buildCatalogItem).join("\n")}
             disabled={!query.trim()}
           >
             Buscar
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResolveByUrl}
+            disabled={!siteUrl.trim()}
+          >
+            Resolver por URL
           </button>
 
           <button type="button" onClick={handleDiscoverSites}>
@@ -370,6 +441,34 @@ ${sites.map(buildCatalogItem).join("\n")}
                 <ExternalLink size={15} strokeWidth={2} />
               </a>
             )}
+            {selectedDrive && (
+  <label style={{ cursor: uploading ? "wait" : "pointer" }}>
+    <input
+      type="file"
+      style={{ display: "none" }}
+      disabled={uploading}
+      onChange={(event) => {
+        void handleTestUpload(event.target.files?.[0]);
+        event.target.value = "";
+      }}
+    />
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.4rem",
+        padding: "0.5rem 0.9rem",
+        borderRadius: "10px",
+        background: uploading ? "#94a3b8" : "#4f7cff",
+        color: "white",
+        fontSize: "0.78rem",
+        fontWeight: 700,
+      }}
+    >
+      {uploading ? "Subiendo..." : "Subir archivo (prueba)"}
+    </span>
+  </label>
+)}
           </div>
 
           {selectedDrive && (
