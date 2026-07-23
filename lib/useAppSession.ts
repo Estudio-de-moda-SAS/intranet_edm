@@ -16,6 +16,13 @@
  * El contrato de retorno {@link AppSession} es **idéntico** al anterior
  * — ningún componente consumidor necesita cambios.
  *
+ * **Sobre `DEV_DISABLE_ROLES`:**
+ * Este hook YA NO tiene manejo propio de esa bandera. Toda la lógica de
+ * "forzar accessLevel a admin mientras los permisos de Azure AD están
+ * pendientes" vive únicamente en {@link useGraphProfile} — `useAppSession`
+ * simplemente usa el `data` que ese hook ya resuelve correctamente, para
+ * evitar dos copias de la misma lógica desincronizándose entre sí.
+ *
  * @example
  * ```tsx
  * const { user, level, can, isLoading } = useAppSession();
@@ -31,7 +38,6 @@ import { useMsal }                               from "@azure/msal-react";
 import { useGraphProfile }                       from "./useGraphProfile";
 import { DEV_SESSION }                           from "./devSession";
 import { can as canFn }                          from "./roles";
-import { DEV_DISABLE_ROLES }                     from "@/config/config";
 import type { AccessLevel, AppUser, Permission } from "./roles";
 
 const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
@@ -104,16 +110,13 @@ export interface AppSession {
  * **Modo bypass** (`NEXT_PUBLIC_AUTH_BYPASS === "true"`):
  * Retorna {@link DEV_SESSION} directamente sin invocar MSAL ni Graph.
  *
- * **Roles desactivados** (`DEV_DISABLE_ROLES === true`):
- * En cuanto MSAL confirma que hay sesión activa, devuelve `admin` sin
- * esperar a que Graph resuelva — la query está desactivada en este modo.
- * Para restaurar: `DEV_DISABLE_ROLES = false` en `config/config.ts`.
- *
  * **Modo producción**:
  * Usa {@link useGraphProfile} para obtener el perfil desde Graph con el
  * token de MSAL. Mientras el perfil se resuelve, `isLoading` es `true` y
  * `user` es `null`. Si MSAL no tiene sesión activa, retorna el estado
- * "no autenticado" con `isAuthed: false`.
+ * "no autenticado" con `isAuthed: false`. El manejo de `DEV_DISABLE_ROLES`
+ * (forzar `accessLevel` a `"admin"`) ocurre dentro de `useGraphProfile` —
+ * este hook no lo duplica.
  *
  * ⚠️ `isBypass` es una constante de build — su valor nunca cambia en
  * tiempo de ejecución, por lo que el orden de invocación de hooks es
@@ -157,29 +160,16 @@ export function useAppSession(): AppSession {
     };
   }
 
-  // Roles desactivados → hay sesión MSAL, no hace falta esperar a Graph.
-  // useGraphProfile tiene la query desactivada en este modo, data nunca llega.
-  // Para restaurar: DEV_DISABLE_ROLES = false en config/config.ts
-  if (DEV_DISABLE_ROLES) {
-    const account = accounts[0];
-    const base    = DEV_SESSION.user as AppUser;
-    const user: AppUser = {
-      ...base,
-      accessLevel: "admin",
-      ...(account && {
-        id:    account.localAccountId,
-        name:  account.name     ?? base.name,
-        email: account.username ?? base.email,
-      }),
-    };
-    return {
-      user,
-      level:     "admin",
-      can:       () => true,
-      isLoading: false,
-      isAuthed:  true,
-    };
-  }
+  // Nota: antes existía aquí un bloque especial para DEV_DISABLE_ROLES que
+  // sustituía el usuario completo por DEV_SESSION (el mock de desarrollo).
+  // Se eliminó porque duplicaba —y desincronizaba— la misma lógica que ya
+  // vive en useGraphProfile: ese hook ya consulta Graph siempre (sin
+  // desactivarse por DEV_DISABLE_ROLES) y ya fuerza accessLevel a "admin"
+  // sin tocar el resto del perfil. useAppSession ahora confía 100% en el
+  // `data` que useGraphProfile ya resuelve correctamente, en vez de
+  // mantener una segunda copia de la misma bandera que podía quedar
+  // desactualizada respecto a la otra (que fue justo lo que causó que el
+  // cargo mostrara "Aprendiz TI 2" para todos los usuarios).
 
   // Graph aún está resolviendo
   if (isLoading || !data) {

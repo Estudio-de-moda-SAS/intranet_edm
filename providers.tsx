@@ -9,15 +9,23 @@
  * montado en `app/layout.tsx`.
  *
  * **Providers incluidos (de exterior a interior):**
- * 1. **`MsalProvider`** — disponible solo en modo producción. Inicializa
- *    la instancia de MSAL Browser y expone el contexto de autenticación
- *    a todos los componentes cliente. En modo bypass se omite para evitar
- *    llamadas a Azure innecesarias.
- * 2. **`QueryClientProvider`** (TanStack Query) — gestión de caché y
+ * 1. **`initMSALCore()`** — corre `msal.initialize()` ANTES de montar
+ *    `MsalProvider` (requisito de `msal-react`). Mientras esto no termina,
+ *    se muestra un loader mínimo en vez del árbol de providers.
+ * 2. **`MsalProvider`** — disponible solo en modo producción. Expone el
+ *    contexto de autenticación a todos los componentes cliente. En modo
+ *    bypass se omite para evitar llamadas a Azure innecesarias.
+ * 3. **`MsalBootstrap`** — YA DENTRO de `MsalProvider`, procesa
+ *    `handleRedirectPromise()` y reconcilia la cookie `edm_authed` (que
+ *    lee el middleware) contra la sesión real de MSAL (`localStorage`).
+ *    Deja pasar `/login` siempre, sin bloquear, porque ahí "sin cuenta"
+ *    es el estado esperado. Ver el comentario dentro de `MsalBootstrap`
+ *    para el detalle completo.
+ * 4. **`QueryClientProvider`** (TanStack Query) — gestión de caché y
  *    estado asíncrono para Client Components.
- * 3. **`MotionConfig`** (Framer Motion) — control global de animaciones
+ * 5. **`MotionConfig`** (Framer Motion) — control global de animaciones
  *    sincronizado con las preferencias de apariencia del colaborador.
- * 4. **`SettingsInitializer`** — aplica dark mode, densidad, fuente y
+ * 6. **`SettingsInitializer`** — aplica dark mode, densidad, fuente y
  *    otras preferencias en cada navegación.
  *
  * **Cambio respecto a la versión NextAuth:**
@@ -44,11 +52,12 @@
 
 "use client";
 
-import { MsalProvider }                         from "@azure/msal-react";
-import { msal }                                 from "@/app/api/auth/msal";
+import { MsalProvider, useMsal }                from "@azure/msal-react";
+import { msal, initMSALCore, initMSAL }         from "@/app/api/auth/msal";
 import { QueryClient, QueryClientProvider }     from "@tanstack/react-query";
 import { ReactQueryDevtools }                   from "@tanstack/react-query-devtools";
 import { useState, useEffect }                  from "react";
+import { usePathname, useRouter }               from "next/navigation";
 import { MotionConfig }                         from "framer-motion";
 import { SettingsInitializer }                  from "@/app/components/SettingsInitializer";
 
@@ -65,6 +74,16 @@ const isBypass = process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
  * apariencia del colaborador.
  */
 const STORAGE_KEY = "edm_intranet_settings";
+
+/**
+ * Nombres de cookie compartidos con `middleware.ts` (proxy.ts). Se
+ * duplican aquí (en vez de importarlas) porque ese archivo corre en Edge
+ * Runtime e importa `next/server`, que no debe entrar al bundle de
+ * cliente. Si cambian los nombres allá, deben actualizarse aquí también.
+ */
+const AUTH_COOKIE         = "edm_authed";
+const ACCESS_LEVEL_COOKIE = "edm_access_level";
+const LAST_PAGE_COOKIE    = "edm_last_page";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -99,6 +118,99 @@ function getAnimationsEnabled(): boolean {
   }
 }
 
+/**
+ * Borra las cookies de sesión del lado del cliente.
+ *
+ * @remarks
+ * Se usa cuando detectamos que la cookie `edm_authed` dice "autenticado"
+ * pero la sesión real de MSAL (`localStorage`) no existe — un estado
+ * desincronizado que, sin esta limpieza, deja al middleware creyendo
+ * para siempre que el usuario tiene sesión válida.
+ */
+function clearAuthCookies(): void {
+  const expired = "path=/; max-age=0; samesite=lax";
+  document.cookie = `${AUTH_COOKIE}=; ${expired}`;
+  document.cookie = `${ACCESS_LEVEL_COOKIE}=; ${expired}`;
+  document.cookie = `${LAST_PAGE_COOKIE}=; ${expired}`;
+}
+
+// ── Bootstrap del redirect de MSAL ─────────────────────────────────────────────
+
+/**
+ * Procesa `handleRedirectPromise()` una sola vez, ya montado dentro de
+ * `<MsalProvider>`, para que sus eventos actualicen correctamente el
+ * `inProgress` que expone `useMsal()` en el resto de la app.
+ *
+ * @remarks
+ * Mientras el redirect no ha terminado de procesarse, no renderiza
+ * `children` — evita que `HomeClient` y componentes similares lean
+ * `useMsal()` con un estado a medio resolver.
+ *
+ * **Reconciliación cookie vs. sesión real de MSAL:**
+ * El middleware (`proxy.ts`) decide si dejar pasar a una ruta protegida
+ * basándose SOLO en la cookie `edm_authed`. Esa cookie es un flag
+ * optimista que el cliente escribe tras un login exitoso — no una
+ * verificación en vivo en cada request. Si el `localStorage` de MSAL se
+ * vacía (por el navegador, por una política de Chrome, por lo que sea)
+ * sin que la cookie se borre, el middleware sigue dejando pasar al
+ * usuario a rutas protegidas, pero `useMsal()` aquí reporta
+ * `accounts: []`. Sin este guard, cada módulo (`HomeClient`, Documentos,
+ * etc.) se entera del problema por separado y a destiempo, mostrando
+ * errores genéricos en vez de mandar al usuario a `/login`.
+ *
+ * Se centraliza aquí: en cuanto MSAL termina de inicializar, si no hay
+ * ninguna cuenta real, se borra la cookie desactualizada y se redirige a
+ * `/login` de una vez — antes de que cualquier hijo intente pedir datos
+ * con una sesión que no existe.
+ *
+ * **`/login` es un caso especial:** ahí "sin cuenta" es el estado
+ * NORMAL y esperado (es literalmente donde el usuario va a loguearse).
+ * Por eso `isLoginRoute` excluye esa ruta tanto del efecto de redirección
+ * como del bloqueo de renderizado — de lo contrario la página de login
+ * nunca podría montarse (spinner infinito, porque nunca hay cuenta ahí
+ * antes de loguearse, y el guard de redirección tampoco actúa por estar
+ * ya en `/login`).
+ */
+function MsalBootstrap({ children }: { children: React.ReactNode }) {
+  const { inProgress, accounts } = useMsal();
+  const [redirectHandled, setRedirectHandled] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    initMSAL().finally(() => setRedirectHandled(true));
+  }, []);
+
+  const isLoginRoute = pathname?.startsWith("/login") ?? false;
+
+  useEffect(() => {
+    if (!redirectHandled || inProgress !== "none") return;
+    if (accounts.length > 0) return;
+    if (isLoginRoute) return;
+
+    clearAuthCookies();
+    router.replace(`/login?callbackUrl=${encodeURIComponent(pathname ?? "/")}`);
+  }, [redirectHandled, inProgress, accounts.length, isLoginRoute, pathname, router]);
+
+  // Sin cuenta y fuera de /login: se está a punto de redirigir (efecto de
+  // arriba) — mostrar el loader mientras tanto para no montar children con
+  // una sesión que no existe. En /login, "sin cuenta" es el estado
+  // esperado y normal: nunca debe bloquearse, o esa página jamás podría
+  // renderizarse para que el usuario inicie sesión.
+  const awaitingRedirect =
+    redirectHandled && inProgress === "none" && accounts.length === 0 && !isLoginRoute;
+
+  if (!redirectHandled || inProgress === "startup" || awaitingRedirect) {
+    return (
+      <div className="min-h-screen bg-slate-50/70 flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 /**
@@ -106,6 +218,15 @@ function getAnimationsEnabled(): boolean {
  *
  * @remarks
  * Debe montarse como hijo directo del `<body>` en `app/layout.tsx`.
+ *
+ * **Inicialización de MSAL (en dos fases, ver {@link MsalBootstrap}):**
+ * 1. `msalCoreReady` — controla `msal.initialize()`, ANTES de montar
+ *    `MsalProvider`.
+ * 2. Dentro de `MsalBootstrap` — controla `handleRedirectPromise()` y la
+ *    reconciliación de sesión, DESPUÉS de montar `MsalProvider`.
+ *
+ * En modo bypass ninguna de las dos fases corre — se salta directo al
+ * árbol de contenido.
  *
  * **TanStack Query:**
  * - `staleTime: 60s` — datos frescos durante 1 minuto.
@@ -119,6 +240,18 @@ function getAnimationsEnabled(): boolean {
  * @param props - Ver {@link ProvidersProps}.
  */
 export default function Providers({ children }: ProvidersProps) {
+
+  // ── Inicialización de MSAL (fase 1: solo initialize()) ──────────────────
+  const [msalCoreReady, setMsalCoreReady] = useState(isBypass);
+
+  useEffect(() => {
+    if (isBypass) return;
+    // Solo `msal.initialize()` — el procesamiento del redirect
+    // (`handleRedirectPromise`) y la reconciliación de sesión se hacen
+    // más abajo, DENTRO de `<MsalProvider>`, via `MsalBootstrap`. Ver
+    // initMSAL() en msal.ts para el porqué de esta separación.
+    initMSALCore().finally(() => setMsalCoreReady(true));
+  }, []);
 
   // ── TanStack Query client ───────────────────────────────────────────────
   const [queryClient] = useState(
@@ -173,9 +306,23 @@ export default function Providers({ children }: ProvidersProps) {
   // inicializaciones de MSAL innecesarias en desarrollo
   if (isBypass) return content;
 
+  // No montar MsalProvider hasta que msal.initialize() haya terminado
+  // (requisito de msal-react). El procesamiento del redirect y la
+  // reconciliación de sesión todavía no corrieron en este punto — eso lo
+  // hace MsalBootstrap, ya dentro del provider.
+  if (!msalCoreReady) {
+    return (
+      <div className="min-h-screen bg-slate-50/70 flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <MsalProvider instance={msal}>
-      {content}
+      <MsalBootstrap>
+        {content}
+      </MsalBootstrap>
     </MsalProvider>
   );
 }

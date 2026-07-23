@@ -43,6 +43,9 @@ export function isSupported(url: string): boolean {
 export function isOfficeFile(url: string): boolean {
   if (url.includes("view.officeapps.live.com")) return true;
   if (url.includes("action=embedview")) return true;
+  if (url.includes("action=interactivepreview")) return true;
+  if (url.includes("/_layouts/15/embed.aspx")) return true;
+  if (url.includes("/_layouts/15/Doc.aspx")) return true;
   return OFFICE_TYPES.some((ext) => url.toLowerCase().endsWith(ext));
 }
 
@@ -54,5 +57,14 @@ export function isOfficeFile(url: string): boolean {
  */
 export function toOfficeEmbedUrl(url: string): string {
   if (url.includes("view.officeapps.live.com")) return url;
+
+  // URLs generadas por Graph (acción `preview`) ya son embeds funcionales
+  // de SharePoint, con su propio token WOPI. Envolverlas en Office Online
+  // rompe la autenticación (CORS/token cruzado) y produce 404.
+  if (url.includes("/_layouts/15/embed.aspx")) return url;
+  if (url.includes("/_layouts/15/Doc.aspx")) return url;
+  if (url.includes("action=embedview")) return url;
+  if (url.includes("action=interactivepreview")) return url;
+
   return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
 }

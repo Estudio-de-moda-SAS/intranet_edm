@@ -12,6 +12,17 @@
  * - acciones rápidas hacia módulos internos,
  * - tarjeta institucional de la organización,
  * - accesos rápidos a herramientas Microsoft 365.
+ *
+ * Layout: antes tenía un grid interno de 2 columnas (workspace a la
+ * izquierda, tarjeta institucional + Microsoft 365 a la derecha) con
+ * altura fija de 620px. Al reducir el ancho de esta sección en el home
+ * (para darle más espacio a EDM News), ese grid interno de 2 columnas
+ * quedaba demasiado apretado. Se cambió a un stack vertical de una sola
+ * columna — mismo contenido, sin altura fija, apilado de arriba a abajo.
+ *
+ * Orden del stack: tarjeta institucional (KnowUsCard) primero, luego el
+ * workspace de búsqueda/accesos, luego Microsoft 365 — a pedido, para que
+ * lo institucional sea lo primero que se vea al entrar.
  */
 
 "use client";
@@ -59,17 +70,17 @@ interface Props {
  *
  * @param props Propiedades del componente.
  * @param props.announcements Lista de noticias disponibles.
- * @returns Sección con workspace, acciones rápidas, tarjeta institucional y accesos Microsoft 365.
+ * @returns Sección con tarjeta institucional, workspace y accesos Microsoft 365, apilados verticalmente.
  *
  * @remarks
  * - El carrusel de noticias fue reemplazado por un workspace operativo.
- * - La columna izquierda concentra la búsqueda y los accesos internos.
- * - La columna derecha conserva "Nuestra organización" y agrupa Microsoft 365.
+ * - Todo el contenido va en una sola columna vertical (ver nota de layout arriba).
  * - No requiere backend, base de datos ni integración adicional con Microsoft Graph.
  */
 export function NewsSection({ announcements: _announcements }: Props) {
-  const SHOW_POLICIES_CARD_ASIDE = false; // Controla visibilidad de la tarjeta de políticas en el lado derecho
-  const SHOW_MICROSOFT_365_SECTION = true; // Controla visibilidad de accesos rápidos a herramientas Microsoft 365
+  const SHOW_POLICIES_CARD_ASIDE = false; // Controla visibilidad de la tarjeta de políticas
+  const SHOW_MICROSOFT_365_SECTION = true; // Controla visibilidad de accesos rápidos a Microsoft 365
+  const SHOW_WORKSPACE = false; // Controla visibilidad del workspace de búsqueda y accesos rápidos
 
   return (
     <section className="space-y-4">
@@ -87,49 +98,24 @@ export function NewsSection({ announcements: _announcements }: Props) {
         </div>
       </div>
 
-      {/* Grid principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:h-[620px]">
+    {/* Stack vertical: tarjeta institucional → Microsoft 365 → workspace */}
+      <div className="flex flex-col gap-3">
+        <KnowUsCard />
 
-        {/* Workspace principal */}
-<div className="h-auto lg:h-full">
-  <HomeWorkspace />
-</div>
-        {/* Panel derecho */}
-        <div className="grid grid-cols-2 grid-rows-2 gap-2 lg:h-full">
-          <div
-            className={`
-              ${
-                SHOW_POLICIES_CARD_ASIDE
-                  ? SHOW_MICROSOFT_365_SECTION
-                    ? "col-span-1 row-span-1"
-                    : "col-span-1 row-span-2"
-                  : SHOW_MICROSOFT_365_SECTION
-                    ? "col-span-2 row-span-1"
-                    : "col-span-2 row-span-2"
-              }
-              lg:h-full
-            `}
-          >
-            <KnowUsCard />
-          </div>
+        {SHOW_MICROSOFT_365_SECTION && (
+          <QuickLinksSection
+            quickLinks={microsoft365QuickLinks}
+            title="Microsoft 365"
+            subtitle="Accede a tus herramientas corporativas"
+            badgeLabel={`${microsoft365QuickLinks.length} herramientas`}
+            showFavorites={false}
+          />
+        )}
 
-          {SHOW_POLICIES_CARD_ASIDE && <PoliciesCardAside />}
-
-          {SHOW_MICROSOFT_365_SECTION && (
-            <div className="col-span-2 lg:h-full">
-              <QuickLinksSection
-                quickLinks={microsoft365QuickLinks}
-                title="Microsoft 365"
-                subtitle="Accede a tus herramientas corporativas"
-                badgeLabel={`${microsoft365QuickLinks.length} herramientas`}
-                showFavorites={false}
-                fillHeight
-              />
-            </div>
-          )}
-        </div>
-
+        {SHOW_POLICIES_CARD_ASIDE && <PoliciesCardAside />}
+        {SHOW_WORKSPACE && <HomeWorkspace />}
       </div>
+
     </section>
   );
 }

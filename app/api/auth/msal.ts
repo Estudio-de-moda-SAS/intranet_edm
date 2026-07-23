@@ -13,6 +13,22 @@
  * | `NEXT_PUBLIC_MSAL_CLIENT_ID`    | Client ID de la app en Azure AD      |
  * | `NEXT_PUBLIC_MSAL_TENANT_ID`    | Tenant ID del directorio corporativo |
  *
+ * @remarks
+ * **Sobre `initMSALCore()` vs `initMSAL()`:**
+ * Se dividió la inicialización en dos pasos porque tienen requisitos de
+ * timing distintos respecto a `<MsalProvider>` (de `@azure/msal-react`):
+ *
+ * - {@link initMSALCore} — solo `msal.initialize()`. Debe correr ANTES de
+ *   montar `<MsalProvider>` (requisito de la librería).
+ * - {@link initMSAL} — además llama `msal.handleRedirectPromise()`. Debe
+ *   correr DESPUÉS de montar `<MsalProvider>`, porque el provider se
+ *   suscribe a los eventos internos de MSAL (`HANDLE_REDIRECT_START`/`END`)
+ *   para actualizar su `inProgress` de `"startup"` a `"none"`. Si el
+ *   redirect se procesa antes de que el provider exista, esos eventos se
+ *   pierden y `inProgress` queda atascado en `"startup"` para siempre.
+ *
+ * Ver `providers.tsx` para el orden real de estas llamadas.
+ *
  * @example
  * ```ts
  * import { getAccessToken } from "@/app/api/auth/msal";
@@ -75,8 +91,13 @@ export const msal = new PublicClientApplication({
 
 // -- Estado interno ------------------------------------------------------------
 
-let initialized = false;
 let eventsWired = false;
+
+/**
+ * Promesa compartida de solo `msal.initialize()` — se usa para el guard
+ * de pre-render en `Providers`, ANTES de montar `MsalProvider`.
+ */
+let coreInitPromise: Promise<void> | null = null;
 
 // -- Requests reutilizables ----------------------------------------------------
 
@@ -93,25 +114,45 @@ const loginRedirectRequest: RedirectRequest = {
 // -- Inicialización ------------------------------------------------------------
 
 /**
- * Inicializa la instancia MSAL y procesa el retorno del redirect si lo hay.
+ * Inicializa únicamente `msal.initialize()`, sin procesar el redirect.
  *
  * @remarks
- * Idempotente — si ya fue inicializada no hace nada. Debe llamarse antes
- * de cualquier otra operación de MSAL, especialmente antes del primer render
- * en el `MsalProvider`.
+ * Debe completarse antes de montar `<MsalProvider>`. A diferencia de
+ * `handleRedirectPromise()`, esta llamada no depende de que `MsalProvider`
+ * esté escuchando eventos, así que es segura de correr en pre-render.
  *
- * `handleRedirectPromise` es crítico: procesa el hash de retorno de Azure AD
- * tras un login por redirect. Sin esta llamada la sesión no se establece.
+ * Idempotente y a prueba de llamadas concurrentes: la existencia de
+ * `coreInitPromise` (no un booleano) es el guard, para que dos llamadas
+ * casi simultáneas esperen la MISMA promesa en vez de llamar
+ * `msal.initialize()` dos veces en paralelo.
+ */
+export function initMSALCore(): Promise<void> {
+  if (coreInitPromise) return coreInitPromise;
+  coreInitPromise = msal.initialize();
+  return coreInitPromise;
+}
+
+/**
+ * Procesa el retorno del redirect de Azure AD y deja MSAL listo para usarse.
+ *
+ * @remarks
+ * CRÍTICO: debe llamarse desde un componente que ya esté montado DENTRO de
+ * `<MsalProvider>` (nunca antes) — ver {@link MsalBootstrap} en
+ * `providers.tsx`. Llamarla antes de montar el provider deja el
+ * `inProgress` de `useMsal()` atascado en `"startup"` de forma permanente,
+ * porque los eventos que el provider necesita escuchar ya se dispararon
+ * sin testigos.
+ *
+ * Internamente espera a {@link initMSALCore}, así que es seguro llamarla
+ * sin garantizar el orden manualmente.
  */
 export async function initMSAL(): Promise<void> {
-  if (initialized) return;
-  await msal.initialize();
+  await initMSALCore();
   await msal.handleRedirectPromise().catch((e) => {
     console.error("[MSAL] handleRedirectPromise error:", e);
   });
   wireEventsOnce();
   ensureActiveAccount();
-  initialized = true;
 }
 
 // -- Gestión de cuenta activa --------------------------------------------------
@@ -208,8 +249,15 @@ export async function ensureLogin(
 /**
  * Obtiene un access token siguiendo la cascada:
  * 1. `acquireTokenSilent` — sin interaccion del usuario.
- * 2. Si falla con {@link InteractionRequiredAuthError}: popup (nunca redirect).
- * 3. Si no hay sesion activa: lanza error — el login debe hacerse desde
+ * 2. Si falla con {@link InteractionRequiredAuthError} y `interactionMode`
+ *    es `'redirect'`: navega a Microsoft para renovar la sesión. Esta
+ *    ruta es obligatoria para cualquier flujo que se dispare sin un gesto
+ *    directo del usuario (montaje de componente, `useQuery`, `useEffect`),
+ *    porque `acquireTokenPopup` depende de `window.open`, que los
+ *    navegadores bloquean cuando no hay un clic real detrás.
+ * 3. Si falla y `interactionMode` es `'popup'` (default): intenta popup.
+ *    Usar este modo SOLO dentro de un handler de clic real del usuario.
+ * 4. Si no hay sesion activa: lanza error — el login debe hacerse desde
  *    la página de login via {@link ensureLogin}.
  *
  * @param opts.interactionMode            - Modo de interaccion si el silent falla (default: `'popup'`).
@@ -242,13 +290,28 @@ export async function getAccessToken(opts?: {
     if (opts?.forceSilent) throw e;
 
     if (e instanceof InteractionRequiredAuthError) {
+      const mode = opts?.interactionMode ?? "popup";
+
+      // Redirect: navegación de página completa. No depende de que el
+      // navegador permita cookies de terceros (a diferencia del silent
+      // iframe) ni de un gesto de clic (a diferencia del popup), por lo
+      // que es la única vía segura de usar dentro de flujos automáticos
+      // como useQuery en el montaje de un componente.
+      if (mode === "redirect") {
+        await msal.acquireTokenRedirect({
+          scopes: [...SCOPES, ...(opts?.silentExtraScopesToConsent ?? [])],
+          ...(silentReq.account && { account: silentReq.account }),
+        });
+        // acquireTokenRedirect navega fuera de la página; esta promesa
+        // nunca debe resolver en esta pestaña.
+        return new Promise<string>(() => {});
+      }
+
       try {
-
         const res = await msal.acquireTokenPopup({
-   scopes: [...SCOPES, ...(opts?.silentExtraScopesToConsent ?? [])],    //fragmento modificado para agregar scopes adicionales en el popup
-  ...(silentReq.account && { account: silentReq.account }),
-});
-
+          scopes: [...SCOPES, ...(opts?.silentExtraScopesToConsent ?? [])],
+          ...(silentReq.account && { account: silentReq.account }),
+        });
         return res.accessToken;
       } catch (popupErr) {
         console.warn("[MSAL] acquireTokenPopup falló:", popupErr);
@@ -258,7 +321,45 @@ export async function getAccessToken(opts?: {
     throw e;
   }
 }
+/**
+ * Obtiene el ID Token del usuario autenticado.
+ *
+ * @remarks
+ * A diferencia de {@link getAccessToken} (pensado para llamar a Microsoft
+ * Graph), el ID Token trae como audiencia (`aud`) el propio `clientId` de
+ * esta app — es lo que usa el backend de la Intranet para verificar la
+ * identidad del usuario en los endpoints de gestión (ej. EDM News),
+ * sin necesitar un scope de API expuesto en Azure AD.
+ *
+ * @returns El ID Token como string (JWT).
+ */
+export async function getIdToken(): Promise<string> {
+  await initMSAL();
 
+  const account = ensureActiveAccount();
+  if (!account) {
+    throw new Error("[getIdToken] No hay sesión activa de MSAL");
+  }
+
+  const silentReq: SilentRequest = {
+    account,
+    scopes: [...SCOPES],
+  };
+
+  try {
+    const res = await msal.acquireTokenSilent(silentReq);
+    return res.idToken;
+  } catch (e) {
+    if (e instanceof InteractionRequiredAuthError) {
+      const res = await msal.acquireTokenPopup({
+        scopes: [...SCOPES],
+        account,
+      });
+      return res.idToken;
+    }
+    throw e;
+  }
+}
 // -- Logout --------------------------------------------------------------------
 
 /**
