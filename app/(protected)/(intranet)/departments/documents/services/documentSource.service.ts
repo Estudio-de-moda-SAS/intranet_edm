@@ -21,6 +21,7 @@ import {
   getSharePointDriveRootChildren,
   getSharePointFolderChildren,
   getSharePointPreviewUrl,
+  uploadSharePointFile,
 } from "./sharepointDiscovery.service";
 import {
   getMyTeamDriveRootChildren,
@@ -95,5 +96,31 @@ export async function loadDocumentPreviewUrl(
       return getSharePointPreviewUrl(item.driveId, item.id);
     case "teams":
       return getMyTeamPreviewUrl(item.driveId, item.id);
+  }
+}
+
+/**
+ * Sube un archivo a la ubicación actual (carpeta o raíz de biblioteca),
+ * sin importar la fuente a la que pertenece.
+ *
+ * @remarks
+ * Por ahora solo `corporate-sites` soporta escritura (requiere el scope
+ * `Files.ReadWrite.All`, ya aprobado). Las demás fuentes lanzan un error
+ * explícito — el botón de subida debe ocultarse fuera de ese contexto.
+ */
+export async function uploadDocument(
+  location: DocumentLocation,
+  source: DocumentSourceType,
+  file: File
+): Promise<DocumentItem> {
+  switch (source) {
+    case "corporate-sites":
+      return uploadSharePointFile(location.driveId, location.itemId, file);
+    case "my-drive":
+    case "shared":
+    case "teams":
+      throw new Error(
+        `La subida de archivos no está disponible para la fuente "${source}" todavía.`
+      );
   }
 }

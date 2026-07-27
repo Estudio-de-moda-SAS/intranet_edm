@@ -1,0 +1,772 @@
+/* ==========================================================
+   Document Workspace
+   Design System — mismo lenguaje que Department Sidebar
+   ========================================================== */
+
+.document-workspace {
+  --dw-bg: #ffffff;
+  --dw-surface: #f8fafc;
+  --dw-hover: #f5f3ff;
+  --dw-border: #e5e7eb;
+
+  --dw-title: #0f172a;
+  --dw-text: #334155;
+  --dw-muted: #64748b;
+
+  --dw-accent: #7c3aed;
+  --dw-accent-strong: #6d28d9;
+  --dw-accent-bg: #f5f3ff;
+
+  --dw-icon-bg: #f1f5f9;
+  --dw-icon-color: #475569;
+
+  --dw-radius-lg: 24px;
+  --dw-radius-md: 16px;
+  --dw-radius-sm: 12px;
+
+  --transition: 220ms cubic-bezier(.2,.8,.2,1);
+
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  color: var(--dw-text);
+}
+
+@media (min-width: 1280px) {
+  .document-workspace {
+    grid-template-columns: 340px minmax(0, 1fr);
+  }
+}
+
+/* ==========================================================
+   Nav de fuentes documentales (Mi unidad / Compartidos / Áreas)
+   ========================================================== */
+
+.document-workspace__source-nav {
+  background: var(--dw-bg);
+  border: 1px solid var(--dw-border);
+  border-radius: var(--dw-radius-lg);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+  padding: 1rem;
+  height: fit-content;
+}
+
+.document-workspace__source-nav-label {
+  display: block;
+  padding: 0 .5rem;
+  margin-bottom: .75rem;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--dw-muted);
+}
+
+.document-workspace__source-list {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.document-workspace__source-item {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .7rem .9rem;
+  border: none;
+  border-radius: var(--dw-radius-sm);
+  background: transparent;
+  color: var(--dw-text);
+  font-size: .88rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition), color var(--transition);
+}
+
+.document-workspace__source-item:hover {
+  background: var(--dw-hover);
+  color: var(--dw-accent-strong);
+}
+
+.document-workspace__source-item--active {
+  background: var(--dw-accent);
+  color: white;
+}
+
+.document-workspace__source-item--active:hover {
+  background: var(--dw-accent);
+  color: white;
+}
+
+/* ==========================================================
+   Panel principal
+   ========================================================== */
+
+.document-workspace__panel {
+  min-height: 700px;
+  background: var(--dw-bg);
+  border: 1px solid var(--dw-border);
+  border-radius: var(--dw-radius-lg);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+  overflow: hidden;
+}
+
+.document-workspace__body {
+  padding: 1.75rem 2rem;
+}
+
+/* ==========================================================
+   Barra superior (tabs + spinner)
+   ========================================================== */
+
+.document-workspace__top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.document-workspace__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.document-workspace__tab {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .4rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--dw-surface);
+  color: var(--dw-text);
+  font-size: .74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.document-workspace__tab:hover {
+  background: var(--dw-hover);
+  color: var(--dw-accent-strong);
+}
+
+.document-workspace__tab--active {
+  background: var(--dw-accent);
+  color: white;
+}
+
+.document-workspace__tab--active:hover {
+  background: var(--dw-accent);
+  color: white;
+}
+
+/* ==========================================================
+   Error banner
+   ========================================================== */
+
+.document-workspace__error {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--dw-radius-sm);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: .875rem;
+  font-weight: 500;
+}
+
+/* ==========================================================
+   Estado vacío raíz
+   ========================================================== */
+
+.document-workspace__empty-state {
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.document-workspace__empty-icon {
+  margin-bottom: 1.5rem;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--dw-radius-lg);
+  background: var(--dw-accent-bg);
+  color: var(--dw-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.document-workspace__empty-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--dw-title);
+}
+
+.document-workspace__empty-description {
+  margin: .75rem 0 0;
+  max-width: 380px;
+  font-size: .875rem;
+  line-height: 1.6;
+  color: var(--dw-muted);
+}
+
+/* ==========================================================
+   Rastro de subsitios (trail)
+   ========================================================== */
+
+.document-workspace__trail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-bottom: 1rem;
+}
+
+.document-workspace__trail-item {
+  appearance: none;
+  border: none;
+  padding: .35rem .8rem;
+  border-radius: 999px;
+  background: var(--dw-surface);
+  color: var(--dw-text);
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.document-workspace__trail-item:hover {
+  background: var(--dw-hover);
+  color: var(--dw-accent-strong);
+}
+
+.document-workspace__spinner {
+  width: 20px;
+  height: 20px;
+  color: var(--dw-accent);
+  animation: documentWorkspaceSpin .8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes documentWorkspaceSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================
+   Lista de bibliotecas / subsitios (picker)
+   ========================================================== */
+
+.document-workspace__picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  border: 1px solid var(--dw-border);
+  border-radius: var(--dw-radius-md);
+  padding: .5rem;
+  max-width: 620px;
+}
+
+.document-workspace__picker-item {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding: .65rem .8rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
+}
+
+.document-workspace__picker-item:hover {
+  background: var(--dw-hover);
+  border-color: rgba(124, 58, 237, .12);
+  transform: translateY(-1px);
+}
+
+.document-workspace__picker-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--dw-icon-bg);
+  color: var(--dw-icon-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition);
+}
+
+.document-workspace__picker-item:hover .document-workspace__picker-icon {
+  transform: scale(1.03);
+}
+
+.document-workspace__picker-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .18rem;
+}
+
+.document-workspace__picker-title {
+  font-size: .87rem;
+  font-weight: 500;
+  color: var(--dw-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--transition);
+}
+
+.document-workspace__picker-item:hover .document-workspace__picker-title {
+  color: var(--dw-accent-strong);
+}
+
+.document-workspace__picker-type {
+  font-size: .7rem;
+  font-weight: 600;
+  color: var(--dw-muted);
+}
+
+.document-workspace__picker-item--subsite .document-workspace__picker-type {
+  color: var(--dw-accent-strong);
+}
+
+.document-workspace__picker-arrow {
+  flex-shrink: 0;
+  color: #94a3b8;
+  transition: transform var(--transition), color var(--transition);
+}
+
+.document-workspace__picker-item:hover .document-workspace__picker-arrow {
+  color: var(--dw-accent);
+  transform: translateX(3px);
+}
+
+/* ==========================================================
+   Skeleton — bibliotecas
+   ========================================================== */
+
+.document-workspace__library-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  max-width: 620px;
+}
+
+.document-workspace__library-skeleton-row {
+  height: 60px;
+  border-radius: 14px;
+  background: var(--dw-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.document-workspace__library-skeleton-row::after,
+.document-workspace__skeleton-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-110%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.78), transparent);
+  animation: documentWorkspaceShimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes documentWorkspaceShimmer {
+  100% { transform: translateX(110%); }
+}
+
+/* ==========================================================
+   Empty states secundarios
+   ========================================================== */
+
+.document-workspace__inline-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  border-radius: var(--dw-radius-md);
+  border: 1px dashed #cbd5e1;
+  color: var(--dw-muted);
+  font-size: .875rem;
+}
+
+/* ==========================================================
+   Toolbar de items (breadcrumbs + búsqueda local)
+   ========================================================== */
+
+.document-workspace__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.document-workspace__breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem;
+}
+
+.document-workspace__breadcrumb {
+  appearance: none;
+  border: none;
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  background: var(--dw-surface);
+  color: var(--dw-muted);
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.document-workspace__breadcrumb:hover {
+  background: var(--dw-hover);
+  color: var(--dw-accent-strong);
+}
+
+.document-workspace__local-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 240px;
+  flex: 1;
+  max-width: 320px;
+}
+
+.document-workspace__local-search svg {
+  position: absolute;
+  left: .9rem;
+  color: var(--dw-muted);
+  pointer-events: none;
+}
+
+.document-workspace__local-search input {
+  width: 100%;
+  padding: .55rem 2.2rem .55rem 2.4rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba(241, 245, 249, .8);
+  font-size: .82rem;
+  color: var(--dw-text);
+  outline: none;
+  transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.document-workspace__local-search input::placeholder {
+  color: #94a3b8;
+}
+
+.document-workspace__local-search input:focus {
+  background: white;
+  border-color: #c4b5fd;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, .1);
+}
+
+.document-workspace__local-search-clear {
+  position: absolute;
+  right: .5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .16);
+  color: var(--dw-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.document-workspace__local-search-clear:hover {
+  background: var(--dw-accent-bg);
+  color: var(--dw-accent);
+}
+
+/* ==========================================================
+   Tabla de documentos
+   ========================================================== */
+
+.document-workspace__table-wrapper {
+  border: 1px solid var(--dw-border);
+  border-radius: var(--dw-radius-md);
+  overflow: hidden;
+}
+
+.document-workspace__table-scroll {
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.document-workspace__table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: .875rem;
+}
+
+.document-workspace__table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.document-workspace__table th {
+  padding: .65rem 1rem;
+  text-align: left;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--dw-muted);
+  background: var(--dw-surface);
+  border-bottom: 1px solid var(--dw-border);
+}
+
+.document-workspace__table-row {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background var(--transition);
+}
+
+.document-workspace__table-row:last-child {
+  border-bottom: none;
+}
+
+.document-workspace__table-row:hover {
+  background: var(--dw-hover);
+}
+
+.document-workspace__table td {
+  padding: .65rem 1rem;
+  vertical-align: middle;
+}
+
+.document-workspace__row-name-cell--clickable {
+  cursor: pointer;
+}
+
+.document-workspace__row-name {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-width: 0;
+}
+
+.document-workspace__row-icon-box {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--dw-radius-sm);
+  background: var(--dw-icon-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.document-workspace__row-text {
+  min-width: 0;
+}
+
+.document-workspace__row-title {
+  margin: 0;
+  font-size: .875rem;
+  font-weight: 500;
+  color: var(--dw-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.document-workspace__row-subtitle {
+  margin: 0;
+  font-size: .72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.document-workspace__row-meta {
+  white-space: nowrap;
+  font-size: .78rem;
+  color: var(--dw-muted);
+}
+
+.document-workspace__row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.document-workspace__action-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .4rem .75rem;
+  border-radius: var(--dw-radius-sm);
+  border: 1px solid var(--dw-border);
+  background: var(--dw-surface);
+  color: var(--dw-text);
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.document-workspace__action-btn:hover {
+  background: var(--dw-accent);
+  border-color: var(--dw-accent);
+  color: white;
+}
+
+.document-workspace__action-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.document-workspace__action-btn:disabled:hover {
+  background: var(--dw-surface);
+  border-color: var(--dw-border);
+  color: var(--dw-text);
+}
+
+/* ==========================================================
+   Skeleton — filas
+   ========================================================== */
+
+.document-workspace__skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.document-workspace__skeleton-row {
+  height: 44px;
+  border-radius: var(--dw-radius-sm);
+  background: var(--dw-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ==========================================================
+   Dark mode
+   ========================================================== */
+
+.dark .document-workspace {
+  --dw-bg: #0f172a;
+  --dw-surface: #111c2f;
+  --dw-hover: rgba(124, 58, 237, .12);
+  --dw-border: rgba(148, 163, 184, .16);
+
+  --dw-title: #f8fafc;
+  --dw-text: #e2e8f0;
+  --dw-muted: #94a3b8;
+
+  --dw-accent: #7c3aed;
+  --dw-accent-strong: #a78bfa;
+  --dw-accent-bg: rgba(124, 58, 237, .16);
+
+  --dw-icon-bg: rgba(148, 163, 184, .14);
+  --dw-icon-color: #cbd5e1;
+}
+
+.dark .document-workspace__error {
+  background: rgba(239, 68, 68, .08);
+  border-color: rgba(239, 68, 68, .25);
+  color: #fca5a5;
+}
+
+.dark .document-workspace__local-search input {
+  background: rgba(15, 23, 42, .72);
+}
+
+.dark .document-workspace__local-search input:focus {
+  background: #0f172a;
+  border-color: rgba(167, 139, 250, .35);
+}
+
+.dark .document-workspace__inline-empty {
+  border-color: rgba(148, 163, 184, .2);
+}
+
+/* ==========================================================
+   Subida de archivos (botón + drag & drop)
+   ========================================================== */
+
+.document-workspace__upload-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--dw-accent);
+  color: white;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+  flex-shrink: 0;
+}
+
+.document-workspace__upload-btn:hover {
+  background: var(--dw-accent-strong);
+}
+
+.document-workspace__upload-btn:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.document-workspace__dropzone {
+  position: relative;
+  border-radius: var(--dw-radius-md);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.document-workspace__dropzone--active {
+  background: var(--dw-accent-bg);
+  outline: 2px dashed #c4b5fd;
+  outline-offset: -2px;
+}
+
+.document-workspace__dropzone-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border-radius: var(--dw-radius-md);
+  background: rgba(245, 243, 255, .92);
+  color: var(--dw-accent-strong);
+  font-size: .9rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.dark .document-workspace__dropzone-overlay {
+  background: rgba(124, 58, 237, .18);
+}

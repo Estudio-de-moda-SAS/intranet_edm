@@ -7,10 +7,11 @@
  *
  * @remarks
  * Administra la fuente documental activa (`my-drive`, `shared`,
- * `corporate-sites`, `teams`), la navegación (breadcrumbs, carpetas),
- * caché en memoria y estados de carga/error. Delega toda la obtención de
- * datos en {@link documentSource.service}, por lo que no conoce detalles
- * de Graph.
+ * `corporate-sites`, `teams`), la navegación (breadcrumbs, carpetas,
+ * subsitios), la subida de archivos, caché en memoria y estados de
+ * carga/error. Delega toda la obtención de datos en
+ * {@link documentSource.service} y {@link sharepointDiscovery.service},
+ * por lo que no conoce detalles de Graph directamente.
  */
 
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -18,10 +19,13 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   loadFolderChildren,
   loadSourceRoot,
+  uploadDocument,
 } from "../services/documentSource.service";
 import {
   getSharePointSiteDrives,
+  getSharePointSubsites,
   type SharePointDriveDiscoveryResult,
+  type SharePointSiteDiscoveryResult,
 } from "../services/sharepointDiscovery.service";
 import {
   getMyTeamDrives,
@@ -51,25 +55,38 @@ interface SelectableLibrary {
   name?: string;
 }
 
+/** Detalle cacheado de un sitio/subsitio: sus bibliotecas y subsitios. */
+interface SiteDetails {
+  drives: readonly SharePointDriveDiscoveryResult[];
+  subsites: readonly SharePointSiteDiscoveryResult[];
+}
+
 export interface UseDocumentExplorerResult {
   activeSource: DocumentSourceType;
   selectedDepartment: DocumentDepartment | null;
   selectedLibrary: SharePointDriveDiscoveryResult | null;
   selectedDepartmentLibraries: readonly SharePointDriveDiscoveryResult[];
+  selectedDepartmentSubsites: readonly SharePointSiteDiscoveryResult[];
+  siteTrail: readonly SharePointSiteDiscoveryResult[];
   teamDrives: readonly TeamDriveDiscoveryResult[];
   selectedTeamDrive: TeamDriveDiscoveryResult | null;
   currentItems: readonly DocumentItem[];
   breadcrumbs: readonly DocumentBreadcrumbItem[];
   loading: DocumentExplorerLoadingState;
   error: string | null;
+  canUploadHere: boolean;
+  uploadingFile: boolean;
 
   switchSource: (source: DocumentSourceType) => Promise<void>;
   selectDepartment: (department: DocumentDepartment) => Promise<void>;
   selectLibrary: (library: SharePointDriveDiscoveryResult) => Promise<void>;
+  drillIntoSubsite: (subsite: SharePointSiteDiscoveryResult) => Promise<void>;
+  goToSiteTrail: (index: number) => Promise<void>;
   selectTeamDrive: (drive: TeamDriveDiscoveryResult) => Promise<void>;
   openFolder: (item: DocumentItem) => Promise<void>;
   goToRoot: () => Promise<void>;
   goToBreadcrumb: (breadcrumbId: string) => Promise<void>;
+  uploadFile: (file: File) => Promise<void>;
   clearError: () => void;
 }
 
@@ -97,6 +114,12 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
   const [selectedDepartmentLibraries, setSelectedDepartmentLibraries] =
     useState<readonly SharePointDriveDiscoveryResult[]>([]);
 
+  const [selectedDepartmentSubsites, setSelectedDepartmentSubsites] =
+    useState<readonly SharePointSiteDiscoveryResult[]>([]);
+
+  const [siteTrail, setSiteTrail] =
+    useState<readonly SharePointSiteDiscoveryResult[]>([]);
+
   const [teamDrives, setTeamDrives] =
     useState<readonly TeamDriveDiscoveryResult[]>([]);
 
@@ -114,9 +137,9 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
 
   const [error, setError] = useState<string | null>(null);
 
-  const librariesCacheRef = useRef(
-    new Map<string, readonly SharePointDriveDiscoveryResult[]>()
-  );
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  const siteDetailsCacheRef = useRef(new Map<string, SiteDetails>());
 
   const teamDrivesCacheRef = useRef<readonly TeamDriveDiscoveryResult[] | null>(null);
 
@@ -178,6 +201,29 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     [rootBreadcrumbLabel]
   );
 
+  const loadSiteDetails = useCallback(async (siteId: string) => {
+    const cached = siteDetailsCacheRef.current.get(siteId);
+
+    if (cached) {
+      setSelectedDepartmentLibraries(cached.drives);
+      setSelectedDepartmentSubsites(cached.subsites);
+      return;
+    }
+
+    const [drivesResult, subsitesResult] = await Promise.allSettled([
+      getSharePointSiteDrives(siteId),
+      getSharePointSubsites(siteId),
+    ]);
+
+    const drives = drivesResult.status === "fulfilled" ? drivesResult.value : [];
+    const subsites =
+      subsitesResult.status === "fulfilled" ? subsitesResult.value : [];
+
+    siteDetailsCacheRef.current.set(siteId, { drives, subsites });
+    setSelectedDepartmentLibraries(drives);
+    setSelectedDepartmentSubsites(subsites);
+  }, []);
+
   const loadTeamDrives = useCallback(async () => {
     try {
       setLoading("libraries");
@@ -206,6 +252,8 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       setSelectedDepartment(null);
       setSelectedLibrary(null);
       setSelectedDepartmentLibraries([]);
+      setSelectedDepartmentSubsites([]);
+      setSiteTrail([]);
       setSelectedTeamDrive(null);
       setTeamDrives([]);
       setBreadcrumbs([]);
@@ -232,22 +280,17 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
         setCurrentItems([]);
         setBreadcrumbs([]);
 
-        const cached = librariesCacheRef.current.get(department.siteId);
+        const rootTrailItem: SharePointSiteDiscoveryResult = {
+          id: department.siteId,
+          displayName: department.name,
+        };
+        setSiteTrail([rootTrailItem]);
 
-        if (cached) {
-          setSelectedDepartmentLibraries(cached);
-          return;
-        }
-
-        const libraries = await getSharePointSiteDrives(department.siteId);
-        librariesCacheRef.current.set(department.siteId, libraries);
-        setSelectedDepartmentLibraries(libraries);
+        await loadSiteDetails(department.siteId);
       } catch (departmentError) {
-        console.error(
-          "[Document Explorer] selectDepartment",
-          departmentError
-        );
+        console.error("[Document Explorer] selectDepartment", departmentError);
         setSelectedDepartmentLibraries([]);
+        setSelectedDepartmentSubsites([]);
         setError(
           "No fue posible cargar las bibliotecas del área seleccionada."
         );
@@ -255,7 +298,52 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
         setLoading("idle");
       }
     },
-    []
+    [loadSiteDetails]
+  );
+
+  const drillIntoSubsite = useCallback(
+    async (subsite: SharePointSiteDiscoveryResult) => {
+      try {
+        setLoading("libraries");
+        setError(null);
+        setSelectedLibrary(null);
+        setCurrentItems([]);
+        setBreadcrumbs([]);
+
+        setSiteTrail((current) => [...current, subsite]);
+        await loadSiteDetails(subsite.id);
+      } catch (subsiteError) {
+        console.error("[Document Explorer] drillIntoSubsite", subsiteError);
+        setError("No fue posible cargar el contenido de este subsitio.");
+      } finally {
+        setLoading("idle");
+      }
+    },
+    [loadSiteDetails]
+  );
+
+  const goToSiteTrail = useCallback(
+    async (index: number) => {
+      const target = siteTrail.at(index);
+      if (!target) return;
+
+      try {
+        setLoading("libraries");
+        setError(null);
+        setSelectedLibrary(null);
+        setCurrentItems([]);
+        setBreadcrumbs([]);
+
+        setSiteTrail((current) => current.slice(0, index + 1));
+        await loadSiteDetails(target.id);
+      } catch (trailError) {
+        console.error("[Document Explorer] goToSiteTrail", trailError);
+        setError("No fue posible cargar el contenido de este sitio.");
+      } finally {
+        setLoading("idle");
+      }
+    },
+    [loadSiteDetails, siteTrail]
   );
 
   const selectLibrary = useCallback(
@@ -356,10 +444,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
         itemsCacheRef.current.set(cacheKey, items);
         setCurrentItems(items);
       } catch (breadcrumbError) {
-        console.error(
-          "[Document Explorer] goToBreadcrumb",
-          breadcrumbError
-        );
+        console.error("[Document Explorer] goToBreadcrumb", breadcrumbError);
         setError("No fue posible navegar a la carpeta seleccionada.");
       } finally {
         setLoading("idle");
@@ -368,25 +453,69 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     [activeSource, breadcrumbs, goToRoot]
   );
 
+  const canUploadHere = activeSource === "corporate-sites" && breadcrumbs.length > 0;
+
+  const uploadFile = useCallback(
+    async (file: File) => {
+      const currentLocation = breadcrumbs.at(-1)?.location ?? null;
+      if (!currentLocation || !canUploadHere) return;
+
+      try {
+        setUploadingFile(true);
+        setError(null);
+
+        await uploadDocument(currentLocation, activeSource, file);
+
+        const isRoot = currentLocation.itemId === null;
+
+        const cacheKey = isRoot
+          ? buildRootCacheKey(activeSource, currentLocation.driveId)
+          : buildFolderCacheKey(activeSource, currentLocation);
+
+        const items = isRoot
+          ? await loadSourceRoot(activeSource, currentLocation.driveId)
+          : await loadFolderChildren(currentLocation, activeSource);
+
+        itemsCacheRef.current.set(cacheKey, items);
+        setCurrentItems(items);
+      } catch (uploadError) {
+        console.error("[Document Explorer] uploadFile", uploadError);
+        setError(
+          "No fue posible subir el archivo. Verifica tus permisos de escritura sobre esta carpeta."
+        );
+      } finally {
+        setUploadingFile(false);
+      }
+    },
+    [activeSource, breadcrumbs, canUploadHere]
+  );
+
   return useMemo(
     () => ({
       activeSource,
       selectedDepartment,
       selectedLibrary,
       selectedDepartmentLibraries,
+      selectedDepartmentSubsites,
+      siteTrail,
       teamDrives,
       selectedTeamDrive,
       currentItems,
       breadcrumbs,
       loading,
       error,
+      canUploadHere,
+      uploadingFile,
       switchSource,
       selectDepartment,
       selectLibrary,
+      drillIntoSubsite,
+      goToSiteTrail,
       selectTeamDrive,
       openFolder,
       goToRoot,
       goToBreadcrumb,
+      uploadFile,
       clearError,
     }),
     [
@@ -394,19 +523,26 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       selectedDepartment,
       selectedLibrary,
       selectedDepartmentLibraries,
+      selectedDepartmentSubsites,
+      siteTrail,
       teamDrives,
       selectedTeamDrive,
       currentItems,
       breadcrumbs,
       loading,
       error,
+      canUploadHere,
+      uploadingFile,
       switchSource,
       selectDepartment,
       selectLibrary,
+      drillIntoSubsite,
+      goToSiteTrail,
       selectTeamDrive,
       openFolder,
       goToRoot,
       goToBreadcrumb,
+      uploadFile,
       clearError,
     ]
   );

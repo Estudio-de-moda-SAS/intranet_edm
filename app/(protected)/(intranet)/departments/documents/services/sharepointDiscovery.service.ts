@@ -189,15 +189,38 @@ export async function discoverSharePointSites(
  * el sitio no aparece en `searchSharePointSites`/`discoverSharePointSites`
  * por limitaciones del índice de búsqueda de Graph.
  *
- * @param siteUrl - URL completa del sitio, ej.
- * `https://estudiodemoda.sharepoint.com/sites/FS`.
+ * Descarta automáticamente el último segmento de la ruta si corresponde
+ * a una página o archivo (ej. `default.aspx`, `Forms/AllItems.aspx`),
+ * quedándose solo con la ruta real del sitio o subsitio.
+ *
+ * @param siteUrl - URL completa del sitio, puede incluir una página al
+ * final, ej. `https://estudiodemoda.sharepoint.com/sites/FS/Cadena%20Abastecimiento/default.aspx`.
  */
 export async function resolveSharePointSiteByUrl(
   siteUrl: string
 ): Promise<SharePointSiteDiscoveryResult> {
   const url = new URL(siteUrl.trim());
   const hostname = url.hostname;
-  const serverRelativePath = url.pathname.replace(/\/+$/, "");
+
+  const segments = url.pathname
+    .replace(/\/+$/, "")
+    .split("/")
+    .filter(Boolean);
+
+  // Si el último segmento contiene un punto (ej. "default.aspx",
+  // "AllItems.aspx"), es una página/archivo, no parte de la ruta del sitio.
+  const lastSegment = segments.at(-1);
+  if (lastSegment?.includes(".")) {
+    segments.pop();
+  }
+
+  // También descarta el segmento "Forms" cuando aparece antes de la página
+  // (ej. ".../Biblioteca/Forms/AllItems.aspx" -> ".../Biblioteca").
+  if (segments.at(-1) === "Forms") {
+    segments.pop();
+  }
+
+  const serverRelativePath = "/" + segments.join("/");
 
   return graphFetch<SharePointSiteDiscoveryResult>(
     `/sites/${hostname}:${serverRelativePath}`
@@ -274,4 +297,24 @@ export async function uploadSharePointFile(
     "corporate-sites",
     SHAREPOINT_WRITE_SCOPES
   );
+}
+/**
+ * Subsitios directos (un solo nivel) de un sitio de SharePoint.
+ *
+ * @remarks
+ * Equivale a `GET /sites/{siteId}/sites`. Este endpoint tiene soporte
+ * algo limitado en Graph — en la práctica funciona bien para jerarquías
+ * estándar, pero puede omitir subsitios en casos excepcionales. Si un
+ * subsitio conocido no aparece aquí, usa `resolveSharePointSiteByUrl`
+ * como respaldo manual.
+ */
+export async function getSharePointSubsites(
+  siteId: string
+): Promise<SharePointSiteDiscoveryResult[]> {
+  const subsites = await graphFetchCollection<SharePointSiteDiscoveryResult>(
+    `/sites/${encodeURIComponent(siteId)}/sites?$select=id,displayName,name,webUrl,createdDateTime,lastModifiedDateTime`,
+    2
+  );
+
+  return sortByName(subsites);
 }
