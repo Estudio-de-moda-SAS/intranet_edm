@@ -32,9 +32,9 @@
   color: var(--dw-text);
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 960px) {
   .document-workspace {
-    grid-template-columns: 340px minmax(0, 1fr);
+    grid-template-columns: 300px minmax(0, 1fr);
   }
 }
 
@@ -651,6 +651,42 @@
 }
 
 /* ==========================================================
+   Botones de acción tipo ícono (fila de archivos)
+   ========================================================== */
+
+.document-workspace__icon-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--dw-radius-sm);
+  border: 1px solid var(--dw-border);
+  background: var(--dw-surface);
+  color: var(--dw-text);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.document-workspace__icon-btn:hover {
+  background: var(--dw-accent);
+  border-color: var(--dw-accent);
+  color: white;
+}
+
+.document-workspace__icon-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.document-workspace__icon-btn:disabled:hover {
+  background: var(--dw-surface);
+  border-color: var(--dw-border);
+  color: var(--dw-text);
+}
+
+/* ==========================================================
    Skeleton — filas
    ========================================================== */
 
@@ -666,47 +702,6 @@
   background: var(--dw-surface);
   position: relative;
   overflow: hidden;
-}
-
-/* ==========================================================
-   Dark mode
-   ========================================================== */
-
-.dark .document-workspace {
-  --dw-bg: #0f172a;
-  --dw-surface: #111c2f;
-  --dw-hover: rgba(124, 58, 237, .12);
-  --dw-border: rgba(148, 163, 184, .16);
-
-  --dw-title: #f8fafc;
-  --dw-text: #e2e8f0;
-  --dw-muted: #94a3b8;
-
-  --dw-accent: #7c3aed;
-  --dw-accent-strong: #a78bfa;
-  --dw-accent-bg: rgba(124, 58, 237, .16);
-
-  --dw-icon-bg: rgba(148, 163, 184, .14);
-  --dw-icon-color: #cbd5e1;
-}
-
-.dark .document-workspace__error {
-  background: rgba(239, 68, 68, .08);
-  border-color: rgba(239, 68, 68, .25);
-  color: #fca5a5;
-}
-
-.dark .document-workspace__local-search input {
-  background: rgba(15, 23, 42, .72);
-}
-
-.dark .document-workspace__local-search input:focus {
-  background: #0f172a;
-  border-color: rgba(167, 139, 250, .35);
-}
-
-.dark .document-workspace__inline-empty {
-  border-color: rgba(148, 163, 184, .2);
 }
 
 /* ==========================================================
@@ -769,4 +764,72 @@
 
 .dark .document-workspace__dropzone-overlay {
   background: rgba(124, 58, 237, .18);
+}
+
+/* ==========================================================
+   Dark mode
+   ========================================================== */
+
+.dark .document-workspace {
+  --dw-bg: #0f172a;
+  --dw-surface: #111c2f;
+  --dw-hover: rgba(124, 58, 237, .12);
+  --dw-border: rgba(148, 163, 184, .16);
+
+  --dw-title: #f8fafc;
+  --dw-text: #e2e8f0;
+  --dw-muted: #94a3b8;
+
+  --dw-accent: #7c3aed;
+  --dw-accent-strong: #a78bfa;
+  --dw-accent-bg: rgba(124, 58, 237, .16);
+
+  --dw-icon-bg: rgba(148, 163, 184, .14);
+  --dw-icon-color: #cbd5e1;
+}
+
+.dark .document-workspace__error {
+  background: rgba(239, 68, 68, .08);
+  border-color: rgba(239, 68, 68, .25);
+  color: #fca5a5;
+}
+
+.dark .document-workspace__local-search input {
+  background: rgba(15, 23, 42, .72);
+}
+
+.dark .document-workspace__local-search input:focus {
+  background: #0f172a;
+  border-color: rgba(167, 139, 250, .35);
+}
+
+.dark .document-workspace__inline-empty {
+  border-color: rgba(148, 163, 184, .2);
+}
+
+.document-workspace__row-folder-arrow {
+  color: #cbd5e1;
+  transition: transform var(--transition), color var(--transition);
+}
+
+.document-workspace__table-row:hover .document-workspace__row-folder-arrow {
+  color: var(--dw-accent);
+  transform: translateX(3px);
+}
+
+.document-workspace__table-row--clickable {
+  cursor: pointer;
+}
+
+/* ==========================================================
+   Resaltado de resultado de búsqueda global
+   ========================================================== */
+
+.document-workspace__table-row--highlighted {
+  animation: documentWorkspaceHighlight 2.6s ease-out;
+}
+
+@keyframes documentWorkspaceHighlight {
+  0% { background: #ede9fe; }
+  100% { background: transparent; }
 }

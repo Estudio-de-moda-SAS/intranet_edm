@@ -9,21 +9,28 @@
  * Punto de entrada del Explorador Documental Corporativo. Permite alternar
  * entre las fuentes documentales soportadas, navegar carpetas y subsitios
  * mediante breadcrumbs, filtrar localmente los documentos cargados,
- * previsualizar/abrir documentos externamente, y subir archivos a la
- * carpeta actual (solo disponible en Áreas corporativas por ahora).
+ * previsualizar/abrir/descargar documentos, y subir archivos a la carpeta
+ * actual (solo disponible en Áreas corporativas por ahora).
+ *
+ * También soporta deep-links del buscador global de la intranet
+ * (`?source=my-drive&folder=...&highlight=...`), que abren directamente
+ * la carpeta de un resultado de búsqueda y resaltan el archivo encontrado.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Building2,
   ChevronRight,
+  Download,
   Eye,
   FileStack,
   Folder,
   FolderOpen,
   HardDrive,
   Loader2,
+  Lock,
   Search,
   Share2,
   Upload,
@@ -37,7 +44,11 @@ import { loadDocumentPreviewUrl } from "../../services/documentSource.service";
 import { mapDocumentItemToPdfMetadata } from "../../utils/mapDocumentItemToPdfMetadata";
 import { formatFileSize, formatShortDate } from "../../utils/formatDocumentMeta";
 import { getDocumentIcon } from "../../utils/getDocumentIcon";
-import type { DocumentItem, DocumentSourceType } from "../../types/document.types";
+import type {
+  DocumentItem,
+  DocumentLocation,
+  DocumentSourceType,
+} from "../../types/document.types";
 import PdfViewerModal from "@/app/components/pdf/PdfViewerModal";
 import "./DocumentWorkspace.css";
 
@@ -65,8 +76,10 @@ export function DocumentWorkspace() {
     breadcrumbs,
     loading,
     error,
+    accessDenied,
     canUploadHere,
     uploadingFile,
+    highlightedItemId,
     switchSource,
     selectDepartment,
     selectLibrary,
@@ -75,7 +88,10 @@ export function DocumentWorkspace() {
     openFolder,
     goToBreadcrumb,
     uploadFile,
+    openLocationDirect,
   } = useDocumentExplorer();
+
+  const searchParams = useSearchParams();
 
   const [previewItem, setPreviewItem] = useState<DocumentItem | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
@@ -86,6 +102,19 @@ export function DocumentWorkspace() {
   const dragCounterRef = useRef(0);
 
   useEffect(() => {
+    const source = searchParams.get("source");
+    const folder = searchParams.get("folder");
+    const highlight = searchParams.get("highlight");
+
+    if (source === "my-drive") {
+      const location: DocumentLocation = {
+        driveId: "my-drive",
+        itemId: folder,
+      };
+      void openLocationDirect("my-drive", location, highlight ?? undefined);
+      return;
+    }
+
     void switchSource("my-drive");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -93,6 +122,13 @@ export function DocumentWorkspace() {
   useEffect(() => {
     setLocalQuery("");
   }, [activeSource, selectedLibrary, breadcrumbs.length]);
+
+  useEffect(() => {
+    if (!highlightedItemId) return;
+
+    const el = document.getElementById(`doc-row-${highlightedItemId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightedItemId, currentItems]);
 
   const isLoadingPickers = loading === "libraries";
   const isLoadingItems = loading === "root" || loading === "folder";
@@ -130,6 +166,12 @@ export function DocumentWorkspace() {
   const handleOpenExternal = (item: DocumentItem) => {
     if (item.webUrl) {
       window.open(item.webUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleDownload = (item: DocumentItem) => {
+    if (item.downloadUrl) {
+      window.open(item.downloadUrl, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -186,10 +228,6 @@ export function DocumentWorkspace() {
         />
       ) : (
         <nav className="document-workspace__source-nav">
-          <span className="document-workspace__source-nav-label">
-            Fuentes documentales
-          </span>
-
           <div className="document-workspace__source-list">
             {SOURCE_TABS.map((tab) => {
               const Icon = tab.icon;
@@ -289,7 +327,22 @@ export function DocumentWorkspace() {
                 </div>
               )}
 
-              {isLoadingPickers ? (
+              {accessDenied ? (
+                <div className="document-workspace__empty-state">
+                  <div className="document-workspace__empty-icon">
+                    <Lock size={34} strokeWidth={1.8} />
+                  </div>
+
+                  <h3 className="document-workspace__empty-title">
+                    No tienes acceso a esta área
+                  </h3>
+
+                  <p className="document-workspace__empty-description">
+                    Si crees que deberías tener acceso, solicítalo al
+                    responsable del sitio o a TI.
+                  </p>
+                </div>
+              ) : isLoadingPickers ? (
                 <div className="document-workspace__library-skeleton">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <div
@@ -479,21 +532,29 @@ export function DocumentWorkspace() {
                               ? { icon: Folder, colorClass: "" }
                               : getDocumentIcon(item.name);
 
+                            const isHighlighted =
+                              item.id === highlightedItemId;
+
                             return (
                               <tr
                                 key={item.id}
-                                className="document-workspace__table-row"
+                                id={`doc-row-${item.id}`}
+                                onClick={() =>
+                                  item.isFolder && openFolder(item)
+                                }
+                                className={[
+                                  "document-workspace__table-row",
+                                  item.isFolder
+                                    ? "document-workspace__table-row--clickable"
+                                    : "",
+                                  isHighlighted
+                                    ? "document-workspace__table-row--highlighted"
+                                    : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
                               >
-                                <td
-                                  className={
-                                    item.isFolder
-                                      ? "document-workspace__row-name-cell--clickable"
-                                      : ""
-                                  }
-                                  onClick={() =>
-                                    item.isFolder && openFolder(item)
-                                  }
-                                >
+                                <td>
                                   <div className="document-workspace__row-name">
                                     <span className="document-workspace__row-icon-box">
                                       <ItemIcon
@@ -534,32 +595,48 @@ export function DocumentWorkspace() {
                                 <td>
                                   <div className="document-workspace__row-actions">
                                     {item.isFolder ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => openFolder(item)}
-                                        className="document-workspace__action-btn"
-                                      >
-                                        Abrir
-                                        <ChevronRight size={12} />
-                                      </button>
+                                      <ChevronRight
+                                        size={16}
+                                        className="document-workspace__row-folder-arrow"
+                                      />
                                     ) : (
                                       <>
                                         <button
                                           type="button"
-                                          onClick={() => handleOpenPreview(item)}
-                                          className="document-workspace__action-btn"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            void handleOpenPreview(item);
+                                          }}
+                                          title="Vista previa"
+                                          className="document-workspace__icon-btn"
                                         >
-                                          <Eye size={12} />
-                                          Vista previa
+                                          <Eye size={14} strokeWidth={2} />
                                         </button>
 
                                         <button
                                           type="button"
-                                          onClick={() => handleOpenExternal(item)}
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            handleOpenExternal(item);
+                                          }}
                                           disabled={!item.webUrl}
-                                          className="document-workspace__action-btn"
+                                          title="Abrir en SharePoint"
+                                          className="document-workspace__icon-btn"
                                         >
-                                          Abrir
+                                          <ChevronRight size={14} strokeWidth={2} />
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            handleDownload(item);
+                                          }}
+                                          disabled={!item.downloadUrl}
+                                          title="Descargar"
+                                          className="document-workspace__icon-btn"
+                                        >
+                                          <Download size={14} strokeWidth={2} />
                                         </button>
                                       </>
                                     )}

@@ -12,6 +12,15 @@
  * carga/error. Delega toda la obtención de datos en
  * {@link documentSource.service} y {@link sharepointDiscovery.service},
  * por lo que no conoce detalles de Graph directamente.
+ *
+ * Distingue explícitamente el caso "el área no tiene contenido" del caso
+ * "el usuario no tiene permiso para ver esta área" (403 de Graph),
+ * expuesto como `accessDenied`.
+ *
+ * También soporta apertura directa de una ubicación conocida
+ * ({@link openLocationDirect}), usada por el deep-link del buscador
+ * global para llevar al usuario directo a la carpeta de un resultado y
+ * resaltarlo (`highlightedItemId`).
  */
 
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -21,6 +30,7 @@ import {
   loadSourceRoot,
   uploadDocument,
 } from "../services/documentSource.service";
+import { GraphApiError } from "../services/graphClient";
 import {
   getSharePointSiteDrives,
   getSharePointSubsites,
@@ -74,8 +84,10 @@ export interface UseDocumentExplorerResult {
   breadcrumbs: readonly DocumentBreadcrumbItem[];
   loading: DocumentExplorerLoadingState;
   error: string | null;
+  accessDenied: boolean;
   canUploadHere: boolean;
   uploadingFile: boolean;
+  highlightedItemId: string | null;
 
   switchSource: (source: DocumentSourceType) => Promise<void>;
   selectDepartment: (department: DocumentDepartment) => Promise<void>;
@@ -87,6 +99,11 @@ export interface UseDocumentExplorerResult {
   goToRoot: () => Promise<void>;
   goToBreadcrumb: (breadcrumbId: string) => Promise<void>;
   uploadFile: (file: File) => Promise<void>;
+  openLocationDirect: (
+    source: DocumentSourceType,
+    location: DocumentLocation,
+    highlightId?: string
+  ) => Promise<void>;
   clearError: () => void;
 }
 
@@ -137,7 +154,13 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
 
   const [error, setError] = useState<string | null>(null);
 
+  const [accessDenied, setAccessDenied] = useState(false);
+
   const [uploadingFile, setUploadingFile] = useState(false);
+
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(
+    null
+  );
 
   const siteDetailsCacheRef = useRef(new Map<string, SiteDetails>());
 
@@ -207,6 +230,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     if (cached) {
       setSelectedDepartmentLibraries(cached.drives);
       setSelectedDepartmentSubsites(cached.subsites);
+      setAccessDenied(false);
       return;
     }
 
@@ -215,6 +239,19 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       getSharePointSubsites(siteId),
     ]);
 
+    const bothFailedWith403 =
+      drivesResult.status === "rejected" &&
+      subsitesResult.status === "rejected" &&
+      drivesResult.reason instanceof GraphApiError &&
+      drivesResult.reason.status === 403;
+
+    if (bothFailedWith403) {
+      setSelectedDepartmentLibraries([]);
+      setSelectedDepartmentSubsites([]);
+      setAccessDenied(true);
+      return;
+    }
+
     const drives = drivesResult.status === "fulfilled" ? drivesResult.value : [];
     const subsites =
       subsitesResult.status === "fulfilled" ? subsitesResult.value : [];
@@ -222,6 +259,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     siteDetailsCacheRef.current.set(siteId, { drives, subsites });
     setSelectedDepartmentLibraries(drives);
     setSelectedDepartmentSubsites(subsites);
+    setAccessDenied(false);
   }, []);
 
   const loadTeamDrives = useCallback(async () => {
@@ -254,10 +292,12 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       setSelectedDepartmentLibraries([]);
       setSelectedDepartmentSubsites([]);
       setSiteTrail([]);
+      setAccessDenied(false);
       setSelectedTeamDrive(null);
       setTeamDrives([]);
       setBreadcrumbs([]);
       setCurrentItems([]);
+      setHighlightedItemId(null);
 
       if (source === "teams") {
         await loadTeamDrives();
@@ -279,6 +319,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
         setSelectedLibrary(null);
         setCurrentItems([]);
         setBreadcrumbs([]);
+        setHighlightedItemId(null);
 
         const rootTrailItem: SharePointSiteDiscoveryResult = {
           id: department.siteId,
@@ -374,6 +415,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       try {
         setLoading("folder");
         setError(null);
+        setHighlightedItemId(null);
 
         setBreadcrumbs((current) => [
           ...current,
@@ -423,6 +465,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       try {
         setLoading("folder");
         setError(null);
+        setHighlightedItemId(null);
 
         setBreadcrumbs(breadcrumbs.slice(0, index + 1));
 
@@ -453,7 +496,8 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     [activeSource, breadcrumbs, goToRoot]
   );
 
-  const canUploadHere = activeSource === "corporate-sites" && breadcrumbs.length > 0;
+  const canUploadHere =
+    activeSource === "corporate-sites" && breadcrumbs.length > 0;
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -490,6 +534,79 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     [activeSource, breadcrumbs, canUploadHere]
   );
 
+  /**
+   * Abre directamente una ubicación conocida (driveId + itemId), sin
+   * pasar por el flujo normal de selección de área/biblioteca.
+   *
+   * @remarks
+   * Usado por el deep-link del buscador global: cuando un resultado de
+   * búsqueda apunta a una carpeta del OneDrive del usuario, este método
+   * la abre de una vez y marca el archivo encontrado con
+   * `highlightedItemId` para resaltarlo visualmente.
+   */
+  const openLocationDirect = useCallback(
+    async (
+      source: DocumentSourceType,
+      location: DocumentLocation,
+      highlightId?: string
+    ) => {
+      setActiveSource(source);
+      setSelectedDepartment(null);
+      setSelectedLibrary(null);
+      setSelectedDepartmentLibraries([]);
+      setSelectedDepartmentSubsites([]);
+      setSiteTrail([]);
+      setAccessDenied(false);
+      setSelectedTeamDrive(null);
+      setTeamDrives([]);
+      setHighlightedItemId(highlightId ?? null);
+
+      if (!location.itemId) {
+        await loadRootFor(source, null);
+        return;
+      }
+
+      try {
+        setLoading("folder");
+        setError(null);
+
+        setBreadcrumbs([
+          {
+            id: source,
+            name: rootBreadcrumbLabel(source, null),
+            location: { driveId: location.driveId, itemId: null },
+          },
+          {
+            id: location.itemId,
+            name: "Resultado de búsqueda",
+            location,
+          },
+        ]);
+
+        const cacheKey = buildFolderCacheKey(source, location);
+        const cached = itemsCacheRef.current.get(cacheKey);
+
+        if (cached) {
+          setCurrentItems(cached);
+          return;
+        }
+
+        const items = await loadFolderChildren(location, source);
+        itemsCacheRef.current.set(cacheKey, items);
+        setCurrentItems(items);
+      } catch (locationError) {
+        console.error(
+          "[Document Explorer] openLocationDirect",
+          locationError
+        );
+        setError("No fue posible abrir la ubicación solicitada.");
+      } finally {
+        setLoading("idle");
+      }
+    },
+    [loadRootFor, rootBreadcrumbLabel]
+  );
+
   return useMemo(
     () => ({
       activeSource,
@@ -504,8 +621,10 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       breadcrumbs,
       loading,
       error,
+      accessDenied,
       canUploadHere,
       uploadingFile,
+      highlightedItemId,
       switchSource,
       selectDepartment,
       selectLibrary,
@@ -516,6 +635,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       goToRoot,
       goToBreadcrumb,
       uploadFile,
+      openLocationDirect,
       clearError,
     }),
     [
@@ -531,8 +651,10 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       breadcrumbs,
       loading,
       error,
+      accessDenied,
       canUploadHere,
       uploadingFile,
+      highlightedItemId,
       switchSource,
       selectDepartment,
       selectLibrary,
@@ -543,6 +665,7 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       goToRoot,
       goToBreadcrumb,
       uploadFile,
+      openLocationDirect,
       clearError,
     ]
   );

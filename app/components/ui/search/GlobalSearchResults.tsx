@@ -5,6 +5,10 @@
  * @remarks
  * Este archivo renderiza un panel desplegable con resultados agrupados
  * por categoría, navegación por teclado y resaltado del texto buscado.
+ *
+ * Los resultados con `href` externo (ej. un documento de SharePoint fuera
+ * del catálogo interno de Documentos) se abren en pestaña nueva; los
+ * demás navegan internamente con el router de Next.js.
  */
 
 'use client';
@@ -15,30 +19,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 /**
  * Representa un resultado individual de búsqueda.
- *
- * @remarks
- * Esta estructura es la esperada por el componente para agrupar,
- * mostrar y navegar entre resultados.
  */
 interface SearchResultItem {
-  /**
-   * Texto principal mostrado en el resultado.
-   */
   label: string;
-
-  /**
-   * Descripción secundaria del resultado.
-   */
   description: string;
-
-  /**
-   * Ruta de navegación del resultado.
-   */
   href: string;
-
-  /**
-   * Categoría usada para agrupar visualmente los resultados.
-   */
   category?: string;
 }
 
@@ -46,59 +31,23 @@ interface SearchResultItem {
  * Props del componente {@link GlobalSearchResults}.
  */
 interface Props {
-  /**
-   * Lista de resultados a mostrar.
-   */
   results: SearchResultItem[];
-
-  /**
-   * Texto actual de búsqueda.
-   */
   query: string;
-
-  /**
-   * Callback opcional ejecutado al seleccionar un resultado.
-   */
   onSelect?: () => void;
+}
+
+function isExternalHref(href: string) {
+  return href.startsWith('http://') || href.startsWith('https://');
 }
 
 /**
  * Renderiza el panel de resultados de búsqueda global.
- *
- * @param props Propiedades del componente.
- * @param props.results Resultados encontrados.
- * @param props.query Texto actual de búsqueda.
- * @param props.onSelect Callback opcional al seleccionar un resultado.
- * @returns Panel desplegable animado con resultados agrupados.
- *
- * @remarks
- * Flujo general:
- * 1. Agrupa resultados por categoría.
- * 2. Genera una lista plana para navegación por teclado.
- * 3. Permite moverse con flechas arriba/abajo.
- * 4. Permite seleccionar con Enter.
- * 5. Hace scroll automático al resultado activo.
- * 6. Resalta coincidencias del texto buscado.
  */
 export default function GlobalSearchResults({ results, query, onSelect }: Props) {
-  /**
-   * Router de Next.js para navegación programática.
-   */
   const router = useRouter();
-
-  /**
-   * Índice del resultado actualmente activo.
-   */
   const [activeIndex, setActiveIndex] = useState(0);
-
-  /**
-   * Referencias a cada fila renderizada para controlar el scroll.
-   */
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  /**
-   * Resultados agrupados por categoría.
-   */
   const groupedResults = useMemo(() => {
     const grouped: Record<string, SearchResultItem[]> = {};
 
@@ -111,23 +60,20 @@ export default function GlobalSearchResults({ results, query, onSelect }: Props)
     return grouped;
   }, [results]);
 
-  /**
-   * Lista plana de resultados para navegación lineal con teclado.
-   */
   const flatResults = useMemo(
     () => Object.values(groupedResults).flat(),
     [groupedResults]
   );
 
-  /**
-   * Controla la navegación por teclado.
-   *
-   * @remarks
-   * Soporta:
-   * - ArrowDown
-   * - ArrowUp
-   * - Enter
-   */
+  const handleSelect = (href: string) => {
+    if (isExternalHref(href)) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+    } else {
+      router.push(href);
+    }
+    onSelect?.();
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!flatResults.length) return;
@@ -146,19 +92,16 @@ export default function GlobalSearchResults({ results, query, onSelect }: Props)
         e.preventDefault();
         const selected = flatResults[activeIndex];
         if (selected) {
-          router.push(selected.href);
-          onSelect?.();
+          handleSelect(selected.href);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [flatResults, activeIndex, router, onSelect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flatResults, activeIndex]);
 
-  /**
-   * Hace scroll automático al resultado activo.
-   */
   useEffect(() => {
     itemRefs.current[activeIndex]?.scrollIntoView({
       block: 'nearest',
@@ -166,13 +109,6 @@ export default function GlobalSearchResults({ results, query, onSelect }: Props)
     });
   }, [activeIndex]);
 
-  /**
-   * Resalta coincidencias del query dentro de un texto.
-   *
-   * @param text Texto original.
-   * @param query Texto a resaltar.
-   * @returns Fragmentos de texto con coincidencias resaltadas.
-   */
   const highlightText = (text: string, query: string) => {
     if (!query) return text;
 
@@ -189,9 +125,6 @@ export default function GlobalSearchResults({ results, query, onSelect }: Props)
     );
   };
 
-  /**
-   * Índice global usado para mantener la correspondencia entre grupos y lista plana.
-   */
   let globalIndex = -1;
 
   return (
@@ -211,7 +144,6 @@ export default function GlobalSearchResults({ results, query, onSelect }: Props)
 
             {Object.entries(groupedResults).map(([category, items]) => (
               <div key={category}>
-                {/* Encabezado de categoría */}
                 <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider
                                 text-slate-400 dark:text-[#545d68]">
                   {category}
@@ -229,10 +161,7 @@ export default function GlobalSearchResults({ results, query, onSelect }: Props)
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.03 }}
-                      onClick={() => {
-                        router.push(app.href);
-                        onSelect?.();
-                      }}
+                      onClick={() => handleSelect(app.href)}
                       className={`relative group px-4 py-3 cursor-pointer transition-all duration-150
                                   border-b last:border-none overflow-hidden
                                   border-slate-100 dark:border-[#21262d]
