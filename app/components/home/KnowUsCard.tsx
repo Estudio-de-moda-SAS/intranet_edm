@@ -6,6 +6,14 @@
  * @remarks
  * Este archivo renderiza una tarjeta visual interactiva con fondo dinámico,
  * efectos decorativos y una lista de aspectos destacados de la organización.
+ *
+ * Altura: usa `min-h-[220px]` en vez de `h-full`. Antes dependía de un
+ * contenedor padre con `lg:h-full` dentro de un grid de altura fija
+ * (620px) para tener presencia visual — al mover esta card a un stack
+ * vertical sin altura fija, `h-full` colapsaba a la altura mínima del
+ * contenido en flujo (los elementos decorativos son `absolute` y no
+ * aportan altura). `min-h-[220px]` le da una altura consistente sin
+ * depender de ningún padre externo.
  */
 
 "use client";
@@ -75,7 +83,8 @@ export function KnowUsCard({
   return (
     <Link
       href={href}
-      className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl shadow-lg shadow-violet-500/20 ring-1 ring-violet-400/25 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/35 hover:ring-violet-400/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+      style={{ minHeight: "280px" }}
+      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl shadow-lg shadow-violet-500/20 ring-1 ring-violet-400/25 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/35 hover:ring-violet-400/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
     >
       {/* Fondo: imagen o gradiente */}
       <div

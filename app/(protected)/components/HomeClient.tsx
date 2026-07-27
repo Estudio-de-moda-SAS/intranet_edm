@@ -20,13 +20,22 @@
  * El guard `msalReady` evita que la query corra mientras MSAL está
  * procesando el redirect callback de Microsoft (`inProgress === "handleRedirect"`),
  * lo que causaba un loop login → home → login al volver de Entra ID.
+ *
+ * @remarks
+ * `fetchHomeData` pide el token con `interactionMode: "redirect"` a
+ * propósito: esta query se dispara sola al montar el componente, sin
+ * ningún gesto de clic del usuario. Si la sesión venció y `getAccessToken`
+ * intentara `acquireTokenPopup` (el modo por defecto), el navegador
+ * bloquearía el `window.open` por no venir de una interacción directa,
+ * y el usuario quedaría atascado viendo un error sin salida real —
+ * incluso recargando, porque el mismo flujo se repite.
  */
 
 "use client";
 
 import { useQuery }          from "@tanstack/react-query";
 import { useMsal }           from "@azure/msal-react";
-import { getAccessToken }    from "@/app/api/auth/msal";
+import { getAccessToken, ensureLogin } from "@/app/api/auth/msal";
 import { HomePageContent }   from "./HomePageContent";
 import type { HomeData }     from "@/types/home";
 
@@ -106,10 +115,31 @@ export function HomeClient() {
 
   if (isError || !data) {
     return (
-      <div className="min-h-screen bg-slate-50/70 flex items-center justify-center">
-        <p className="text-sm text-slate-400">
-          Error al cargar los datos. Recarga la pagina.
-        </p>
+      <div className="min-h-screen bg-slate-50/70 flex items-center justify-center px-4">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <p className="text-sm text-slate-500">
+            No pudimos cargar tu información. Esto puede pasar si tu sesión
+            expiró.
+          </p>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300"
+            >
+              Reintentar
+            </button>
+
+            <button
+              type="button"
+              onClick={() => ensureLogin("redirect")}
+              className="rounded-full bg-violet-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-violet-700"
+            >
+              Iniciar sesión de nuevo
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

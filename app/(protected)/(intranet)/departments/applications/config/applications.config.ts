@@ -29,7 +29,7 @@ export const COMPANY_APPS: CompanyAppItem[] = [
     href: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/6ff5ee90-2c58-4476-a248-3e1333b3081e?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=3af6e625-ac0a-4221-bdfe-8093cef22ca2&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
     embedUrl: "https://apps.powerapps.com/play/e/default-cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c/a/6ff5ee90-2c58-4476-a248-3e1333b3081e?source=teamsopenwebsite&screenColor=RGBA(0%2C176%2C240%2C1)&hint=3af6e625-ac0a-4221-bdfe-8093cef22ca2&tenantId=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c",
     icon: "calendarDays",
-    color: "pink",
+    color: "purple",
     category: "RRHH",
   },
   {

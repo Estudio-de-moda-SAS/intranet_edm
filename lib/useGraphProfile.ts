@@ -17,11 +17,23 @@
  * {@link DEV_SESSION} directamente sin invocar MSAL ni Graph.
  *
  * **Roles desactivados:**
- * Cuando {@link DEV_DISABLE_ROLES} es `true` el hook retorna `admin`
- * directamente sin invocar Graph, evitando que grupos con `displayName: null`
- * (permisos de Azure AD pendientes) caigan al fallback `employee`.
- * Para restaurar el comportamiento real: asignar `DEV_DISABLE_ROLES = false`
- * en `config/config.ts`, o eliminar la constante por completo.
+ * Cuando {@link DEV_DISABLE_ROLES} es `true`, el hook SIGUE consultando
+ * Graph con normalidad (para traer `role`, `department`, `location`, etc.
+ * reales de cada colaborador) — lo único que cambia es que el
+ * `accessLevel` resuelto se sobrescribe a `"admin"` en el `select` de la
+ * query, en vez de caer al fallback `employee` por el bug de grupos de
+ * Azure AD con `displayName: null` (permisos de Admin Consent pendientes).
+ *
+ * ⚠️ Antes esta bandera reemplazaba el usuario COMPLETO por
+ * {@link DEV_SESSION} (el mock de desarrollo), lo que hacía que TODOS
+ * los colaboradores vieran el mismo cargo/departamento falso del mock
+ * (ej. "Aprendiz TI 2") sin importar su perfil real — un bug, no el
+ * comportamiento buscado. `DEV_DISABLE_ROLES` debe afectar únicamente
+ * `accessLevel`, nunca el resto del perfil.
+ *
+ * Para restaurar el comportamiento real de accessLevel: asignar
+ * `DEV_DISABLE_ROLES = false` en `config/config.ts`, o eliminar la
+ * constante por completo.
  *
  * @example
  * ```tsx
@@ -140,19 +152,17 @@ async function fetchGraphProfile(
  * **Modo bypass** (`NEXT_PUBLIC_AUTH_BYPASS === "true"`):
  * Retorna {@link DEV_SESSION} directamente, sin MSAL ni Graph.
  *
- * **Roles desactivados** (`DEV_DISABLE_ROLES === true`):
- * Retorna `admin` directamente sin llamar a Graph. Evita que grupos de
- * Azure AD con `displayName: null` (permisos pendientes de Admin Consent)
- * caigan al fallback `employee`.
- * Para restaurar: `DEV_DISABLE_ROLES = false` en `config/config.ts`.
- *
  * **Modo producción**:
- * Obtiene el access token con {@link getAccessToken} y consulta Graph.
- * Solo se ejecuta si MSAL tiene al menos una cuenta autenticada.
+ * Obtiene el access token con {@link getAccessToken} y consulta Graph
+ * SIEMPRE que haya una cuenta autenticada — el perfil real (`role`,
+ * `department`, `location`, etc.) nunca se sustituye por datos de mock,
+ * sin importar el valor de {@link DEV_DISABLE_ROLES}.
  *
- * ⚠️ Todos los hooks se invocan incondicionalmente para respetar las
- * Rules of Hooks. El flag {@link DEV_DISABLE_ROLES} solo afecta el valor
- * de retorno, nunca el orden de invocación de hooks.
+ * Si {@link DEV_DISABLE_ROLES} está activo, el único campo que cambia es
+ * `accessLevel` (forzado a `"admin"` en el `select` de la query) — el
+ * resto del perfil sigue viniendo 100% de Graph.
+ * Para restaurar el flujo real de accessLevel: `DEV_DISABLE_ROLES = false`
+ * en `config/config.ts`.
  *
  * @returns Resultado de TanStack Query con {@link GraphProfileResult}
  *   como `data`, más los estados estándar `isLoading`, `isError`, `error`.
@@ -174,57 +184,43 @@ export function useGraphProfile() {
   }
 
   // ── Hooks — siempre se invocan, nunca dentro de un condicional ───────────
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { accounts, inProgress } = useMsal();
   const account    = accounts[0];
   const msalReady  = inProgress === "none";
   const isLoggedIn = !!account;
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const query = useQuery({
     queryKey:  ["graph-profile", account?.homeAccountId ?? ""],
-    // Desactivar la query cuando los roles están desactivados — no hace falta
-    // llamar a Graph si vamos a ignorar el resultado de todas formas.
-    enabled:   !DEV_DISABLE_ROLES && msalReady && isLoggedIn,
+    // Siempre habilitada mientras haya sesión — DEV_DISABLE_ROLES ya NO
+    // desactiva la consulta a Graph, porque el perfil real (role,
+    // department, etc.) debe cargarse sin importar ese flag.
+    enabled:   msalReady && isLoggedIn,
     staleTime: STALE_TIME,
     queryFn:   () => fetchGraphProfile(account!.homeAccountId),
-    select:    (data) => ({
-      ...data,
-      user: {
-        ...data.user,
-        id:    account?.localAccountId ?? data.user.id,
-        name:  account?.name           ?? data.user.name,
-        email: account?.username       ?? data.user.email,
-      },
-    }),
-  });
+    select:    (data) => {
+      // Los grupos de Azure AD devuelven displayName: null porque los
+      // permisos de Admin Consent están pendientes, lo que hace caer
+      // accessLevel a "employee" por defecto. Mientras eso se resuelve,
+      // DEV_DISABLE_ROLES fuerza accessLevel a "admin" — pero SOLO ese
+      // campo. role, department, location, etc. siguen siendo los reales
+      // que ya trajo fetchGraphProfile.
+      const accessLevel = DEV_DISABLE_ROLES
+        ? ("admin" as AccessLevel)
+        : data.accessLevel;
 
-  // ── Roles desactivados → devolver admin sin usar el resultado de Graph ───
-  // Los grupos de Azure AD devuelven displayName: null porque los permisos
-  // de Admin Consent están pendientes. Esto evita caer al fallback employee.
-  // Para restaurar el flujo real: DEV_DISABLE_ROLES = false en config/config.ts
-  if (DEV_DISABLE_ROLES) {
-    const account0 = accounts[0];
-    const devUser  = DEV_SESSION.user as AppUser;
-    return {
-      data: {
+      return {
+        ...data,
+        accessLevel,
         user: {
-          ...devUser,
-          accessLevel: "admin" as AccessLevel,
-          ...(account0 && {
-            id:    account0.localAccountId,
-            name:  account0.name     ?? devUser.name,
-            email: account0.username ?? devUser.email,
-          }),
+          ...data.user,
+          id:          account?.localAccountId ?? data.user.id,
+          name:        account?.name           ?? data.user.name,
+          email:       account?.username       ?? data.user.email,
+          accessLevel,
         },
-        accessLevel: "admin" as AccessLevel,
-        accessToken: "dev-roles-disabled-token",
-      } satisfies GraphProfileResult,
-      isLoading: false,
-      isError:   false,
-      error:     null,
-    };
-  }
+      };
+    },
+  });
 
   return query;
 }

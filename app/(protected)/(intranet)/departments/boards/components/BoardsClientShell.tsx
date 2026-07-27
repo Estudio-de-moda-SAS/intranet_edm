@@ -3,29 +3,18 @@
 /**
  * @module BoardsClientShell
  * @remarks
- * Full client shell for the `/boards` route.
+ * Shell de cliente completo para la ruta `/boards`.
  *
  * Layout:
- * - Hero banner — introduces the boards module
- * - Search and filter toolbar — filters dashboards by name, description, tags and operational area
- * - Two-column panel — sidebar list (left) + viewer / preview panel (right)
- *
- * On mobile the grid collapses to a single column: list above, viewer below.
+ * - Barra de búsqueda y filtros — filtra los tableros por nombre, descripción, etiquetas y área operativa
+ * - Grilla de cards — una tarjeta por tablero, que abre directamente el link oficial de SharePoint / Microsoft 365
+ * - Paginación — máximo 12 tableros por página
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  LayoutGrid,
-  ChevronRight,
-  ExternalLink,
-  ShieldCheck,
-  BarChart3,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
-import { DepartmentHeroBanner } from "@/app/components/ui/animated/DepartmentHeroBanner";
-import { PowerBIViewer } from "./PowerBIViewer";
+import { LayoutGrid, ExternalLink, Search, ChevronLeft, ChevronRight } from "lucide-react";
+
 import {
   POWERBI_DASHBOARDS,
   POWERBI_AREAS,
@@ -39,56 +28,57 @@ import {
 
 interface BoardsClientShellProps {
   /**
-   * Access level resolved server-side — passed down from the Server Component.
-   * Reserved for future role-based visibility of dashboards (e.g. admin-only boards).
+   * Nivel de acceso resuelto en el servidor — se pasa desde el Server Component.
+   * Reservado para futura visibilidad de tableros según rol (ej. tableros solo para admins).
    */
   accessLevel: string;
 }
 
 // ---------------------------------------------------------------------------
-// Area color map — reuses department identity pattern from the intranet
+// Mapa de color por área — tono sólido usado en el ícono de cada card.
+// Se mantiene sincronizado con la identidad de departamentos ya usada en la intranet.
 // ---------------------------------------------------------------------------
 
-const AREA_COLORS: Record<string, string> = {
-  Comercial:
-    "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300",
-  "E-Commerce":
-    "bg-cyan-100 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300",
-  Finanzas:
-    "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300",
-  RRHH: "bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300",
-  Logística:
-    "bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300",
-  Compras:
-    "bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300",
-  TI: "bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300",
-  Tiendas:
-    "bg-pink-100 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300",
-  Jurídico:
-    "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
-  Producto:
-    "bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300",
-  "Servicios Administrativos":
-    "bg-teal-100 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300",
-  Corporativo:
-    "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300",
+const AREA_ACCENT: Record<string, string> = {
+  Comercial: "bg-blue-600 text-white",
+  "E-Commerce": "bg-cyan-600 text-white",
+  Finanzas: "bg-emerald-600 text-white",
+  RRHH: "bg-rose-600 text-white",
+  Logística: "bg-orange-500 text-white",
+  Compras: "bg-amber-500 text-slate-900",
+  CRM: "bg-amber-500 text-slate-900",
+  TI: "bg-violet-600 text-white",
+  Tiendas: "bg-pink-600 text-white",
+  Jurídico: "bg-slate-600 text-white",
+  Producto: "bg-purple-600 text-white",
+  "Servicios Administrativos": "bg-teal-600 text-white",
+  Corporativo: "bg-indigo-600 text-white",
 };
 
 // ---------------------------------------------------------------------------
-// Feature flags
+// Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Temporarily disables embedded dashboard rendering.
- *
- * Keep {@link PowerBIViewer} available for the future, but while the organization
- * defines the final embed strategy, the boards section works as a clean catalog
- * that redirects users to the official Microsoft 365 / SharePoint view.
- */
-const ENABLE_DASHBOARD_EMBED = false;
+/** Deriva las iniciales visibles en el ícono a partir del título del tablero. */
+function getInitials(title: string): string {
+  return title
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 3);
+}
 
 // ---------------------------------------------------------------------------
-// Boards search and filters
+// Paginación
+// ---------------------------------------------------------------------------
+
+/** Cantidad máxima de tableros que se muestran por página en la grilla. */
+const BOARDS_PER_PAGE = 12;
+
+// ---------------------------------------------------------------------------
+// Búsqueda y filtros de tableros
 // ---------------------------------------------------------------------------
 
 type FilterArea = PowerBIArea | "Todos";
@@ -108,54 +98,48 @@ function BoardsToolbar({
   onSearchChange,
   onAreaChange,
 }: BoardsToolbarProps) {
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const filters: FilterArea[] = ["Todos", ...areas];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Centro de tableros
-          </h2>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 dark:bg-violet-950/30">
+            <LayoutGrid className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+          </span>
 
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Busca por nombre, descripción o filtra por área para encontrar el tablero que necesitas.
-          </p>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Mis Tableros
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Crea y consulta tableros compartidos
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <div className="relative w-full shrink-0 sm:w-72 lg:w-80">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
-            <input
-              value={search}
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Buscar tablero..."
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-violet-700 dark:focus:bg-slate-900 sm:w-72"
-            />
-          </div>
-
-          <div className="relative">
-            <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-            <select
-              value={active}
-              onChange={(event) =>
-                onAreaChange(event.target.value as FilterArea)
-              }
-              className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-8 text-sm text-slate-700 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-violet-700 dark:focus:bg-slate-900 sm:w-52"
-            >
-              {filters.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
+          <input
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
+            placeholder="Buscar tablero..."
+            style={{
+              paddingLeft: "2.5rem",
+              boxShadow: isSearchFocused
+                ? "0 0 0 4px rgba(196, 181, 253, 0.35)"
+                : "none",
+            }}
+            className="h-11 w-full min-w-0 rounded-full border-none bg-slate-100/80 pr-4 text-sm text-slate-700 outline-none transition-all duration-200 placeholder:text-slate-400 focus:bg-white dark:bg-slate-800/60 dark:text-slate-200 dark:focus:bg-slate-900"
+          />
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {filters.map((item) => {
           const isActive = active === item;
 
@@ -164,10 +148,10 @@ function BoardsToolbar({
               key={item}
               type="button"
               onClick={() => onAreaChange(item)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-150 ${
                 isActive
-                  ? "border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300"
-                  : "border-slate-200 bg-white text-slate-500 hover:border-violet-200 hover:text-violet-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-violet-800 dark:hover:text-violet-300"
+                  ? "bg-violet-600 text-white shadow-sm shadow-violet-200 dark:shadow-violet-950/40"
+                  : "bg-slate-100 text-slate-500 hover:bg-violet-50 hover:text-violet-600 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-violet-950/30 dark:hover:text-violet-300"
               }`}
             >
               {item}
@@ -180,195 +164,153 @@ function BoardsToolbar({
 }
 
 // ---------------------------------------------------------------------------
-// Sidebar dashboard card
+// Card de tablero
 // ---------------------------------------------------------------------------
 
-interface DashboardCardProps {
-  dashboard: PowerBIDashboard;
-  isSelected: boolean;
-  onClick: () => void;
-}
-
-function DashboardCard({ dashboard, isSelected, onClick }: DashboardCardProps) {
-  const colorClass =
-    AREA_COLORS[dashboard.area] ??
-    "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400";
-
-  return (
-    <motion.button
-      layout
-      initial={{ opacity: 0, x: -6 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -6 }}
-      transition={{ duration: 0.18 }}
-      onClick={onClick}
-      className={`w-full text-left px-4 py-3.5 rounded-xl border transition-all duration-200 group outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-        isSelected
-          ? "border-violet-500/60 bg-violet-50 dark:bg-violet-950/25 shadow-sm"
-          : "border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 hover:border-violet-300 dark:hover:border-violet-800 hover:shadow-sm"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p
-            className={`text-sm font-medium truncate transition-colors ${
-              isSelected
-                ? "text-violet-700 dark:text-violet-300"
-                : "text-slate-800 dark:text-slate-100 group-hover:text-violet-600 dark:group-hover:text-violet-400"
-            }`}
-          >
-            {dashboard.title}
-          </p>
-
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed line-clamp-2">
-            {dashboard.description}
-          </p>
-        </div>
-
-        <ChevronRight
-          className={`w-3.5 h-3.5 mt-0.5 shrink-0 transition-all duration-200 ${
-            isSelected
-              ? "text-violet-500 translate-x-0.5"
-              : "text-slate-300 dark:text-slate-600 group-hover:text-violet-400 group-hover:translate-x-0.5"
-          }`}
-        />
-      </div>
-
-      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-        <span
-          className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${colorClass}`}
-        >
-          {dashboard.area}
-        </span>
-
-        {dashboard.openMode === "external" && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
-            <ExternalLink className="w-3 h-3" />
-            SharePoint
-          </span>
-        )}
-
-        {dashboard.tags?.map((tag) => (
-          <span
-            key={tag}
-            className="inline-block px-2 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-    </motion.button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Dashboard preview panel
-// ---------------------------------------------------------------------------
-
-function DashboardPreview({ dashboard }: { dashboard: PowerBIDashboard }) {
+function BoardCard({ dashboard }: { dashboard: PowerBIDashboard }) {
   const hasValidUrl =
     dashboard.reportUrl &&
     dashboard.reportUrl.trim() !== "" &&
     dashboard.reportUrl.trim() !== "t";
 
+  const accent = AREA_ACCENT[dashboard.area] ?? "bg-slate-500 text-white";
+  const initials = getInitials(dashboard.title);
+
+const card = (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      whileHover={
+        hasValidUrl
+          ? { y: -3, transition: { duration: 0.25, ease: "easeOut" } }
+          : { y: 0 }
+      }
+      className={`group relative flex flex-col items-center gap-3 rounded-2xl border p-5 text-center transition-all duration-300 ease-out ${
+        hasValidUrl
+          ? "cursor-pointer border-slate-200 bg-white hover:border-violet-300 hover:shadow-lg hover:shadow-violet-100 dark:border-slate-700/60 dark:bg-slate-900 dark:hover:border-violet-700 dark:hover:shadow-violet-950/40"
+          : "cursor-not-allowed border-dashed border-slate-200 bg-slate-50/60 opacity-60 dark:border-slate-800 dark:bg-slate-900/40"
+      }`}
+    >
+      {hasValidUrl && (
+        <ExternalLink className="absolute right-3 top-3 h-3.5 w-3.5 text-slate-300 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:text-violet-500 dark:text-slate-600" />
+      )}
+
+      <span
+        className={`flex h-16 w-16 items-center justify-center rounded-2xl text-lg font-bold shadow-sm transition-transform duration-300 ease-out ${accent} ${
+          hasValidUrl ? "group-hover:scale-[1.03]" : ""
+        }`}
+      >
+        {initials}
+      </span>
+
+      <div className="min-w-0">
+        <p
+          className={`text-sm font-medium leading-snug transition-colors ${
+            hasValidUrl
+              ? "text-slate-700 group-hover:text-violet-700 dark:text-slate-200 dark:group-hover:text-violet-300"
+              : "text-slate-400 dark:text-slate-600"
+          }`}
+        >
+          {dashboard.title}
+        </p>
+
+        {!hasValidUrl && (
+          <span className="mt-1 inline-block text-[10px] font-medium text-slate-400 dark:text-slate-600">
+            Próximamente
+          </span>
+        )}
+      </div>
+    </motion.div>
+  );
+
+  if (!hasValidUrl) return card;
+
   return (
-    <div className="flex flex-col rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-700/60">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900/60">
-                <BarChart3 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-              </span>
+    
+      <a href={dashboard.reportUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+      aria-label={`Abrir ${dashboard.title} en SharePoint`}
+    >
+      {card}
+    </a>
+  );
+}
 
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
-                <ExternalLink className="w-3 h-3" />
-                SharePoint
-              </span>
-            </div>
+// ---------------------------------------------------------------------------
+// Controles de paginación
+// ---------------------------------------------------------------------------
 
-            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
-              {dashboard.title}
-            </h2>
+interface BoardsPaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
 
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed max-w-2xl">
-              {dashboard.description ||
-                "Este tablero se encuentra disponible desde el entorno corporativo de Microsoft 365."}
-            </p>
-          </div>
-        </div>
-      </div>
+function BoardsPagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: BoardsPaginationProps) {
+  if (totalPages <= 1) return null;
 
-      <div className="p-6 bg-slate-50 dark:bg-slate-950">
-        <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">
-          <div className="flex flex-col gap-4 max-w-2xl">
-            <div className="flex items-start gap-3">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/60 shrink-0">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
+  const isFirstPage = currentPage === 1;
+  const isLastPage = currentPage === totalPages;
 
-              <div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  Acceso protegido
-                </p>
+  return (
+    <div className="flex items-center justify-between border-t border-slate-100 pt-5 dark:border-slate-800">
+      <button
+        type="button"
+        disabled={isFirstPage}
+        onClick={() => onPageChange(currentPage - 1)}
+        className="flex items-center gap-1 rounded-full border border-slate-200 px-4 py-2 text-xs font-medium text-slate-500 transition-colors disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:border-violet-300 enabled:hover:text-violet-600 dark:border-slate-700 dark:text-slate-400 dark:enabled:hover:border-violet-700 dark:enabled:hover:text-violet-300"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+        Anterior
+      </button>
 
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  Puedes abrir el tablero en su ubicación oficial de SharePoint,
-                  conservando los permisos definidos por Microsoft 365.
-                </p>
-              </div>
-            </div>
+      <div className="flex items-center gap-1.5">
+        {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+          (page) => {
+            const isActive = page === currentPage;
 
-            <div className="flex items-center gap-2 flex-wrap pt-2">
-              <span
-                className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${
-                  AREA_COLORS[dashboard.area] ??
-                  "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+            return (
+              <button
+                key={page}
+                type="button"
+                onClick={() => onPageChange(page)}
+                aria-label={`Ir a la página ${page}`}
+                aria-current={isActive ? "page" : undefined}
+                className={`h-1.5 rounded-full transition-all duration-200 ${
+                  isActive
+                    ? "w-6 bg-violet-600"
+                    : "w-1.5 bg-slate-200 hover:bg-violet-200 dark:bg-slate-700 dark:hover:bg-violet-800"
                 }`}
-              >
-                {dashboard.area}
-              </span>
-
-              {dashboard.tags?.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-block px-2 py-0.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            <div className="pt-2">
-              {hasValidUrl ? (
-                <a
-                  href={dashboard.reportUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-violet-600 hover:bg-violet-700 text-white transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Abrir tablero
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed"
-                >
-                  URL pendiente
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+              />
+            );
+          }
+        )}
       </div>
+
+      <button
+        type="button"
+        disabled={isLastPage}
+        onClick={() => onPageChange(currentPage + 1)}
+        className="flex items-center gap-1 rounded-full border border-slate-200 px-4 py-2 text-xs font-medium text-slate-500 transition-colors disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:border-violet-300 enabled:hover:text-violet-600 dark:border-slate-700 dark:text-slate-400 dark:enabled:hover:border-violet-700 dark:enabled:hover:text-violet-300"
+      >
+        Siguiente
+        <ChevronRight className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Empty state
+// Estado vacío
 // ---------------------------------------------------------------------------
 
 function EmptyState({ area }: { area: FilterArea }) {
@@ -376,16 +318,16 @@ function EmptyState({ area }: { area: FilterArea }) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex flex-col items-center justify-center py-12 gap-3 text-center"
+      className="col-span-full flex flex-col items-center justify-center gap-3 py-12 text-center"
     >
-      <LayoutGrid className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+      <LayoutGrid className="h-8 w-8 text-slate-300 dark:text-slate-600" />
 
       <div>
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
           Sin tableros en {area === "Todos" ? "esta sección" : area}
         </p>
 
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+        <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
           Intenta ajustar la búsqueda o seleccionar otra área.
         </p>
       </div>
@@ -394,15 +336,13 @@ function EmptyState({ area }: { area: FilterArea }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main shell
+// Shell principal
 // ---------------------------------------------------------------------------
 
 export function BoardsClientShell({}: BoardsClientShellProps) {
   const [search, setSearch] = useState("");
   const [activeArea, setActiveArea] = useState<FilterArea>("Todos");
-  const [selectedId, setSelectedId] = useState<string>(
-    POWERBI_DASHBOARDS[0]?.id ?? ""
-  );
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filtered = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -423,112 +363,52 @@ export function BoardsClientShell({}: BoardsClientShellProps) {
     });
   }, [search, activeArea]);
 
-  const selected =
-    filtered.find((d) => d.id === selectedId) ?? filtered[0] ?? null;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filtered.length / BOARDS_PER_PAGE)
+  );
 
-  const handleAreaChange = (area: FilterArea) => {
-    setActiveArea(area);
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * BOARDS_PER_PAGE;
+    return filtered.slice(start, start + BOARDS_PER_PAGE);
+  }, [filtered, currentPage]);
 
-    const first =
-      area === "Todos"
-        ? POWERBI_DASHBOARDS.find((dashboard) => {
-            const normalizedSearch = search.trim().toLowerCase();
-
-            return (
-              dashboard.title.toLowerCase().includes(normalizedSearch) ||
-              dashboard.description?.toLowerCase().includes(normalizedSearch) ||
-              dashboard.area.toLowerCase().includes(normalizedSearch) ||
-              dashboard.tags?.some((tag) =>
-                tag.toLowerCase().includes(normalizedSearch)
-              )
-            );
-          })
-        : POWERBI_DASHBOARDS.find((dashboard) => dashboard.area === area);
-
-    if (first) setSelectedId(first.id);
-  };
+  // Vuelve a la página 1 cada vez que cambia la búsqueda o el filtro de área,
+  // para evitar quedar parado en una página que ya no tiene resultados.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, activeArea]);
 
   return (
-    <>
-      {/* Hero banner */}
-      <DepartmentHeroBanner
-        title="Tableros"
-        subtitle="Consulta tableros corporativos protegidos por Microsoft 365 y SharePoint. El acceso se valida según los permisos asignados a cada usuario."
-        gradientFrom="from-violet-950"
-        gradientVia="via-slate-900"
-        gradientTo="to-purple-800"
-        dotPatternId="boards-hero-pattern"
-        pills={[
-          { type: "status", text: "Acceso protegido" },
-          { type: "info", text: "Power BI" },
-          { type: "info", text: "SharePoint" },
-        ]}
+    <div className="flex flex-col gap-8 px-4 py-6 md:px-6">
+      <BoardsToolbar
+        areas={POWERBI_AREAS}
+        active={activeArea}
+        search={search}
+        onSearchChange={setSearch}
+        onAreaChange={setActiveArea}
       />
 
-      <div className="flex flex-col gap-6 px-4 py-6 md:px-6">
-        {/* Search and filter toolbar */}
-        <BoardsToolbar
-          areas={POWERBI_AREAS}
-          active={activeArea}
-          search={search}
-          onSearchChange={setSearch}
-          onAreaChange={handleAreaChange}
-        />
+      <AnimatePresence mode="popLayout">
+        {filtered.length === 0 ? (
+          <EmptyState key="empty" area={activeArea} />
+        ) : (
+          <motion.div
+            layout
+            className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+          >
+            {paginated.map((dashboard) => (
+              <BoardCard key={dashboard.id} dashboard={dashboard} />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Two-column layout */}
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[280px_1fr]">
-          {/* Left: dashboard list */}
-          <aside className="flex max-h-[calc(100vh-180px)] flex-col gap-2 overflow-y-auto pr-1 pt-1">
-            <AnimatePresence mode="popLayout">
-              {filtered.length === 0 ? (
-                <EmptyState key="empty" area={activeArea} />
-              ) : (
-                filtered.map((dashboard) => (
-                  <DashboardCard
-                    key={dashboard.id}
-                    dashboard={dashboard}
-                    isSelected={selected?.id === dashboard.id}
-                    onClick={() => {
-                      setSelectedId(dashboard.id);
-                    }}
-                  />
-                ))
-              )}
-            </AnimatePresence>
-          </aside>
-
-          {/* Right: viewer / preview */}
-          <main className="min-w-0 pt-1">
-            <AnimatePresence mode="wait">
-              {selected ? (
-                <motion.div
-                  key={selected.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {ENABLE_DASHBOARD_EMBED &&
-                  selected.openMode !== "external" ? (
-                    <PowerBIViewer dashboard={selected} />
-                  ) : (
-                    <DashboardPreview dashboard={selected} />
-                  )}
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="no-selection"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-slate-200 text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500"
-                >
-                  Selecciona un tablero para visualizarlo
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </main>
-        </div>
-      </div>
-    </>
+      <BoardsPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
+    </div>
   );
 }

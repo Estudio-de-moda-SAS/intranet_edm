@@ -176,8 +176,8 @@ export const DEPARTMENTS: Department[] = [
     show:  true,
   },
   {
-    id:    "ticket-systems",
-    label: "Tickets",
+    id:    "edm-soluciones",
+    label: "EDM Soluciones",
     href:  "/departments/ticket-systems",
     show:  true,
   },

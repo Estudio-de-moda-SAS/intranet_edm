@@ -6,6 +6,7 @@ import {
   Minimize2,
   MinusSquare,
   PlusSquare,
+  Search,
 } from "lucide-react";
 import type { GraphOrganizationTreeNode } from "../types/organization.types";
 import { getGraphUsersSample } from "../services/organizationGraph.service";
@@ -18,6 +19,68 @@ interface OrganizationChartProps {
   rootUserEmail: string;
   maxDepth?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Skeleton de carga — dibuja la silueta de un organigrama (nodo raíz +
+// líneas conectoras + nodos hijos) usando el mismo lenguaje visual (shimmer,
+// paleta morada, radios) que el resto del módulo, en vez de un texto plano.
+// ---------------------------------------------------------------------------
+
+function OrganizationChartSkeletonNode({
+  root = false,
+}: {
+  root?: boolean;
+}) {
+  return (
+    <div
+      className={
+        root
+          ? "organization-chart__loading-node organization-chart__loading-node--root"
+          : "organization-chart__loading-node"
+      }
+    >
+      <div className="organization-chart__loading-avatar" />
+      <div className="organization-chart__loading-lines">
+        <div className="organization-chart__loading-bar organization-chart__loading-bar--wide" />
+        <div className="organization-chart__loading-bar organization-chart__loading-bar--narrow" />
+      </div>
+    </div>
+  );
+}
+
+function OrganizationChartSkeleton() {
+  return (
+    <div className="organization-chart__loading">
+      <OrganizationChartSkeletonNode root />
+
+      <div className="organization-chart__loading-connector--vertical" />
+
+      <div className="organization-chart__loading-branches">
+        <div className="organization-chart__loading-branch-line" />
+        <div className="organization-chart__loading-branch-row">
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="organization-chart__loading-branch">
+              <OrganizationChartSkeletonNode />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="organization-chart__loading-status">
+        <span className="organization-chart__loading-dots">
+          <span />
+          <span />
+          <span />
+        </span>
+        Armando la estructura organizacional
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Helpers de árbol
+// ---------------------------------------------------------------------------
 
 function flattenNodes(
   node: GraphOrganizationTreeNode
@@ -92,6 +155,7 @@ export function OrganizationChart({
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -255,9 +319,7 @@ export function OrganizationChart({
   if (loading) {
     return (
       <section className="organization-chart">
-        <div className="organization-chart__empty">
-          Cargando estructura organizacional...
-        </div>
+        <OrganizationChartSkeleton />
       </section>
     );
   }
@@ -283,14 +345,18 @@ export function OrganizationChart({
     >
       <div className="organization-chart__toolbar">
         <div className="organization-chart__search">
-          <span>Buscar</span>
+          <div className="organization-chart__search-control relative">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
-          <div className="organization-chart__search-control">
             <input
               type="search"
               placeholder="Buscar persona, cargo, correo o departamento..."
               value={searchTerm}
-              onFocus={() => setIsSearchOpen(true)}
+              onFocus={() => {
+                setIsSearchOpen(true);
+                setIsSearchFocused(true);
+              }}
+              onBlur={() => setIsSearchFocused(false)}
               onChange={(event) => {
                 setSearchTerm(event.target.value);
                 setIsSearchOpen(true);
@@ -304,6 +370,13 @@ export function OrganizationChart({
                   handleSearchSelect(searchResults[0].id);
                 }
               }}
+              style={{
+                paddingLeft: "2.5rem",
+                boxShadow: isSearchFocused
+                  ? "0 0 0 4px rgba(196, 181, 253, 0.35)"
+                  : "none",
+              }}
+              className="h-11 w-full min-w-0 rounded-full border-none bg-slate-100/80 pr-4 text-sm text-slate-700 outline-none transition-all duration-200 placeholder:text-slate-400 focus:bg-white"
             />
 
             {isSearchOpen && hasSearchTerm && (

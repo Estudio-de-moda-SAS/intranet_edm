@@ -1,0 +1,53 @@
+/* ==========================================================
+   Document Home Page
+   Header de módulo — mismo lenguaje que Document Workspace
+   ========================================================== */
+
+.document-home {
+  padding-top: 1.75rem;
+}
+
+.document-home__header {
+  display: flex;
+  align-items: flex-start;
+  gap: .85rem;
+  margin-bottom: 1.5rem;
+}
+
+.document-home__header-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #f5f3ff;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.document-home__header-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.document-home__header-subtitle {
+  margin: .3rem 0 0;
+  font-size: .875rem;
+  color: #64748b;
+}
+
+.dark .document-home__header-icon {
+  background: rgba(124, 58, 237, .16);
+  color: #a78bfa;
+}
+
+.dark .document-home__header-title {
+  color: #f8fafc;
+}
+
+.dark .document-home__header-subtitle {
+  color: #94a3b8;
+}
