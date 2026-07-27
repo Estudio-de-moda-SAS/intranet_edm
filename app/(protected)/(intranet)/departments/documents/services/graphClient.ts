@@ -19,6 +19,21 @@ interface GraphCollectionResponse<T> {
 }
 
 /**
+ * Error de Graph con el código de estado HTTP incluido, para poder
+ * distinguir casos como 403 (sin permiso) o 429 (throttling) de otros
+ * fallos genéricos de red.
+ */
+export class GraphApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "GraphApiError";
+    this.status = status;
+  }
+}
+
+/**
  * Obtiene un access token de Graph con los scopes delegados adicionales
  * requeridos por el servicio que invoca.
  */
@@ -51,7 +66,8 @@ export async function graphFetch<T>(
   });
 
   if (!response.ok) {
-    throw new Error(
+    throw new GraphApiError(
+      response.status,
       `[Graph] ${response.status} ${response.statusText} · ${url}`
     );
   }
@@ -73,10 +89,9 @@ export async function graphFetchCollection<T>(
   let currentPage = 0;
 
   while (nextUrl && currentPage < maxPages) {
-   const response: GraphCollectionResponse<T> = await graphFetch<GraphCollectionResponse<T>>(
-  nextUrl,
-  extraScopes
-);
+    const response: GraphCollectionResponse<T> = await graphFetch
+      <GraphCollectionResponse<T>
+    >(nextUrl, extraScopes);
 
     results.push(...response.value);
     nextUrl = response["@odata.nextLink"];
@@ -85,10 +100,10 @@ export async function graphFetchCollection<T>(
 
   return results;
 }
+
 /**
  * Ejecuta un POST contra Microsoft Graph y retorna el JSON tipado.
  */
-
 export async function graphPost<T>(
   pathOrUrl: string,
   body: unknown,
@@ -110,7 +125,8 @@ export async function graphPost<T>(
   });
 
   if (!response.ok) {
-    throw new Error(
+    throw new GraphApiError(
+      response.status,
       `[Graph] ${response.status} ${response.statusText} · ${url}`
     );
   }
@@ -146,7 +162,8 @@ export async function graphUpload<T>(
   });
 
   if (!response.ok) {
-    throw new Error(
+    throw new GraphApiError(
+      response.status,
       `[Graph] ${response.status} ${response.statusText} · ${url}`
     );
   }
