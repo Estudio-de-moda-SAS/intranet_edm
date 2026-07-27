@@ -41,6 +41,7 @@ import {
   EventType,
   InteractionRequiredAuthError,
   type AccountInfo,
+  type Configuration,
   type EventMessage,
   type PopupRequest,
   type RedirectRequest,
@@ -58,34 +59,87 @@ const TENANT_ID = process.env.NEXT_PUBLIC_MSAL_TENANT_ID!;
  */
 export const SCOPES = ["openid", "profile", "email", "User.Read"] as const;
 
-// -- Instancia MSAL ------------------------------------------------------------
+// -- Instancia MSAL (lazy) -------------------------------------------------
 
 /**
- * Instancia singleton de {@link PublicClientApplication} configurada
- * con las credenciales del tenant corporativo de EDM.
+ * Config de MSAL. Extraída a función porque no debe evaluarse hasta que
+ * sepamos que estamos en el navegador (ver {@link getMsalInstance}).
  *
  * @remarks
  * `redirectUri` apunta a `window.location.origin` para que Microsoft
  * redirija al origen de la app. `cacheLocation: "localStorage"` persiste
  * la sesión entre pestañas y recargas de página.
  */
-export const msal = new PublicClientApplication({
-  auth: {
-    clientId:    CLIENT_ID,
-    authority:   `https://login.microsoftonline.com/${TENANT_ID}`,
-    redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI ?? "https://intranet-edm.netlify.app/",  },
-  cache: {
-    cacheLocation: "localStorage",
-  },
-  system: {
-    loggerOptions: {
-      loggerCallback: (level, message) => {
-        if (message?.includes("msal")) {
-          console.debug("[MSAL]", level, message);
-        }
-      },
-      piiLoggingEnabled: false,
+function createMsalConfig(): Configuration {
+  return {
+    auth: {
+      clientId:    CLIENT_ID,
+      authority:   `https://login.microsoftonline.com/${TENANT_ID}`,
+      redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI ?? "https://intranet-edm.netlify.app/",
     },
+    cache: {
+      cacheLocation: "localStorage",
+    },
+    system: {
+      loggerOptions: {
+        loggerCallback: (level, message) => {
+          if (message?.includes("msal")) {
+            console.debug("[MSAL]", level, message);
+          }
+        },
+        piiLoggingEnabled: false,
+      },
+    },
+  };
+}
+
+let _msalInstance: PublicClientApplication | null = null;
+
+/**
+ * Crea (una sola vez) y devuelve la instancia real de
+ * {@link PublicClientApplication}, exclusivamente en el navegador.
+ *
+ * @remarks
+ * Antes, `msal` se instanciaba directamente al nivel del módulo
+ * (`export const msal = new PublicClientApplication(...)`), lo que
+ * ejecutaba código dependiente del navegador en el momento en que
+ * CUALQUIER cosa importara este archivo — incluido, por accidente, un
+ * Server Component, un `layout.tsx`, o el proceso de build de Next.js
+ * corriendo en Node.js, donde `window` no existe. Eso es la causa del
+ * `ReferenceError: window is not defined` que loguea `@azure/msal-browser`
+ * internamente.
+ *
+ * Con esta función, la instancia no se crea hasta que alguien accede
+ * realmente a una propiedad de `msal` (ver el `Proxy` más abajo), y si
+ * eso llega a pasar en el servidor, falla con un mensaje claro en vez de
+ * un `ReferenceError` interno de la librería.
+ */
+function getMsalInstance(): PublicClientApplication {
+  if (typeof window === "undefined") {
+    throw new Error(
+      "[MSAL] Se intentó usar la instancia de MSAL fuera del navegador " +
+      "(SSR/servidor). Este módulo es exclusivamente de cliente — revisá " +
+      "si algo lo está importando desde un Server Component o similar."
+    );
+  }
+  if (!_msalInstance) {
+    _msalInstance = new PublicClientApplication(createMsalConfig());
+  }
+  return _msalInstance;
+}
+
+/**
+ * Instancia singleton de {@link PublicClientApplication}, expuesta como
+ * `Proxy` para que la creación real sea perezosa (ver
+ * {@link getMsalInstance}). Todo el resto del código puede seguir
+ * usándola exactamente igual que antes (`msal.loginRedirect(...)`,
+ * `msal.getActiveAccount()`, etc.) — el `Proxy` es transparente.
+ */
+export const msal = new Proxy({} as PublicClientApplication, {
+  get(_target, prop, _receiver) {
+    const instance = getMsalInstance();
+    const value = Reflect.get(instance, prop, instance);
+    return typeof value === "function" ? value.bind(instance) : value;
   },
 });
 
@@ -98,6 +152,34 @@ let eventsWired = false;
  * de pre-render en `Providers`, ANTES de montar `MsalProvider`.
  */
 let coreInitPromise: Promise<void> | null = null;
+
+/**
+ * Promesa compartida de `msal.handleRedirectPromise()`.
+ *
+ * @remarks
+ * MSAL requiere que `handleRedirectPromise()` se ejecute UNA SOLA VEZ por
+ * carga de página. `initMSAL()` se llama internamente desde casi todas las
+ * funciones públicas de este módulo (`ensureLogin*`, `getAccessToken`,
+ * `getIdToken`, `logout`), así que sin este guard, cada llamada
+ * concurrente (por ejemplo varios componentes pidiendo un access token en
+ * su montaje) dispara otra ejecución de `handleRedirectPromise()` en
+ * paralelo. Eso deja entradas huérfanas de request state
+ * (`code.verifier`, `nonce`, `state`) en el storage que nunca se limpian
+ * del todo, y con el tiempo agotan la cuota de `localStorage`
+ * (`QuotaExceededError`), rompiendo el login/la renovación silenciosa.
+ */
+let redirectPromise: Promise<void> | null = null;
+
+/**
+ * Contador de diagnóstico: cuántas veces se intentó crear
+ * {@link redirectPromise}. En uso normal debería quedar siempre en 1.
+ * Si un refactor futuro rompe el guard de {@link initMSAL} (por ejemplo,
+ * alguien "simplifica" la función y vuelve a llamar
+ * `handleRedirectPromise()` sin el `if`), esto lo va a gritar en
+ * desarrollo en vez de acumularse silenciosamente en producción durante
+ * horas, como pasó con el bug original.
+ */
+let redirectInitAttempts = 0;
 
 // -- Requests reutilizables ----------------------------------------------------
 
@@ -145,12 +227,34 @@ export function initMSALCore(): Promise<void> {
  *
  * Internamente espera a {@link initMSALCore}, así que es seguro llamarla
  * sin garantizar el orden manualmente.
+ *
+ * `handleRedirectPromise()` se cachea en {@link redirectPromise} para que
+ * se ejecute una única vez por carga de página, sin importar cuántas
+ * veces se invoque `initMSAL()` (ver el comentario de esa variable).
  */
 export async function initMSAL(): Promise<void> {
   await initMSALCore();
-  await msal.handleRedirectPromise().catch((e) => {
-    console.error("[MSAL] handleRedirectPromise error:", e);
-  });
+
+  if (!redirectPromise) {
+    redirectInitAttempts++;
+    if (process.env.NODE_ENV !== "production" && redirectInitAttempts > 1) {
+      console.error(
+        "[MSAL] handleRedirectPromise se está creando más de una vez " +
+        `(intento #${redirectInitAttempts}). Esto indica una regresión en ` +
+        "el guard de initMSAL() — revisá que nadie haya vuelto a llamar " +
+        "msal.handleRedirectPromise() fuera de este bloque. Si esto llega " +
+        "a producción, el storage se va a ir llenando de entradas " +
+        "huérfanas hasta un QuotaExceededError."
+      );
+    }
+    redirectPromise = msal.handleRedirectPromise()
+      .then(() => undefined)
+      .catch((e) => {
+        console.error("[MSAL] handleRedirectPromise error:", e);
+      });
+  }
+  await redirectPromise;
+
   wireEventsOnce();
   ensureActiveAccount();
 }
@@ -184,6 +288,31 @@ export function isLoggedIn(): boolean {
  */
 export function getAccount(): AccountInfo | null {
   return msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
+}
+
+// -- Utilidad de storage ---------------------------------------------------
+
+/**
+ * Limpia todas las entradas `msal.*` de `localStorage`.
+ *
+ * @remarks
+ * Se usa como recuperación defensiva cuando el storage está lleno
+ * (`QuotaExceededError`) — por ejemplo en Safari en modo privado o en
+ * webviews corporativos con cuota reducida — para poder reintentar el
+ * login sin quedar atascados.
+ */
+function clearMsalStorage(): void {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("msal."))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch (e) {
+    console.warn("[MSAL] No se pudo limpiar el storage:", e);
+  }
+}
+
+function isQuotaExceededError(e: unknown): boolean {
+  return e instanceof Error && e.name === "QuotaExceededError";
 }
 
 // -- Login ---------------------------------------------------------------------
@@ -221,7 +350,17 @@ export async function ensureLoginRedirect(): Promise<AccountInfo> {
   await initMSAL();
   const account = ensureActiveAccount();
   if (!account) {
-    await msal.loginRedirect(loginRedirectRequest);
+    try {
+      await msal.loginRedirect(loginRedirectRequest);
+    } catch (e) {
+      if (isQuotaExceededError(e)) {
+        console.warn("[MSAL] Storage lleno, limpiando entradas msal.* y reintentando...");
+        clearMsalStorage();
+        await msal.loginRedirect(loginRedirectRequest);
+      } else {
+        throw e;
+      }
+    }
     return new Promise<AccountInfo>(() => {});
   }
   return account;

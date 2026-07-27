@@ -16,14 +16,15 @@ import {
   getSharePointDriveRootChildren,
   getSharePointFolderChildren,
   getSharePointSiteDrives,
+  getSharePointSubsites,
   resolveSharePointSiteByUrl,
   searchSharePointSites,
+  uploadSharePointFile,
   type SharePointDriveDiscoveryResult,
   type SharePointSiteDiscoveryResult,
 } from "../services/sharepointDiscovery.service";
 import type { DocumentItem } from "../types/document.types";
 import "./DocumentsExplorer.css";
-import { uploadSharePointFile } from "../services/sharepointDiscovery.service";
 
 function toSlug(value: string) {
   return value
@@ -55,6 +56,8 @@ export function DocumentsExplorer() {
   const [siteUrl, setSiteUrl] = useState("");
   const [sites, setSites] = useState<SharePointSiteDiscoveryResult[]>([]);
   const [drives, setDrives] = useState<SharePointDriveDiscoveryResult[]>([]);
+  const [subsites, setSubsites] = useState<SharePointSiteDiscoveryResult[]>([]);
+  const [siteTrail, setSiteTrail] = useState<SharePointSiteDiscoveryResult[]>([]);
   const [items, setItems] = useState<DocumentItem[]>([]);
   const [selectedSite, setSelectedSite] =
     useState<SharePointSiteDiscoveryResult | null>(null);
@@ -64,6 +67,7 @@ export function DocumentsExplorer() {
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const catalogPreview = useMemo(() => {
     return `export const DOCUMENT_SITES: readonly DocumentDepartment[] = [
@@ -84,6 +88,8 @@ ${sites.map(buildCatalogItem).join("\n")}
     setSelectedSite(null);
     setSelectedDrive(null);
     setDrives([]);
+    setSubsites([]);
+    setSiteTrail([]);
     setItems([]);
     setFolderStack([]);
   };
@@ -142,23 +148,52 @@ ${sites.map(buildCatalogItem).join("\n")}
     }
   };
 
-  const handleSelectSite = async (site: SharePointSiteDiscoveryResult) => {
+  const loadSiteDetails = async (site: SharePointSiteDiscoveryResult) => {
     try {
-      setLoading("Consultando bibliotecas...");
+      setLoading("Consultando bibliotecas y subsitios...");
       setError("");
       setSelectedSite(site);
       setSelectedDrive(null);
       setItems([]);
       setFolderStack([]);
 
-      const results = await getSharePointSiteDrives(site.id);
-      setDrives(results);
+      const [drivesResult, subsitesResult] = await Promise.allSettled([
+        getSharePointSiteDrives(site.id),
+        getSharePointSubsites(site.id),
+      ]);
+
+      setDrives(drivesResult.status === "fulfilled" ? drivesResult.value : []);
+      setSubsites(
+        subsitesResult.status === "fulfilled" ? subsitesResult.value : []
+      );
     } catch (siteError) {
       console.error("[Documents Explorer]", siteError);
-      setError("No se pudieron consultar las bibliotecas del sitio.");
+      setError(
+        "No se pudieron consultar las bibliotecas o subsitios del sitio."
+      );
     } finally {
       setLoading("");
     }
+  };
+
+  const handleSelectSite = async (site: SharePointSiteDiscoveryResult) => {
+    setSiteTrail([site]);
+    await loadSiteDetails(site);
+  };
+
+  const handleDrillIntoSubsite = async (
+    subsite: SharePointSiteDiscoveryResult
+  ) => {
+    setSiteTrail((current) => [...current, subsite]);
+    await loadSiteDetails(subsite);
+  };
+
+  const handleGoToTrailIndex = async (index: number) => {
+    const target = siteTrail.at(index);
+    if (!target) return;
+
+    setSiteTrail((current) => current.slice(0, index + 1));
+    await loadSiteDetails(target);
   };
 
   const handleSelectDrive = async (drive: SharePointDriveDiscoveryResult) => {
@@ -218,32 +253,32 @@ ${sites.map(buildCatalogItem).join("\n")}
     }
   };
 
-  const [uploading, setUploading] = useState(false);
-
   const handleTestUpload = async (file: File | undefined) => {
-  if (!file || !selectedDrive) return;
+    if (!file || !selectedDrive) return;
 
-  const currentFolderId = folderStack.at(-1)?.id ?? null;
+    const currentFolderId = folderStack.at(-1)?.id ?? null;
 
-  try {
-    setUploading(true);
-    setError("");
+    try {
+      setUploading(true);
+      setError("");
 
-    await uploadSharePointFile(selectedDrive.id, currentFolderId, file);
+      await uploadSharePointFile(selectedDrive.id, currentFolderId, file);
 
-    // Refresca el listado actual para ver el archivo recién subido
-    const results = currentFolderId
-      ? await getSharePointFolderChildren(selectedDrive.id, currentFolderId)
-      : await getSharePointDriveRootChildren(selectedDrive.id);
+      const results = currentFolderId
+        ? await getSharePointFolderChildren(selectedDrive.id, currentFolderId)
+        : await getSharePointDriveRootChildren(selectedDrive.id);
 
-    setItems(results);
-  } catch (uploadError) {
-    console.error("[Documents Explorer] upload", uploadError);
-    setError("No se pudo subir el archivo. Verifica que el permiso Files.ReadWrite.All esté aprobado.");
-  } finally {
-    setUploading(false);
-  }
-};
+      setItems(results);
+    } catch (uploadError) {
+      console.error("[Documents Explorer] upload", uploadError);
+      setError(
+        "No se pudo subir el archivo. Verifica que el permiso Files.ReadWrite.All esté aprobado."
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <section className="documents-explorer">
       <div className="documents-explorer__toolbar">
@@ -393,37 +428,69 @@ ${sites.map(buildCatalogItem).join("\n")}
         <aside className="documents-explorer__sidebar documents-explorer__sidebar--libraries">
           <div className="documents-explorer__column-header">
             <Library size={17} strokeWidth={2} />
-            <span>Bibliotecas</span>
+            <span>Bibliotecas y subsitios</span>
           </div>
+
+          {siteTrail.length > 1 && (
+            <div className="documents-explorer__breadcrumb">
+              {siteTrail.map((trailSite, index) => (
+                <button
+                  key={trailSite.id}
+                  type="button"
+                  onClick={() => handleGoToTrailIndex(index)}
+                >
+                  {trailSite.displayName ?? trailSite.name ?? "Sitio"}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="documents-explorer__list">
             {!selectedSite ? (
               <div className="documents-explorer__empty">
-                Selecciona un sitio para ver sus bibliotecas.
+                Selecciona un sitio para ver sus bibliotecas y subsitios.
               </div>
-            ) : drives.length === 0 ? (
+            ) : drives.length === 0 && subsites.length === 0 ? (
               <div className="documents-explorer__empty">
-                No se encontraron bibliotecas para este sitio.
+                No se encontraron bibliotecas ni subsitios para este sitio.
               </div>
             ) : (
-              drives.map((drive) => (
-                <button
-                  key={drive.id}
-                  type="button"
-                  className={[
-                    "documents-explorer__list-item",
-                    selectedDrive?.id === drive.id
-                      ? "documents-explorer__list-item--active"
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() => handleSelectDrive(drive)}
-                >
-                  <strong>{drive.name ?? "Biblioteca sin nombre"}</strong>
-                  <span>{drive.webUrl ?? drive.id}</span>
-                </button>
-              ))
+              <>
+                {drives.map((drive) => (
+                  <button
+                    key={drive.id}
+                    type="button"
+                    className={[
+                      "documents-explorer__list-item",
+                      selectedDrive?.id === drive.id
+                        ? "documents-explorer__list-item--active"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={() => handleSelectDrive(drive)}
+                  >
+                    <strong>{drive.name ?? "Biblioteca sin nombre"}</strong>
+                    <span>{drive.webUrl ?? drive.id}</span>
+                  </button>
+                ))}
+
+                {subsites.map((subsite) => (
+                  <button
+                    key={subsite.id}
+                    type="button"
+                    className="documents-explorer__list-item"
+                    onClick={() => handleDrillIntoSubsite(subsite)}
+                  >
+                    <strong>
+                      {subsite.displayName ?? subsite.name ?? "Subsitio sin nombre"}
+                    </strong>
+                    <span style={{ color: "#4f7cff", fontWeight: 700 }}>
+                      Subsitio → clic para explorar
+                    </span>
+                  </button>
+                ))}
+              </>
             )}
           </div>
         </aside>
@@ -441,34 +508,35 @@ ${sites.map(buildCatalogItem).join("\n")}
                 <ExternalLink size={15} strokeWidth={2} />
               </a>
             )}
+
             {selectedDrive && (
-  <label style={{ cursor: uploading ? "wait" : "pointer" }}>
-    <input
-      type="file"
-      style={{ display: "none" }}
-      disabled={uploading}
-      onChange={(event) => {
-        void handleTestUpload(event.target.files?.[0]);
-        event.target.value = "";
-      }}
-    />
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "0.4rem",
-        padding: "0.5rem 0.9rem",
-        borderRadius: "10px",
-        background: uploading ? "#94a3b8" : "#4f7cff",
-        color: "white",
-        fontSize: "0.78rem",
-        fontWeight: 700,
-      }}
-    >
-      {uploading ? "Subiendo..." : "Subir archivo (prueba)"}
-    </span>
-  </label>
-)}
+              <label style={{ cursor: uploading ? "wait" : "pointer" }}>
+                <input
+                  type="file"
+                  style={{ display: "none" }}
+                  disabled={uploading}
+                  onChange={(event) => {
+                    void handleTestUpload(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
+                />
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0.5rem 0.9rem",
+                    borderRadius: "10px",
+                    background: uploading ? "#94a3b8" : "#4f7cff",
+                    color: "white",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  {uploading ? "Subiendo..." : "Subir archivo (prueba)"}
+                </span>
+              </label>
+            )}
           </div>
 
           {selectedDrive && (

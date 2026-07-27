@@ -20,7 +20,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { Building2, Search } from "lucide-react";
+import { Building2, Search, X } from "lucide-react";
 
 import { useDocumentDepartments } from "../../hooks/useDocumentDepartments";
 import type { DocumentDepartment } from "../../types/documentDepartment.types";
@@ -51,15 +51,21 @@ export function DepartmentSidebar({
 
   const [searchValue, setSearchValue] = useState("");
 
-  /**
-   * Cantidad de departamentos actualmente visibles.
-   */
   const totalDepartments = useMemo(() => departments.length, [departments]);
+  const isSearching = searchValue.trim().length > 0;
+
+  const handleSearchChange = async (value: string) => {
+    setSearchValue(value);
+    await search(value);
+  };
+
+  const handleClearSearch = async () => {
+    setSearchValue("");
+    await search("");
+  };
 
   return (
     <aside className="department-sidebar">
-      {/* ================= HEADER ================= */}
-
       <header className="department-sidebar__header">
         <div className="department-sidebar__title">
           <span className="department-sidebar__icon">
@@ -78,8 +84,6 @@ export function DepartmentSidebar({
         </div>
       </header>
 
-      {/* ================= BUSCADOR ================= */}
-
       <div className="department-sidebar__search">
         <Search size={16} />
 
@@ -87,17 +91,20 @@ export function DepartmentSidebar({
           type="search"
           placeholder="Buscar área..."
           value={searchValue}
-          onChange={async (event) => {
-            const value = event.target.value;
-
-            setSearchValue(value);
-
-            await search(value);
-          }}
+          onChange={(event) => void handleSearchChange(event.target.value)}
         />
-      </div>
 
-      {/* ================= CONTENIDO ================= */}
+        {isSearching && (
+          <button
+            type="button"
+            onClick={() => void handleClearSearch()}
+            aria-label="Limpiar búsqueda"
+            className="department-sidebar__search-clear"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
 
       <div className="department-sidebar__body">
         {loading && <DepartmentSidebarSkeleton />}
@@ -109,7 +116,14 @@ export function DepartmentSidebar({
           />
         )}
 
-        {!loading && !error && departments.length === 0 && (
+        {!loading && !error && departments.length === 0 && isSearching && (
+          <DepartmentSidebarEmpty
+            title="Sin resultados."
+            description={`No encontramos áreas que coincidan con "${searchValue}".`}
+          />
+        )}
+
+        {!loading && !error && departments.length === 0 && !isSearching && (
           <DepartmentSidebarEmpty
             title="No hay áreas disponibles."
             description="No existen áreas documentales configuradas."

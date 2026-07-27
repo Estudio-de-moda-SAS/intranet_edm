@@ -12,14 +12,14 @@
  * No realiza consultas a Microsoft Graph ni conoce detalles sobre
  * SharePoint.
  *
- * Únicamente renderiza la información recibida mediante propiedades.
+ * Únicamente renderiza la información recibida mediante propiedades,
+ * incluyendo el ícono correspondiente al área (resuelto a partir de
+ * {@link DocumentDepartment.icon}).
  */
 
-import {
-  ChevronRight,
-  FolderOpen,
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
+import { getDepartmentIcon } from "../../utils/getDepartmentIcon";
 import type { DocumentDepartment } from "../../types/documentDepartment.types";
 
 export interface DepartmentSidebarItemProps {
@@ -44,45 +44,29 @@ export function DepartmentSidebarItem({
   selected = false,
   onClick,
 }: DepartmentSidebarItemProps) {
+  const Icon = getDepartmentIcon(department.icon);
+
   return (
     <button
       type="button"
       className={[
         "department-sidebar__item",
-        selected
-          ? "department-sidebar__item--selected"
-          : "",
+        selected ? "department-sidebar__item--selected" : "",
       ]
         .filter(Boolean)
         .join(" ")}
       onClick={onClick}
     >
-      {/* Icono */}
-
       <div className="department-sidebar__item-icon">
-        <FolderOpen size={18} />
+        <Icon size={17} strokeWidth={2} />
       </div>
-
-      {/* Información */}
 
       <div className="department-sidebar__item-content">
-
-        <strong>
-          {department.name}
-        </strong>
-
-        {department.description && (
-          <span>
-            {department.description}
-          </span>
-        )}
-
+        <strong>{department.name}</strong>
       </div>
 
-      {/* Flecha */}
-
       <div className="department-sidebar__item-arrow">
-        <ChevronRight size={18} />
+        <ChevronRight size={16} />
       </div>
     </button>
   );
