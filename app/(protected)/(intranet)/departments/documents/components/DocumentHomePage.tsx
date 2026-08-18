@@ -53,7 +53,7 @@ type Props = { accessLevel: AccessLevel };
  * documental para el usuario final.
  */
 export default function DocumentHomePage({ accessLevel }: Props) {
-  const SHOW_EXPLORER = false;
+  const SHOW_EXPLORER = true;
   const SHOW_OWNERS = false;
 
   /**

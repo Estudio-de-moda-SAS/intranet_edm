@@ -14,6 +14,19 @@
 import type { DocumentDepartment } from "../types/documentDepartment.types";
 
 export const DOCUMENT_SITES: readonly DocumentDepartment[] = [
+    {
+    id: "GC",
+    name: "GC",
+    siteId:
+      "estudiodemoda.sharepoint.com,1fb52e1a-d7f9-403c-bce1-8e5004c5a846,749a952b-e579-4d69-bc55-d4a083ba7693",
+    siteUrl:
+      "https://estudiodemoda.sharepoint.com/sites/FS/Tecnologia/PR/GC/default.aspx",
+    description: "Repositorio documental de GC",
+    icon: "BookText",
+    accentColor: "indigo",
+    order: 1,
+    enabled: true,
+  },
   {
     id: "juridica",
     name: "Jurídica",
@@ -160,6 +173,19 @@ export const DOCUMENT_SITES: readonly DocumentDepartment[] = [
     icon: "Handshake",
     accentColor: "indigo",
     order: 12,
+    enabled: true,
+  },
+  {
+    id: "Help-Desk",
+    name: "Help Desk",
+    siteId:
+      "estudiodemoda.sharepoint.com,35a25e9a-b939-4364-837b-a13c258e6bd3,02f4efa6-4cc5-4d2e-b2b3-1b59441a3b3e",
+    siteUrl:
+      "https://estudiodemoda.sharepoint.com/sites/TransformacionDigital/IN/HD/default.aspx?xsdata=MDV8MDJ8fGQwMDQyYTJkMmIxMDRkMDk5M2YyMDhkZWYxOWQwOTU5fGNkNDhlY2Q5N2UxNTRmNGI5N2Q5ZWM4MTNlZTQyYjJjfDB8MHw2MzkyMTM4NTM5MDIyMTQxMzB8VW5rbm93bnxWR1ZoYlhOVFpXTjFjbWwwZVZObGNuWnBZMlY4ZXlKRFFTSTZJbFJsWVcxelgwRlVVRk5sY25acFkyVmZVMUJQVEU5R0lpd2lWaUk2SWpBdU1DNHdNREF3SWl3aVVDSTZJbGRwYmpNeUlpd2lRVTRpT2lKUGRHaGxjaUlzSWxkVUlqb3hNWDA9fDF8TDJOb1lYUnpMekU1T2pJeE1ERmlNRFkzTFRZeE4yRXROR1JtT0MxaFlUWXlMV1ZtWmpRMU1EWTFaak5oWmw4M1pqQmxZVEZrTnkwNVlXSTJMVFF3TkRVdE9USmtZeTFsWm1Zek1XSmhZamczTVRWQWRXNXhMbWRpYkM1emNHRmpaWE12YldWemMyRm5aWE12TVRjNE5UYzRPRFU0T0RFeE5BPT18ZjkwODcyMmNkMDY3NDlkYTQyZDYwOGRlZjE5ZDA5NTl8NDljMzgyMWFhMDZjNGZmZGIzYmFlYjc1ZGVjMzc3YjM%3d&sdata=MkdLeEFmZGhLOXNRSlhKSGxDa1lTRGdRQ0c1dU4yOEpzc2RMRk9BMkNoTT0%3d&ovuser=cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c%2caprendizti%40estudiodemoda.com.co&TeamsCID=f5f6cfda-731e-47bc-8138-f2a13badca45&OR=Teams-HL&CT=1785788614337&clickparams=eyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiI0OS8yNjA3MDIxNTcxMSIsIkhhc0ZlZGVyYXRlZFVzZXIiOmZhbHNlfQ%3d%3d&SafelinksUrl=https%3a%2f%2festudiodemoda.sharepoint.com%2fsites%2fTransformacionDigital%2fIN%2fHD%2fdefault.aspx",
+    description: "Repositorio documental de Help Desk",
+    icon: "Headset",
+    accentColor: "indigo",
+    order: 13,
     enabled: true,
   },
 ];

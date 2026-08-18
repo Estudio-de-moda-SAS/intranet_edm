@@ -3,12 +3,13 @@
  * Hook para gestionar la búsqueda global de navegación dentro de la intranet.
  *
  * @remarks
- * Combina dos fuentes de resultados:
+ * Combina tres fuentes de resultados:
  *
  * - Un catálogo controlado de secciones de navegación (síncrono).
- * - Documentos reales del usuario, buscados vía Microsoft Search API
- *   (asíncrono, con debounce) a través de
- *   {@link searchDocumentsGlobal}.
+ * - Áreas corporativas del catálogo documental (síncrono, sin llamada
+ *   a Graph — es solo un filtro en memoria).
+ * - Documentos y carpetas reales del usuario, buscados vía Microsoft
+ *   Search API (asíncrono, con debounce).
  *
  * Los resultados de documentos solo cubren lo que el usuario ya tiene
  * permiso de ver en Microsoft 365 — el motor de búsqueda de Graph filtra
@@ -23,6 +24,7 @@ import {
   searchDocumentsGlobal,
   type GlobalDocumentSearchResult,
 } from "@/app/(protected)/(intranet)/departments/documents/services/globalDocumentSearch.service";
+import { searchAreasGlobal } from "@/app/(protected)/(intranet)/departments/documents/services/globalAreaSearch.service";
 
 /**
  * Representa un elemento navegable disponible para búsqueda global.
@@ -80,12 +82,13 @@ const SEARCHABLE_NAV_ITEMS: SearchableNavItem[] = [
 ];
 
 const DOCUMENT_SEARCH_DEBOUNCE_MS = 350;
+const MIN_QUERY_LENGTH_FOR_DOCUMENT_SEARCH = 2;
 
 /**
  * Hook principal de búsqueda global.
  *
  * @param accessLevel Nivel de acceso del usuario.
- * @returns Estado de búsqueda y resultados combinados (navegación + documentos).
+ * @returns Estado de búsqueda y resultados combinados.
  */
 export function useGlobalSearch(accessLevel: AccessLevel) {
   const [query, setQuery] = useState("");
@@ -115,18 +118,24 @@ export function useGlobalSearch(accessLevel: AccessLevel) {
         if (item.department.toLowerCase().includes(normalizedQuery))
           score += 1;
 
-        return { ...item, score };
+        return { ...item, score, kind: "module" as const };
       })
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
   }, [query, navItems]);
 
+  const areaResults = useMemo(() => {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) return [];
+    return searchAreasGlobal(normalizedQuery);
+  }, [query]);
+
   useEffect(() => {
     const normalizedQuery = query.trim();
     latestQueryRef.current = normalizedQuery;
 
-    if (!normalizedQuery) {
+    if (normalizedQuery.length < MIN_QUERY_LENGTH_FOR_DOCUMENT_SEARCH) {
       setDocumentResults([]);
       return;
     }
@@ -151,8 +160,8 @@ export function useGlobalSearch(accessLevel: AccessLevel) {
   }, [query]);
 
   const results = useMemo(
-    () => [...navResults, ...documentResults],
-    [navResults, documentResults]
+    () => [...navResults, ...areaResults, ...documentResults],
+    [navResults, areaResults, documentResults]
   );
 
   return {

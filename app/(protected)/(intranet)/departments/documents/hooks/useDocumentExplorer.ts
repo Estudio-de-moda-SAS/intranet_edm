@@ -15,7 +15,9 @@
  *
  * Distingue explícitamente el caso "el área no tiene contenido" del caso
  * "el usuario no tiene permiso para ver esta área" (403 de Graph),
- * expuesto como `accessDenied`.
+ * expuesto como `accessDenied` — activado si al menos una de las dos
+ * llamadas (bibliotecas o subsitios) falla con 403 y no queda contenido
+ * real que mostrar.
  *
  * También soporta apertura directa de una ubicación conocida
  * ({@link openLocationDirect}), usada por el deep-link del buscador
@@ -239,22 +241,24 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       getSharePointSubsites(siteId),
     ]);
 
-    const bothFailedWith403 =
-      drivesResult.status === "rejected" &&
-      subsitesResult.status === "rejected" &&
-      drivesResult.reason instanceof GraphApiError &&
-      drivesResult.reason.status === 403;
+    const is403 = (result: PromiseSettledResult<unknown>) =>
+      result.status === "rejected" &&
+      result.reason instanceof GraphApiError &&
+      result.reason.status === 403;
 
-    if (bothFailedWith403) {
+    const drives = drivesResult.status === "fulfilled" ? drivesResult.value : [];
+    const subsites =
+      subsitesResult.status === "fulfilled" ? subsitesResult.value : [];
+
+    const hasSome403 = is403(drivesResult) || is403(subsitesResult);
+    const hasNoContent = drives.length === 0 && subsites.length === 0;
+
+    if (hasSome403 && hasNoContent) {
       setSelectedDepartmentLibraries([]);
       setSelectedDepartmentSubsites([]);
       setAccessDenied(true);
       return;
     }
-
-    const drives = drivesResult.status === "fulfilled" ? drivesResult.value : [];
-    const subsites =
-      subsitesResult.status === "fulfilled" ? subsitesResult.value : [];
 
     siteDetailsCacheRef.current.set(siteId, { drives, subsites });
     setSelectedDepartmentLibraries(drives);
@@ -534,16 +538,6 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     [activeSource, breadcrumbs, canUploadHere]
   );
 
-  /**
-   * Abre directamente una ubicación conocida (driveId + itemId), sin
-   * pasar por el flujo normal de selección de área/biblioteca.
-   *
-   * @remarks
-   * Usado por el deep-link del buscador global: cuando un resultado de
-   * búsqueda apunta a una carpeta del OneDrive del usuario, este método
-   * la abre de una vez y marca el archivo encontrado con
-   * `highlightedItemId` para resaltarlo visualmente.
-   */
   const openLocationDirect = useCallback(
     async (
       source: DocumentSourceType,
@@ -561,8 +555,46 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       setTeamDrives([]);
       setHighlightedItemId(highlightId ?? null);
 
+      // Raíz de una biblioteca conocida (ej. resultado de búsqueda que
+      // apunta a una biblioteca completa, no a una carpeta específica).
       if (!location.itemId) {
-        await loadRootFor(source, null);
+        if (source === "my-drive") {
+          await loadRootFor(source, null);
+          return;
+        }
+
+        try {
+          setLoading("root");
+          setError(null);
+
+          setBreadcrumbs([
+            {
+              id: source,
+              name: rootBreadcrumbLabel(source, null),
+              location: { driveId: location.driveId, itemId: null },
+            },
+          ]);
+
+          const cacheKey = buildRootCacheKey(source, location.driveId);
+          const cached = itemsCacheRef.current.get(cacheKey);
+
+          if (cached) {
+            setCurrentItems(cached);
+            return;
+          }
+
+          const items = await loadSourceRoot(source, location.driveId);
+          itemsCacheRef.current.set(cacheKey, items);
+          setCurrentItems(items);
+        } catch (rootError) {
+          console.error(
+            "[Document Explorer] openLocationDirect (root)",
+            rootError
+          );
+          setError("No fue posible abrir la biblioteca solicitada.");
+        } finally {
+          setLoading("idle");
+        }
         return;
       }
 
@@ -606,7 +638,6 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     },
     [loadRootFor, rootBreadcrumbLabel]
   );
-
   return useMemo(
     () => ({
       activeSource,
