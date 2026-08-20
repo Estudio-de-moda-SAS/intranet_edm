@@ -20,8 +20,10 @@
  * Representa un área documental corporativa.
  *
  * @remarks
- * Cada instancia corresponde a un sitio de SharePoint previamente registrado
- * dentro del catálogo documental de la organización.
+ * Cada instancia corresponde a un subsitio de SharePoint descubierto
+ * dinámicamente bajo el sitio raíz del módulo documental (ver
+ * `documentSites.ts` y `documentCatalog.service.ts`), enriquecido con
+ * cosmética curada opcional (ícono, color, orden) cuando existe.
  *
  * Este modelo constituye la fuente de información utilizada por el sidebar
  * principal del módulo documental y sirve como punto de entrada para cargar
