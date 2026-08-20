@@ -53,7 +53,7 @@ type Props = { accessLevel: AccessLevel };
  * documental para el usuario final.
  */
 export default function DocumentHomePage({ accessLevel }: Props) {
-  const SHOW_EXPLORER = true;
+  const SHOW_EXPLORER = false; // TODO: habilitar cuando el explorador se quiera probar o recorrer un sitio para sacar su sited id e incluirlo en el config de sitios para añadirlo en el modulo
   const SHOW_OWNERS = false;
 
   /**

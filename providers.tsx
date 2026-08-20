@@ -134,73 +134,67 @@ function clearAuthCookies(): void {
   document.cookie = `${LAST_PAGE_COOKIE}=; ${expired}`;
 }
 
-// ── Bootstrap del redirect de MSAL ─────────────────────────────────────────────
-
 /**
- * Procesa `handleRedirectPromise()` una sola vez, ya montado dentro de
- * `<MsalProvider>`, para que sus eventos actualicen correctamente el
- * `inProgress` que expone `useMsal()` en el resto de la app.
+ * Bloquea el renderizado de `children` mientras `MsalProvider` todavía
+ * está procesando su propio arranque (`inProgress !== "none"`), y
+ * reconcilia la cookie `edm_authed` contra la sesión real de MSAL.
  *
  * @remarks
- * Mientras el redirect no ha terminado de procesarse, no renderiza
- * `children` — evita que `HomeClient` y componentes similares lean
- * `useMsal()` con un estado a medio resolver.
+ * **`inProgress` es la única fuente de verdad para saber si el redirect
+ * ya se procesó.** `MsalProvider` llama `handleRedirectPromise()`
+ * automáticamente por su cuenta (comportamiento incorporado de la
+ * librería) y actualiza `inProgress` de forma confiable a medida que
+ * avanza. Este componente ya NO llama `handleRedirectPromise()` por su
+ * lado — hacerlo generaba una condición de carrera real con la llamada
+ * interna de `MsalProvider` (ver el comentario de {@link initMSAL} en
+ * `msal.ts` para el detalle completo del bug y su causa).
  *
  * **Reconciliación cookie vs. sesión real de MSAL:**
  * El middleware (`proxy.ts`) decide si dejar pasar a una ruta protegida
  * basándose SOLO en la cookie `edm_authed`. Esa cookie es un flag
  * optimista que el cliente escribe tras un login exitoso — no una
  * verificación en vivo en cada request. Si el `localStorage` de MSAL se
- * vacía (por el navegador, por una política de Chrome, por lo que sea)
- * sin que la cookie se borre, el middleware sigue dejando pasar al
- * usuario a rutas protegidas, pero `useMsal()` aquí reporta
- * `accounts: []`. Sin este guard, cada módulo (`HomeClient`, Documentos,
- * etc.) se entera del problema por separado y a destiempo, mostrando
- * errores genéricos en vez de mandar al usuario a `/login`.
- *
- * Se centraliza aquí: en cuanto MSAL termina de inicializar, si no hay
- * ninguna cuenta real, se borra la cookie desactualizada y se redirige a
- * `/login` de una vez — antes de que cualquier hijo intente pedir datos
- * con una sesión que no existe.
+ * vacía sin que la cookie se borre, el middleware sigue dejando pasar al
+ * usuario, pero `useMsal()` aquí reporta `accounts: []`. Se centraliza
+ * aquí: en cuanto `inProgress` llega a `"none"`, si no hay ninguna
+ * cuenta real, se borra la cookie desactualizada y se redirige a
+ * `/login`.
  *
  * **`/login` es un caso especial:** ahí "sin cuenta" es el estado
- * NORMAL y esperado (es literalmente donde el usuario va a loguearse).
- * Por eso `isLoginRoute` excluye esa ruta tanto del efecto de redirección
- * como del bloqueo de renderizado — de lo contrario la página de login
- * nunca podría montarse (spinner infinito, porque nunca hay cuenta ahí
- * antes de loguearse, y el guard de redirección tampoco actúa por estar
- * ya en `/login`).
+ * NORMAL y esperado. Por eso `isLoginRoute` excluye esa ruta tanto del
+ * efecto de redirección como del bloqueo de renderizado.
  */
 function MsalBootstrap({ children }: { children: React.ReactNode }) {
   const { inProgress, accounts } = useMsal();
-  const [redirectHandled, setRedirectHandled] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    initMSAL().finally(() => setRedirectHandled(true));
+    // Ya no gestiona el redirect (eso lo hace MsalProvider por su
+    // cuenta) — solo se asegura de que initMSALCore() haya resuelto,
+    // registra nuestro propio listener de eventos, y selecciona la
+    // cuenta activa si existe. Ver el comentario de initMSAL en msal.ts.
+    void initMSAL();
   }, []);
 
   const isLoginRoute = pathname?.startsWith("/login") ?? false;
 
   useEffect(() => {
-    if (!redirectHandled || inProgress !== "none") return;
+    if (inProgress !== "none") return;
     if (accounts.length > 0) return;
     if (isLoginRoute) return;
 
     clearAuthCookies();
     router.replace(`/login?callbackUrl=${encodeURIComponent(pathname ?? "/")}`);
-  }, [redirectHandled, inProgress, accounts.length, isLoginRoute, pathname, router]);
+  }, [inProgress, accounts.length, isLoginRoute, pathname, router]);
 
   // Sin cuenta y fuera de /login: se está a punto de redirigir (efecto de
-  // arriba) — mostrar el loader mientras tanto para no montar children con
-  // una sesión que no existe. En /login, "sin cuenta" es el estado
-  // esperado y normal: nunca debe bloquearse, o esa página jamás podría
-  // renderizarse para que el usuario inicie sesión.
+  // arriba) — mostrar el loader mientras tanto. En /login, "sin cuenta"
+  // es el estado esperado y nunca debe bloquearse.
   const awaitingRedirect =
-    redirectHandled && inProgress === "none" && accounts.length === 0 && !isLoginRoute;
+    inProgress === "none" && accounts.length === 0 && !isLoginRoute;
 
-  if (!redirectHandled || inProgress === "startup" || awaitingRedirect) {
+  if (inProgress !== "none" || awaitingRedirect) {
     return (
       <div className="min-h-screen bg-slate-50/70 flex items-center justify-center">
         <div className="h-8 w-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
@@ -210,7 +204,6 @@ function MsalBootstrap({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-
 // ── Componente principal ──────────────────────────────────────────────────────
 
 /**
