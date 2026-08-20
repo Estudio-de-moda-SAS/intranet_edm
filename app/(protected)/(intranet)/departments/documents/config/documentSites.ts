@@ -57,7 +57,20 @@ export const DOCUMENTS_ROOT_SITE_ID =
  * herramienta interna `DocumentsExplorer.tsx` o `resolveSharePointSiteByUrl`),
  * ej.: `"https://estudiodemoda.sharepoint.com/sites/FS/Juridica"`.
  */
-export const KNOWN_SUBSITE_URLS: readonly string[] = [];
+export const KNOWN_SUBSITE_URLS: readonly string[] = [
+  "https://estudiodemoda.sharepoint.com/sites/FS/Juridica",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Ecommerce",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Producto",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Tecnologia",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Financiero",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Cadena%20Abastecimiento",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Capital%20Humano",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Control%20Interno",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Gerencia%20de%20Marcas",
+  "https://estudiodemoda.sharepoint.com/sites/FS/IC",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Servicios%20Administrativos",
+  "https://estudiodemoda.sharepoint.com/sites/FS/Socios%20Comerciales",
+];
 
 /**
  * Normaliza un nombre de sitio/área a una clave estable (minúsculas, sin
