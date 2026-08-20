@@ -80,6 +80,22 @@ interface GraphCollectionResponse<T> {
   "@odata.nextLink"?: string;
 }
 
+/**
+ * Error de una llamada a Graph que sí llegó a responder (a diferencia de un
+ * error de red). Conserva el status HTTP para que el llamador pueda
+ * distinguir, por ejemplo, un 403 (sin permiso sobre ese recurso puntual)
+ * de otros fallos que sí deban propagarse como error real.
+ */
+export class GraphRequestError extends Error {
+  readonly status: number;
+
+  constructor(status: number, statusText: string) {
+    super(`[SharePoint Graph] ${status} ${statusText}`);
+    this.name = "GraphRequestError";
+    this.status = status;
+  }
+}
+
 async function getSharePointToken() {
   return getAccessToken({
     silentExtraScopesToConsent: Array.from(SHAREPOINT_DISCOVERY_SCOPES),
@@ -100,9 +116,7 @@ async function graphFetch<T>(pathOrUrl: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(
-      `[SharePoint Graph] ${response.status} ${response.statusText}`
-    );
+    throw new GraphRequestError(response.status, response.statusText);
   }
 
   return response.json() as Promise<T>;

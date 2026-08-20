@@ -19,9 +19,15 @@ import {
   DEPARTMENT_OVERRIDES,
   DOCUMENTS_ROOT_SITE_ID,
   EXCLUDED_SUBSITE_KEYS,
+  KNOWN_SUBSITE_URLS,
   normalizeDepartmentKey,
 } from "../config/documentSites";
-import { getSharePointSubsites } from "./sharepointDiscovery.service";
+import {
+  GraphRequestError,
+  getSharePointSubsites,
+  resolveSharePointSiteByUrl,
+  type SharePointSiteDiscoveryResult,
+} from "./sharepointDiscovery.service";
 import type { DocumentDepartment } from "../types/documentDepartment.types";
 
 let cachedDepartments: readonly DocumentDepartment[] | null = null;
@@ -33,10 +39,39 @@ export function invalidateDocumentDepartmentsCache(): void {
   pendingFetch = null;
 }
 
+/**
+ * Respaldo para cuando `getSharePointSubsites(DOCUMENTS_ROOT_SITE_ID)` falla
+ * con 403 — el usuario no tiene permiso sobre el sitio raíz, pero puede
+ * tenerlo sobre uno o varios subsitios conocidos. Resuelve cada URL de
+ * {@link KNOWN_SUBSITE_URLS} de forma individual y descarta en silencio las
+ * que también fallen (el usuario tampoco tiene acceso ahí).
+ */
+async function resolveKnownSubsitesIndividually(): Promise<
+  SharePointSiteDiscoveryResult[]
+> {
+  const results = await Promise.allSettled(
+    KNOWN_SUBSITE_URLS.map((url) => resolveSharePointSiteByUrl(url))
+  );
+
+  return results.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : []
+  );
+}
+
 async function fetchDepartmentsFromGraph(): Promise<
   readonly DocumentDepartment[]
 > {
-  const subsites = await getSharePointSubsites(DOCUMENTS_ROOT_SITE_ID);
+  let subsites: SharePointSiteDiscoveryResult[];
+
+  try {
+    subsites = await getSharePointSubsites(DOCUMENTS_ROOT_SITE_ID);
+  } catch (error) {
+    if (error instanceof GraphRequestError && error.status === 403) {
+      subsites = await resolveKnownSubsitesIndividually();
+    } else {
+      throw error;
+    }
+  }
 
   const excluded = new Set(EXCLUDED_SUBSITE_KEYS);
 

@@ -40,6 +40,26 @@ export const DOCUMENTS_ROOT_SITE_ID =
   "estudiodemoda.sharepoint.com,1fb52e1a-d7f9-403c-bce1-8e5004c5a846";
 
 /**
+ * Respaldo manual de URLs de subsitios conocidos.
+ *
+ * @remarks
+ * `getSharePointSubsites(DOCUMENTS_ROOT_SITE_ID)` (`GET /sites/{id}/sites`)
+ * requiere que el usuario tenga permiso sobre el **sitio raíz** para poder
+ * enumerar sus subsitios — si no lo tiene, Graph responde 403 para esa
+ * llamada aunque el usuario sí tenga permiso directo sobre uno o varios
+ * subsitios. `documentCatalog.service.ts` usa esta lista como respaldo
+ * exactamente en ese caso: resuelve cada URL de forma individual vía
+ * `resolveSharePointSiteByUrl` y descarta en silencio las que también
+ * fallen (el usuario tampoco tiene acceso ahí, lo cual es correcto).
+ *
+ * Vacía por defecto — no hay ningún subsitio "de más" hasta que se
+ * complete con URLs reales verificadas contra el tenant (ej. con la
+ * herramienta interna `DocumentsExplorer.tsx` o `resolveSharePointSiteByUrl`),
+ * ej.: `"https://estudiodemoda.sharepoint.com/sites/FS/Juridica"`.
+ */
+export const KNOWN_SUBSITE_URLS: readonly string[] = [];
+
+/**
  * Normaliza un nombre de sitio/área a una clave estable (minúsculas, sin
  * tildes, separada por guiones), usada tanto para generar `id` a partir del
  * `displayName` que devuelve Graph como para las claves de
