@@ -14,7 +14,6 @@
  * apertura/descarga de documentos, subida de archivos, y deep-links del
  * buscador global con resaltado del archivo encontrado.
  */
-import { DOCUMENT_SITES } from "../../config/documentSites";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { useSearchParams } from "next/navigation";
@@ -40,6 +39,7 @@ import {
 import { DepartmentSidebar } from "../DepartmentSidebar/DepartmentSidebar";
 import { useDocumentExplorer } from "../../hooks/useDocumentExplorer";
 import { loadDocumentPreviewUrl } from "../../services/documentSource.service";
+import { getDocumentDepartmentById } from "../../services/documentCatalog.service";
 import { mapDocumentItemToPdfMetadata } from "../../utils/mapDocumentItemToPdfMetadata";
 import { formatFileSize, formatShortDate } from "../../utils/formatDocumentMeta";
 import { getDocumentIcon } from "../../utils/getDocumentIcon";
@@ -106,7 +106,20 @@ export function DocumentWorkspace() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
-    useEffect(() => {
+  /**
+   * Resuelve deep-links de entrada al módulo:
+   * - `?source=my-drive&folder=...&highlight=...` (buscador global de docs).
+   * - `?source=corporate-sites&driveId=...&folder=...&highlight=...`
+   *   (buscador global de docs dentro de un área/biblioteca corporativa).
+   * - `?source=corporate-sites&area=...` (buscador global de áreas — ver
+   *   `globalAreaSearch.service.ts`). La búsqueda del área es async porque
+   *   `getDocumentDepartmentById` resuelve contra el catálogo dinámico
+   *   (`documentCatalog.service.ts`, cacheado en memoria) en vez de un
+   *   array estático — por eso el fallback a "Mi unidad" vive DENTRO del
+   *   bloque async: si se dejara fuera, se dispararía antes de que la
+   *   promesa resuelva y causaría un parpadeo entre fuentes.
+   */
+  useEffect(() => {
     const source = searchParams.get("source");
     const folder = searchParams.get("folder");
     const highlight = searchParams.get("highlight");
@@ -122,22 +135,24 @@ export function DocumentWorkspace() {
       return;
     }
 
-     if (source === "corporate-sites" && driveId) {
+    if (source === "corporate-sites" && driveId) {
       const location: DocumentLocation = { driveId, itemId: folder };
       void openLocationDirect("corporate-sites", location, highlight ?? undefined);
       return;
     }
 
     if (source === "corporate-sites" && areaId) {
-      const department = DOCUMENT_SITES.find((d) => d.id === areaId);
+      void (async () => {
+        const department = await getDocumentDepartmentById(areaId);
 
-      if (department) {
-        void (async () => {
+        if (department) {
           await switchSource("corporate-sites");
           await selectDepartment(department);
-        })();
-        return;
-      }
+        } else {
+          await switchSource("my-drive");
+        }
+      })();
+      return;
     }
 
     void switchSource("my-drive");
@@ -163,10 +178,18 @@ export function DocumentWorkspace() {
   const showLibraryPicker =
     isCorporateSites && selectedDepartment && !selectedLibrary;
 
+  /**
+   * Depende solo de `selectedLibrary` (no de `selectedDepartment` también):
+   * los deep-links del buscador global de documentos entran directo a una
+   * biblioteca vía `openLocationDirect`, sin pasar por el flujo manual
+   * sidebar -> selectDepartment -> selectLibrary, así que
+   * `selectedDepartment` puede quedar en `null` aunque los items ya estén
+   * cargados y listos para mostrarse.
+   */
   const showItemsList =
     activeSource === "my-drive" ||
     activeSource === "shared" ||
-    (isCorporateSites && Boolean(selectedDepartment) && Boolean(selectedLibrary));
+    (isCorporateSites && Boolean(selectedLibrary));
 
   const filteredItems = useMemo(() => {
     const query = localQuery.trim().toLowerCase();
@@ -363,7 +386,7 @@ export function DocumentWorkspace() {
 
           {error && <div className="document-workspace__error">{error}</div>}
 
-          {isCorporateSites && !selectedDepartment && (
+          {isCorporateSites && !selectedDepartment && !selectedLibrary && (
             <div className="document-workspace__empty-state">
               <div className="document-workspace__empty-icon">
                 <FolderOpen size={34} strokeWidth={1.8} />

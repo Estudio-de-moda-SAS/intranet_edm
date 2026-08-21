@@ -240,6 +240,17 @@ export function initMSALCore(): Promise<void> {
  * de forma confiable, porque es él quien de verdad ejecuta
  * `handleRedirectPromise()`. Ver `MsalBootstrap` en `providers.tsx`,
  * que ya lee `inProgress` para esto.
+ *
+ * **Nota sobre `navigateToLoginRequestUrl`:** en versiones antiguas de
+ * MSAL Browser esa opción vivía en `Configuration.auth`. En esta versión
+ * (5.x), se movió a ser un parámetro de la llamada `handleRedirectPromise()`
+ * misma (`HandleRedirectPromiseOptions`) — y como esta app deliberadamente
+ * no llama `handleRedirectPromise()` manualmente (ver el punto anterior),
+ * no hay un lugar limpio para pasarla sin reintroducir la condición de
+ * carrera que ya se resolvió. Se descartó por eso. El caso real de
+ * `block_iframe_reload` que motivó considerarla se resuelve en
+ * `app/login/page.tsx` con una guarda `window.self !== window.top`, que
+ * no depende de esta opción de configuración.
  */
 export async function initMSAL(): Promise<void> {
   await initMSALCore();

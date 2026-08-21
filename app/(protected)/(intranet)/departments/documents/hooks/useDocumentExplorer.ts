@@ -546,7 +546,6 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
     ) => {
       setActiveSource(source);
       setSelectedDepartment(null);
-      setSelectedLibrary(null);
       setSelectedDepartmentLibraries([]);
       setSelectedDepartmentSubsites([]);
       setSiteTrail([]);
@@ -554,6 +553,20 @@ export function useDocumentExplorer(): UseDocumentExplorerResult {
       setSelectedTeamDrive(null);
       setTeamDrives([]);
       setHighlightedItemId(highlightId ?? null);
+
+      // Deep-links de corporate-sites llegan sin pasar por el flujo manual
+      // (sidebar -> selectDepartment -> selectLibrary), así que
+      // selectedLibrary nunca se setea por ese camino. DocumentWorkspace
+      // usa selectedLibrary para decidir si mostrar la tabla de items o el
+      // estado vacío "Selecciona un área documental" — sin esto, los datos
+      // se cargan correctamente pero nunca se muestran. Se arma un stub
+      // mínimo con el driveId conocido (id es el único campo obligatorio
+      // de SharePointDriveDiscoveryResult); el nombre real de la
+      // biblioteca no viaja en el deep-link, así que el breadcrumb cae a
+      // un label genérico hasta que se navegue manualmente.
+      setSelectedLibrary(
+        source === "corporate-sites" ? { id: location.driveId } : null
+      );
 
       // Raíz de una biblioteca conocida (ej. resultado de búsqueda que
       // apunta a una biblioteca completa, no a una carpeta específica).

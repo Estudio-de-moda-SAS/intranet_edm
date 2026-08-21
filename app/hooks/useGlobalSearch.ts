@@ -6,8 +6,10 @@
  * Combina tres fuentes de resultados:
  *
  * - Un catálogo controlado de secciones de navegación (síncrono).
- * - Áreas corporativas del catálogo documental (síncrono, sin llamada
- *   a Graph — es solo un filtro en memoria).
+ * - Áreas corporativas del catálogo documental (asíncrono — el catálogo
+ *   se resuelve contra Microsoft Graph vía `documentCatalog.service.ts`,
+ *   pero se cachea en memoria: solo la primera búsqueda de la sesión
+ *   dispara la llamada real, las siguientes son casi instantáneas).
  * - Documentos y carpetas reales del usuario, buscados vía Microsoft
  *   Search API (asíncrono, con debounce).
  *
@@ -24,7 +26,10 @@ import {
   searchDocumentsGlobal,
   type GlobalDocumentSearchResult,
 } from "@/app/(protected)/(intranet)/departments/documents/services/globalDocumentSearch.service";
-import { searchAreasGlobal } from "@/app/(protected)/(intranet)/departments/documents/services/globalAreaSearch.service";
+import {
+  searchAreasGlobal,
+  type GlobalAreaSearchResult,
+} from "@/app/(protected)/(intranet)/departments/documents/services/globalAreaSearch.service";
 
 /**
  * Representa un elemento navegable disponible para búsqueda global.
@@ -95,8 +100,10 @@ export function useGlobalSearch(accessLevel: AccessLevel) {
   const [documentResults, setDocumentResults] = useState
     <GlobalDocumentSearchResult[]
   >([]);
+  const [areaResults, setAreaResults] = useState<GlobalAreaSearchResult[]>([]);
 
   const latestQueryRef = useRef("");
+  const latestAreaQueryRef = useRef("");
 
   const navItems = useMemo(() => {
     void accessLevel;
@@ -125,10 +132,40 @@ export function useGlobalSearch(accessLevel: AccessLevel) {
       .slice(0, 8);
   }, [query, navItems]);
 
-  const areaResults = useMemo(() => {
+  /**
+   * Búsqueda de áreas corporativas. `searchAreasGlobal` es async porque el
+   * catálogo se resuelve contra Graph (con caché) — no hay debounce porque
+   * solo la primera consulta de la sesión golpea la red; el guard con
+   * `latestAreaQueryRef` evita que una respuesta vieja pise una más nueva
+   * si el usuario sigue escribiendo mientras la promesa resuelve.
+   */
+  useEffect(() => {
     const normalizedQuery = query.trim();
-    if (!normalizedQuery) return [];
-    return searchAreasGlobal(normalizedQuery);
+    latestAreaQueryRef.current = normalizedQuery;
+
+    if (!normalizedQuery) {
+      setAreaResults([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    searchAreasGlobal(normalizedQuery)
+      .then((results) => {
+        if (!cancelled && latestAreaQueryRef.current === normalizedQuery) {
+          setAreaResults(results);
+        }
+      })
+      .catch((searchError) => {
+        console.error("[useGlobalSearch] area search", searchError);
+        if (!cancelled && latestAreaQueryRef.current === normalizedQuery) {
+          setAreaResults([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [query]);
 
   useEffect(() => {
