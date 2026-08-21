@@ -37,11 +37,11 @@ export function OfficePreview({ url, title }: OfficePreviewProps) {
   return (
     <div className="flex flex-col w-full h-full">
       {isDark && (
-        <div className="flex items-center gap-2 px-4 py-2 shrink-0
-                        bg-amber-500/[0.10] border-b border-amber-500/20">
-          <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-          <p className="text-[11px] text-amber-300/90">
-            Office Online no admite modo oscuro — el documento se muestra en tema claro independientemente de tu preferencia.
+        <div className="pdf-viewer-modal__office-warning">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <p>
+            Office Online no admite modo oscuro — el documento se muestra en tema claro
+            independientemente de tu preferencia.
           </p>
         </div>
       )}

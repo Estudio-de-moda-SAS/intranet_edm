@@ -45,19 +45,16 @@ export function ToolbarBtn({
   danger = false,
   children,
 }: ToolbarBtnProps) {
+  const className = [
+    "pdf-viewer-modal__toolbar-btn",
+    disabled && "pdf-viewer-modal__toolbar-btn--disabled",
+    danger && !disabled && "pdf-viewer-modal__toolbar-btn--danger",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={`p-1.5 rounded-lg transition ${
-        disabled
-          ? "text-slate-300 dark:text-[#30363d] cursor-not-allowed"
-          : danger
-            ? "text-slate-500 dark:text-[#768390] hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/[0.10] dark:hover:text-rose-400"
-            : "text-slate-500 dark:text-[#768390] hover:bg-slate-100 dark:hover:bg-[#21262d] dark:hover:text-[#adbac7]"
-      }`}
-    >
+    <button onClick={onClick} disabled={disabled} title={title} className={className}>
       {children}
     </button>
   );

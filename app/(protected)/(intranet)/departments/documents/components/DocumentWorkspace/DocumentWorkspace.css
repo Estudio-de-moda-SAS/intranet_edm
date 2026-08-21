@@ -833,3 +833,61 @@
   0% { background: #ede9fe; }
   100% { background: transparent; }
 }
+/* ==========================================================
+   Botón "Atrás" y ruta combinada (sitio + carpetas)
+   ========================================================== */
+
+.document-workspace__back-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--dw-border);
+  background: var(--dw-surface);
+  color: var(--dw-text);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.document-workspace__back-btn:hover {
+  background: var(--dw-accent);
+  border-color: var(--dw-accent);
+  color: white;
+}
+
+.document-workspace__back-btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.document-workspace__back-btn:disabled:hover {
+  background: var(--dw-surface);
+  border-color: var(--dw-border);
+  color: var(--dw-text);
+}
+
+.document-workspace__path-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+.document-workspace__path-segment {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.document-workspace__path-separator {
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.dark .document-workspace__path-separator {
+  color: #475569;
+}

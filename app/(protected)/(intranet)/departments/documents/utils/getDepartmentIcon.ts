@@ -19,6 +19,8 @@ import {
   TrendingUp,
   Truck,
   Users,
+  BookText,
+  Headset,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +37,8 @@ const DEPARTMENT_ICON_MAP: Record<string, LucideIcon> = {
   TrendingUp,
   Building2,
   Handshake,
+  BookText,
+  Headset,
 };
 
 /**

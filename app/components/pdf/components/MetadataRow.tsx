@@ -32,22 +32,13 @@ export function MetadataRow({ icon: Icon, label, value }: MetadataRowProps) {
   if (!value) return null;
 
   return (
-    <div className="flex items-start gap-3 py-2.5 border-b last:border-0
-                    border-slate-100 dark:border-[#21262d]">
-      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md
-                       border bg-slate-50 border-slate-200
-                       dark:bg-[#21262d] dark:border-[#30363d]">
-        <Icon className="h-3.5 w-3.5 text-slate-400 dark:text-[#545d68]" />
+    <div className="pdf-viewer-modal__meta-row">
+      <span className="pdf-viewer-modal__meta-icon">
+        <Icon className="h-3.5 w-3.5" />
       </span>
-      <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-wide font-semibold
-                      text-slate-400 dark:text-[#545d68]">
-          {label}
-        </p>
-        <p className="text-[12px] font-medium mt-0.5 break-words
-                      text-slate-700 dark:text-[#cdd9e5]">
-          {value}
-        </p>
+      <div className="pdf-viewer-modal__meta-body">
+        <p className="pdf-viewer-modal__meta-label">{label}</p>
+        <p className="pdf-viewer-modal__meta-value">{value}</p>
       </div>
     </div>
   );
