@@ -153,33 +153,7 @@ let eventsWired = false;
  */
 let coreInitPromise: Promise<void> | null = null;
 
-/**
- * Promesa compartida de `msal.handleRedirectPromise()`.
- *
- * @remarks
- * MSAL requiere que `handleRedirectPromise()` se ejecute UNA SOLA VEZ por
- * carga de página. `initMSAL()` se llama internamente desde casi todas las
- * funciones públicas de este módulo (`ensureLogin*`, `getAccessToken`,
- * `getIdToken`, `logout`), así que sin este guard, cada llamada
- * concurrente (por ejemplo varios componentes pidiendo un access token en
- * su montaje) dispara otra ejecución de `handleRedirectPromise()` en
- * paralelo. Eso deja entradas huérfanas de request state
- * (`code.verifier`, `nonce`, `state`) en el storage que nunca se limpian
- * del todo, y con el tiempo agotan la cuota de `localStorage`
- * (`QuotaExceededError`), rompiendo el login/la renovación silenciosa.
- */
-let redirectPromise: Promise<void> | null = null;
 
-/**
- * Contador de diagnóstico: cuántas veces se intentó crear
- * {@link redirectPromise}. En uso normal debería quedar siempre en 1.
- * Si un refactor futuro rompe el guard de {@link initMSAL} (por ejemplo,
- * alguien "simplifica" la función y vuelve a llamar
- * `handleRedirectPromise()` sin el `if`), esto lo va a gritar en
- * desarrollo en vez de acumularse silenciosamente en producción durante
- * horas, como pasó con el bug original.
- */
-let redirectInitAttempts = 0;
 
 // -- Requests reutilizables ----------------------------------------------------
 
@@ -232,29 +206,54 @@ export function initMSALCore(): Promise<void> {
  * se ejecute una única vez por carga de página, sin importar cuántas
  * veces se invoque `initMSAL()` (ver el comentario de esa variable).
  */
+/**
+ * Prepara MSAL para usarse: espera `msal.initialize()` (compartido con
+ * {@link initMSALCore}), registra nuestro propio listener de eventos
+ * ({@link wireEventsOnce}) y selecciona la cuenta activa si existe.
+ *
+ * @remarks
+ * **IMPORTANTE — por qué esta función YA NO llama `handleRedirectPromise()`:**
+ * `MsalProvider` (de `@azure/msal-react`) llama `instance.handleRedirectPromise()`
+ * automáticamente, por su cuenta, en su propio `useEffect` interno, apenas
+ * se monta — es un comportamiento incorporado de la librería, no algo que
+ * la app deba replicar.
+ *
+ * La versión anterior de esta función también lo llamaba manualmente
+ * desde `MsalBootstrap` (que vive DENTRO de `MsalProvider`). Eso generaba
+ * DOS llamadas independientes a `handleRedirectPromise()` — la de
+ * `MsalProvider` y esta — compitiendo por las mismas entradas temporales
+ * de `localStorage` (`code_verifier`, `nonce`, `state`) que MSAL usa para
+ * validar el login. El guard con una promesa cacheada solo evitaba que
+ * ESTE módulo se llamara a sí mismo dos veces — no tenía forma de
+ * coordinarse con la llamada interna de `MsalProvider`, que ocurre de
+ * forma completamente independiente.
+ *
+ * Es exactamente el escenario descrito en un issue conocido de la
+ * librería ("Race condition when calling handleRedirectPromise... using
+ * @azure/msal-react"): la falla es intermitente porque depende del
+ * timing de cuál llamada "gana" — coincide con el síntoma real
+ * observado (falla a veces, no siempre, y navegar a `/login` lo
+ * destraba al reiniciar el timing).
+ *
+ * **La fuente de verdad correcta** para saber si el redirect ya se
+ * procesó es `inProgress` de `useMsal()` — que `MsalProvider` actualiza
+ * de forma confiable, porque es él quien de verdad ejecuta
+ * `handleRedirectPromise()`. Ver `MsalBootstrap` en `providers.tsx`,
+ * que ya lee `inProgress` para esto.
+ *
+ * **Nota sobre `navigateToLoginRequestUrl`:** en versiones antiguas de
+ * MSAL Browser esa opción vivía en `Configuration.auth`. En esta versión
+ * (5.x), se movió a ser un parámetro de la llamada `handleRedirectPromise()`
+ * misma (`HandleRedirectPromiseOptions`) — y como esta app deliberadamente
+ * no llama `handleRedirectPromise()` manualmente (ver el punto anterior),
+ * no hay un lugar limpio para pasarla sin reintroducir la condición de
+ * carrera que ya se resolvió. Se descartó por eso. El caso real de
+ * `block_iframe_reload` que motivó considerarla se resuelve en
+ * `app/login/page.tsx` con una guarda `window.self !== window.top`, que
+ * no depende de esta opción de configuración.
+ */
 export async function initMSAL(): Promise<void> {
   await initMSALCore();
-
-  if (!redirectPromise) {
-    redirectInitAttempts++;
-    if (process.env.NODE_ENV !== "production" && redirectInitAttempts > 1) {
-      console.error(
-        "[MSAL] handleRedirectPromise se está creando más de una vez " +
-        `(intento #${redirectInitAttempts}). Esto indica una regresión en ` +
-        "el guard de initMSAL() — revisá que nadie haya vuelto a llamar " +
-        "msal.handleRedirectPromise() fuera de este bloque. Si esto llega " +
-        "a producción, el storage se va a ir llenando de entradas " +
-        "huérfanas hasta un QuotaExceededError."
-      );
-    }
-    redirectPromise = msal.handleRedirectPromise()
-      .then(() => undefined)
-      .catch((e) => {
-        console.error("[MSAL] handleRedirectPromise error:", e);
-      });
-  }
-  await redirectPromise;
-
   wireEventsOnce();
   ensureActiveAccount();
 }
@@ -299,7 +298,7 @@ export function getAccount(): AccountInfo | null {
  * Se usa como recuperación defensiva cuando el storage está lleno
  * (`QuotaExceededError`) — por ejemplo en Safari en modo privado o en
  * webviews corporativos con cuota reducida — para poder reintentar el
- * login sin quedar atascados.
+ * login o el logout sin quedar atascados.
  */
 function clearMsalStorage(): void {
   try {
@@ -503,6 +502,22 @@ export async function getIdToken(): Promise<string> {
 
 /**
  * Cierra la sesion del colaborador autenticado y redirige al login.
+ *
+ * @remarks
+ * `msal.logoutRedirect()` necesita escribir estado temporal en
+ * `localStorage` antes de navegar (igual que el login). Si esa escritura
+ * falla con `QuotaExceededError` — por ejemplo en Safari en modo privado
+ * o en webviews corporativos con cuota reducida — el usuario podía
+ * quedar con las cookies ya borradas pero sin completar el logout. Mismo
+ * patrón de recuperación que {@link ensureLoginRedirect}: limpiar
+ * `msal.*` y reintentar una vez; si vuelve a fallar, forzar la
+ * navegación manual como último recurso — para ese punto ya no hay nada
+ * más que MSAL pueda hacer por nosotros.
+ *
+ * Este es un caso raro en la práctica (no es la causa típica de
+ * `QuotaExceededError` que se ha visto en producción — ver
+ * `organizationGraph.service.ts` para esa historia), pero queda como red
+ * de seguridad barata por si ocurre.
  */
 export async function logout(): Promise<void> {
   await initMSAL();
@@ -515,12 +530,42 @@ export async function logout(): Promise<void> {
   document.cookie = `edm_user_email=; ${expired}`;
   document.cookie = `edm_last_page=; ${expired}`;
 
-  await msal.logoutRedirect({
-    ...(account && { account }),
-    postLogoutRedirectUri: typeof window !== "undefined"
-      ? `${window.location.origin}/login`
-      : "/login",
-  });
+  const postLogoutRedirectUri = typeof window !== "undefined"
+    ? `${window.location.origin}/login`
+    : "/login";
+
+  try {
+    await msal.logoutRedirect({
+      ...(account && { account }),
+      postLogoutRedirectUri,
+    });
+  } catch (e) {
+    if (isQuotaExceededError(e)) {
+      console.warn("[MSAL] Storage lleno durante logout, limpiando entradas msal.* y reintentando...");
+      clearMsalStorage();
+      try {
+        await msal.logoutRedirect({
+          ...(account && { account }),
+          postLogoutRedirectUri,
+        });
+        return;
+      } catch (retryErr) {
+        console.error(
+          "[MSAL] logoutRedirect volvió a fallar tras limpiar storage, forzando redirect manual:",
+          retryErr
+        );
+      }
+    } else {
+      console.error("[MSAL] logoutRedirect falló:", e);
+    }
+
+    // Último recurso: cookies (y, si aplicaba, el storage de MSAL) ya
+    // quedaron limpios a mano, así que forzamos la navegación para no
+    // dejar al usuario atascado en una sesión a medio cerrar.
+    if (typeof window !== "undefined") {
+      window.location.assign(postLogoutRedirectUri);
+    }
+  }
 }
 // -- Eventos MSAL --------------------------------------------------------------
 

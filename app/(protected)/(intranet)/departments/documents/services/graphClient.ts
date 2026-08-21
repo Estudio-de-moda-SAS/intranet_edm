@@ -4,14 +4,18 @@
  * Cliente HTTP mínimo y genérico para Microsoft Graph.
  *
  * @remarks
- * Centraliza la obtención de tokens (vía MSAL), el armado de URLs y la
- * paginación por `@odata.nextLink`. Es consumido por todos los servicios
- * documentales para evitar duplicar lógica de fetch en cada uno.
+ * Centraliza la obtención de tokens (vía MSAL), el armado de URLs, la
+ * paginación por `@odata.nextLink`, y el manejo automático de throttling
+ * (HTTP 429 con reintento respetando `Retry-After`). Es consumido por
+ * todos los servicios documentales para evitar duplicar esta lógica.
  */
 
 import { getAccessToken } from "@/app/api/auth/msal";
 
 export const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
+
+const MAX_THROTTLE_RETRIES = 3;
+const DEFAULT_RETRY_AFTER_SECONDS = 2;
 
 interface GraphCollectionResponse<T> {
   value: T[];
@@ -45,6 +49,53 @@ export async function getGraphToken(
   });
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function resolveUrl(pathOrUrl: string): string {
+  return pathOrUrl.startsWith("https://")
+    ? pathOrUrl
+    : `${GRAPH_BASE_URL}${pathOrUrl}`;
+}
+
+/**
+ * Ejecuta un `fetch` contra Graph con reintento automático en caso de
+ * throttling (429): espera el tiempo indicado en `Retry-After` (o un
+ * valor por defecto si el header no viene) y reintenta hasta
+ * `MAX_THROTTLE_RETRIES` veces antes de rendirse.
+ */
+async function fetchWithThrottleRetry(
+  url: string,
+  init: RequestInit
+): Promise<Response> {
+  let attempt = 0;
+
+  while (true) {
+    const response = await fetch(url, init);
+
+    if (response.status !== 429 || attempt >= MAX_THROTTLE_RETRIES) {
+      return response;
+    }
+
+    const retryAfterHeader = response.headers.get("Retry-After");
+    const retryAfterSeconds = retryAfterHeader
+      ? Number(retryAfterHeader)
+      : DEFAULT_RETRY_AFTER_SECONDS;
+
+    console.warn(
+      `[Graph] 429 recibido, reintentando en ${retryAfterSeconds}s (intento ${attempt + 1}/${MAX_THROTTLE_RETRIES})`
+    );
+
+    await delay(
+      (Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : DEFAULT_RETRY_AFTER_SECONDS) *
+        1000
+    );
+
+    attempt += 1;
+  }
+}
+
 /**
  * Ejecuta un GET contra Microsoft Graph y retorna el JSON tipado.
  *
@@ -56,12 +107,9 @@ export async function graphFetch<T>(
   extraScopes: readonly string[]
 ): Promise<T> {
   const token = await getGraphToken(extraScopes);
+  const url = resolveUrl(pathOrUrl);
 
-  const url = pathOrUrl.startsWith("https://")
-    ? pathOrUrl
-    : `${GRAPH_BASE_URL}${pathOrUrl}`;
-
-  const response = await fetch(url, {
+  const response = await fetchWithThrottleRetry(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -110,12 +158,9 @@ export async function graphPost<T>(
   extraScopes: readonly string[]
 ): Promise<T> {
   const token = await getGraphToken(extraScopes);
+  const url = resolveUrl(pathOrUrl);
 
-  const url = pathOrUrl.startsWith("https://")
-    ? pathOrUrl
-    : `${GRAPH_BASE_URL}${pathOrUrl}`;
-
-  const response = await fetch(url, {
+  const response = await fetchWithThrottleRetry(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -147,12 +192,9 @@ export async function graphUpload<T>(
   extraScopes: readonly string[]
 ): Promise<T> {
   const token = await getGraphToken(extraScopes);
+  const url = resolveUrl(pathOrUrl);
 
-  const url = pathOrUrl.startsWith("https://")
-    ? pathOrUrl
-    : `${GRAPH_BASE_URL}${pathOrUrl}`;
-
-  const response = await fetch(url, {
+  const response = await fetchWithThrottleRetry(url, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
