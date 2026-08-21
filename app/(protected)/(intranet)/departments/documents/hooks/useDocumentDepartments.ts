@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   getDocumentDepartments,
+  invalidateDocumentDepartmentsCache,
   searchDocumentDepartments,
 } from "../services/documentCatalog.service";
 
@@ -89,6 +90,15 @@ export function useDocumentDepartments(): UseDocumentDepartmentsResult {
   }, []);
 
   /**
+   * Recarga el catálogo forzando un refetch contra Graph, para reflejar
+   * subsitios agregados/renombrados desde la última carga.
+   */
+  const reloadDepartments = useCallback(async () => {
+    invalidateDocumentDepartmentsCache();
+    await loadDepartments();
+  }, [loadDepartments]);
+
+  /**
    * Ejecuta una búsqueda dentro del catálogo.
    */
   const search = useCallback(async (searchTerm: string) => {
@@ -110,9 +120,9 @@ export function useDocumentDepartments(): UseDocumentDepartmentsResult {
       departments,
       loading,
       error,
-      reload: loadDepartments,
+      reload: reloadDepartments,
       search,
     }),
-    [departments, loading, error, loadDepartments, search]
+    [departments, loading, error, reloadDepartments, search]
   );
 }
