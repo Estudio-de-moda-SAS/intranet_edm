@@ -88,7 +88,7 @@ export const TICKET_SYSTEMS: TicketSystem[] = [
       "Gestionar asignaciones",
       "Realizar novedades relacionadas con parking",
     ],
-    url: "https://proud-mushroom-00b1ea00f.1.azurestaticapps.net/",
+    url: "https://parking.estudiodemoda.co/",
     icon: Car,
     accent: "amber",
     external: true,
