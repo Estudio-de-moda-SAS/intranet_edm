@@ -73,7 +73,7 @@ export function DepartmentSidebar({
           </span>
 
           <div>
-            <h2>Áreas documentales</h2>
+            <h2>Carpetas Corporativas</h2>
 
             <p>
               {loading

@@ -3,19 +3,31 @@
  * Componente cliente para mostrar los resultados de la búsqueda global.
  *
  * @remarks
- * Este archivo renderiza un panel desplegable con resultados agrupados
- * por categoría, navegación por teclado y resaltado del texto buscado.
- *
- * Los resultados con `href` externo (ej. un documento de SharePoint fuera
- * del catálogo interno de Documentos) se abren en pestaña nueva; los
- * demás navegan internamente con el router de Next.js.
+ * Renderiza la lista de resultados agrupados por categoría, con
+ * navegación por teclado y resaltado del texto buscado. El ícono de cada
+ * fila depende de `kind`: módulo, área corporativa, biblioteca, carpeta
+ * o archivo (con color según tipo, igual que en la tabla del módulo
+ * Documentos).
  */
 
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Building2,
+  ChevronRight,
+  File,
+  FileStack,
+  Folder,
+  LayoutGrid,
+} from 'lucide-react';
+import { getDocumentIcon } from '@/app/(protected)/(intranet)/departments/documents/utils/getDocumentIcon';
+import {
+  formatFileSize,
+  formatShortDate,
+} from '@/app/(protected)/(intranet)/departments/documents/utils/formatDocumentMeta';
+import './GlobalSearchResults.css';
 
 /**
  * Representa un resultado individual de búsqueda.
@@ -25,6 +37,10 @@ interface SearchResultItem {
   description: string;
   href: string;
   category?: string;
+  kind?: 'module' | 'area' | 'library' | 'folder' | 'file';
+  pathSegments?: string[];
+  size?: number;
+  lastModifiedDateTime?: string;
 }
 
 /**
@@ -40,8 +56,49 @@ function isExternalHref(href: string) {
   return href.startsWith('http://') || href.startsWith('https://');
 }
 
+function ResultIcon({ item }: { item: SearchResultItem }) {
+  if (item.kind === 'file') {
+    const { icon: Icon, colorClass } = getDocumentIcon(item.label);
+    return (
+      <span className="gsearch-row__icon">
+        <Icon className={`h-5 w-5 ${colorClass}`} />
+      </span>
+    );
+  }
+
+  if (item.kind === 'folder') {
+    return (
+      <span className="gsearch-row__icon">
+        <Folder className="h-5 w-5" style={{ color: '#7c3aed' }} />
+      </span>
+    );
+  }
+
+  if (item.kind === 'library') {
+    return (
+      <span className="gsearch-row__icon">
+        <FileStack className="h-5 w-5" style={{ color: '#7c3aed' }} />
+      </span>
+    );
+  }
+
+  if (item.kind === 'area') {
+    return (
+      <span className="gsearch-row__icon gsearch-row__icon--module">
+        <Building2 className="h-5 w-5" />
+      </span>
+    );
+  }
+
+  return (
+    <span className="gsearch-row__icon gsearch-row__icon--module">
+      <LayoutGrid className="h-5 w-5" />
+    </span>
+  );
+}
+
 /**
- * Renderiza el panel de resultados de búsqueda global.
+ * Renderiza la lista de resultados de búsqueda global.
  */
 export default function GlobalSearchResults({ results, query, onSelect }: Props) {
   const router = useRouter();
@@ -125,84 +182,82 @@ export default function GlobalSearchResults({ results, query, onSelect }: Props)
     );
   };
 
+  if (results.length === 0) {
+    return (
+      <div className="gsearch-empty">
+        <File className="h-8 w-8" />
+        <p>
+          No encontramos resultados para <strong>&quot;{query}&quot;</strong>
+        </p>
+      </div>
+    );
+  }
+
   let globalIndex = -1;
 
   return (
-    <AnimatePresence>
-      {results.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -6, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -6, scale: 0.98 }}
-          transition={{ duration: 0.18, ease: 'easeOut' }}
-          className="absolute top-full mt-2 left-0 w-full z-[999]"
-        >
-          <div className="rounded-2xl overflow-hidden max-h-80 overflow-y-auto
-                          border shadow-2xl ring-1
-                          bg-white/90 backdrop-blur-xl border-slate-200 ring-black/5
-                          dark:bg-[#161b22]/95 dark:border-[#30363d] dark:ring-white/5 dark:shadow-black/50">
+    <div>
+      {Object.entries(groupedResults).map(([category, items]) => (
+        <div key={category}>
+          <div className="gsearch-category">{category}</div>
 
-            {Object.entries(groupedResults).map(([category, items]) => (
-              <div key={category}>
-                <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider
-                                text-slate-400 dark:text-[#545d68]">
-                  {category}
+          {items.map((item) => {
+            globalIndex++;
+            const isActive = activeIndex === globalIndex;
+            const idx = globalIndex;
+
+            const metaParts: string[] = [];
+            if (item.kind === 'file' && item.size !== undefined)
+              metaParts.push(formatFileSize(item.size));
+            if (item.lastModifiedDateTime)
+              metaParts.push(formatShortDate(item.lastModifiedDateTime));
+
+            return (
+              <div
+                ref={(el) => { itemRefs.current[idx] = el; }}
+                key={item.href + item.label}
+                onClick={() => handleSelect(item.href)}
+                className={`gsearch-row ${isActive ? 'gsearch-row--active' : ''}`}
+              >
+                <ResultIcon item={item} />
+
+                <div className="gsearch-row__content">
+                  <p className="gsearch-row__title">
+                    {highlightText(item.label, query)}
+                  </p>
+
+                  {item.pathSegments && item.pathSegments.length > 0 ? (
+                    <div className="gsearch-row__path">
+                      {item.pathSegments.map((segment, segIndex) => (
+                        <span key={segIndex} className="gsearch-row__path-segment">
+                          {segIndex > 0 && <ChevronRight className="h-3 w-3 shrink-0" />}
+                          {segment}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    (item.kind === 'file' || item.kind === 'area') && (
+                      <p className="gsearch-row__path">
+                        {highlightText(item.description, query)}
+                      </p>
+                    )
+                  )}
+
+                  {(item.kind === 'folder' || item.kind === 'library') && (
+                    <p className="gsearch-row__meta">{item.description}</p>
+                  )}
+
+                  {metaParts.length > 0 && (
+                    <p className="gsearch-row__meta">{metaParts.join(' · ')}</p>
+                  )}
                 </div>
 
-                {items.map((app) => {
-                  globalIndex++;
-                  const isActive = activeIndex === globalIndex;
-                  const idx = globalIndex;
-
-                  return (
-                    <motion.div
-                      ref={(el) => { itemRefs.current[idx] = el; }}
-                      key={app.href}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.03 }}
-                      onClick={() => handleSelect(app.href)}
-                      className={`relative group px-4 py-3 cursor-pointer transition-all duration-150
-                                  border-b last:border-none overflow-hidden
-                                  border-slate-100 dark:border-[#21262d]
-                                  ${
-                                    isActive
-                                      ? 'bg-violet-50 dark:bg-violet-500/[0.08]'
-                                      : 'hover:bg-violet-50/70 dark:hover:bg-violet-500/[0.06]'
-                                  }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p
-                            className={`text-sm font-semibold transition-colors ${
-                              isActive
-                                ? 'text-violet-700 dark:text-violet-400'
-                                : 'text-slate-800 group-hover:text-violet-700 dark:text-[#cdd9e5] dark:group-hover:text-violet-400'
-                            }`}
-                          >
-                            {highlightText(app.label, query)}
-                          </p>
-
-                          <p className="text-xs transition-colors
-                                        text-slate-400 group-hover:text-slate-500
-                                        dark:text-[#545d68] dark:group-hover:text-[#768390]">
-                            {highlightText(app.description, query)}
-                          </p>
-                        </div>
-
-                        <div className="opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all
-                                        text-violet-500 dark:text-violet-400">
-                          →
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                <ChevronRight className="gsearch-row__arrow h-4 w-4" />
               </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+            );
+          })}
+        </div>
+      ))}
+    </div>
   );
 }

@@ -8,19 +8,17 @@
  * @remarks
  * Punto de entrada del Explorador Documental Corporativo. Permite alternar
  * entre las fuentes documentales soportadas, navegar carpetas y subsitios
- * mediante breadcrumbs, filtrar localmente los documentos cargados,
- * previsualizar/abrir/descargar documentos, y subir archivos a la carpeta
- * actual (solo disponible en Áreas corporativas por ahora).
- *
- * También soporta deep-links del buscador global de la intranet
- * (`?source=my-drive&folder=...&highlight=...`), que abren directamente
- * la carpeta de un resultado de búsqueda y resaltan el archivo encontrado.
+ * mediante una ruta combinada (sitio + carpetas) siempre visible, con un
+ * botón "Atrás" para retroceder un nivel a la vez sin tener que reentrar
+ * al área desde cero. También soporta filtrado local, previsualización,
+ * apertura/descarga de documentos, subida de archivos, y deep-links del
+ * buscador global con resaltado del archivo encontrado.
  */
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  ArrowLeft,
   Building2,
   ChevronRight,
   Download,
@@ -41,6 +39,7 @@ import {
 import { DepartmentSidebar } from "../DepartmentSidebar/DepartmentSidebar";
 import { useDocumentExplorer } from "../../hooks/useDocumentExplorer";
 import { loadDocumentPreviewUrl } from "../../services/documentSource.service";
+import { getDocumentDepartmentById } from "../../services/documentCatalog.service";
 import { mapDocumentItemToPdfMetadata } from "../../utils/mapDocumentItemToPdfMetadata";
 import { formatFileSize, formatShortDate } from "../../utils/formatDocumentMeta";
 import { getDocumentIcon } from "../../utils/getDocumentIcon";
@@ -61,8 +60,14 @@ interface SourceTabConfig {
 const SOURCE_TABS: readonly SourceTabConfig[] = [
   { id: "my-drive", label: "Mi unidad", icon: HardDrive },
   { id: "shared", label: "Compartidos conmigo", icon: Share2 },
-  { id: "corporate-sites", label: "Áreas corporativas", icon: Building2 },
+  { id: "corporate-sites", label: "Carpetas Corporativas", icon: Building2 },
 ];
+
+interface PathSegment {
+  id: string;
+  name: string;
+  onClick: () => void;
+}
 
 export function DocumentWorkspace() {
   const {
@@ -101,10 +106,25 @@ export function DocumentWorkspace() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
+  /**
+   * Resuelve deep-links de entrada al módulo:
+   * - `?source=my-drive&folder=...&highlight=...` (buscador global de docs).
+   * - `?source=corporate-sites&driveId=...&folder=...&highlight=...`
+   *   (buscador global de docs dentro de un área/biblioteca corporativa).
+   * - `?source=corporate-sites&area=...` (buscador global de áreas — ver
+   *   `globalAreaSearch.service.ts`). La búsqueda del área es async porque
+   *   `getDocumentDepartmentById` resuelve contra el catálogo dinámico
+   *   (`documentCatalog.service.ts`, cacheado en memoria) en vez de un
+   *   array estático — por eso el fallback a "Mi unidad" vive DENTRO del
+   *   bloque async: si se dejara fuera, se dispararía antes de que la
+   *   promesa resuelva y causaría un parpadeo entre fuentes.
+   */
   useEffect(() => {
     const source = searchParams.get("source");
     const folder = searchParams.get("folder");
     const highlight = searchParams.get("highlight");
+    const areaId = searchParams.get("area");
+    const driveId = searchParams.get("driveId");
 
     if (source === "my-drive") {
       const location: DocumentLocation = {
@@ -112,6 +132,26 @@ export function DocumentWorkspace() {
         itemId: folder,
       };
       void openLocationDirect("my-drive", location, highlight ?? undefined);
+      return;
+    }
+
+    if (source === "corporate-sites" && driveId) {
+      const location: DocumentLocation = { driveId, itemId: folder };
+      void openLocationDirect("corporate-sites", location, highlight ?? undefined);
+      return;
+    }
+
+    if (source === "corporate-sites" && areaId) {
+      void (async () => {
+        const department = await getDocumentDepartmentById(areaId);
+
+        if (department) {
+          await switchSource("corporate-sites");
+          await selectDepartment(department);
+        } else {
+          await switchSource("my-drive");
+        }
+      })();
       return;
     }
 
@@ -138,10 +178,18 @@ export function DocumentWorkspace() {
   const showLibraryPicker =
     isCorporateSites && selectedDepartment && !selectedLibrary;
 
+  /**
+   * Depende solo de `selectedLibrary` (no de `selectedDepartment` también):
+   * los deep-links del buscador global de documentos entran directo a una
+   * biblioteca vía `openLocationDirect`, sin pasar por el flujo manual
+   * sidebar -> selectDepartment -> selectLibrary, así que
+   * `selectedDepartment` puede quedar en `null` aunque los items ya estén
+   * cargados y listos para mostrarse.
+   */
   const showItemsList =
     activeSource === "my-drive" ||
     activeSource === "shared" ||
-    (isCorporateSites && Boolean(selectedDepartment) && Boolean(selectedLibrary));
+    (isCorporateSites && Boolean(selectedLibrary));
 
   const filteredItems = useMemo(() => {
     const query = localQuery.trim().toLowerCase();
@@ -150,6 +198,52 @@ export function DocumentWorkspace() {
       item.name.toLowerCase().includes(query)
     );
   }, [currentItems, localQuery]);
+
+  /**
+   * Ruta combinada: sitio/subsitio (siteTrail) + biblioteca/carpetas
+   * (breadcrumbs) en una sola secuencia clickeable, para nunca perder de
+   * vista de dónde vienes, sin importar qué tan profundo hayas navegado.
+   */
+  const fullPathSegments: PathSegment[] = useMemo(() => {
+    const siteSegments: PathSegment[] = isCorporateSites
+      ? siteTrail.map((site, index) => ({
+          id: `site-${site.id}-${index}`,
+          name: site.displayName ?? site.name ?? "Sitio",
+          onClick: () => void goToSiteTrail(index),
+        }))
+      : [];
+
+    const crumbSegments: PathSegment[] = breadcrumbs.map((crumb) => ({
+      id: `crumb-${crumb.id}`,
+      name: crumb.name,
+      onClick: () => void goToBreadcrumb(crumb.id),
+    }));
+
+    return [...siteSegments, ...crumbSegments];
+  }, [isCorporateSites, siteTrail, breadcrumbs, goToSiteTrail, goToBreadcrumb]);
+
+  const canGoBackInPicker = siteTrail.length > 1;
+
+  const canGoBackInItems =
+    breadcrumbs.length > 1 || (isCorporateSites && siteTrail.length > 0);
+
+  const handleGoBackInPicker = () => {
+    if (siteTrail.length > 1) {
+      void goToSiteTrail(siteTrail.length - 2);
+    }
+  };
+
+  const handleGoBackInItems = () => {
+    if (breadcrumbs.length > 1) {
+      const target = breadcrumbs[breadcrumbs.length - 2];
+      if (target) void goToBreadcrumb(target.id);
+      return;
+    }
+
+    if (isCorporateSites && siteTrail.length > 0) {
+      void goToSiteTrail(siteTrail.length - 1);
+    }
+  };
 
   const handleOpenPreview = async (item: DocumentItem) => {
     setPreviewItem(item);
@@ -292,7 +386,7 @@ export function DocumentWorkspace() {
 
           {error && <div className="document-workspace__error">{error}</div>}
 
-          {isCorporateSites && !selectedDepartment && (
+          {isCorporateSites && !selectedDepartment && !selectedLibrary && (
             <div className="document-workspace__empty-state">
               <div className="document-workspace__empty-icon">
                 <FolderOpen size={34} strokeWidth={1.8} />
@@ -313,6 +407,17 @@ export function DocumentWorkspace() {
             <>
               {siteTrail.length > 1 && (
                 <div className="document-workspace__trail">
+                  <button
+                    type="button"
+                    onClick={handleGoBackInPicker}
+                    disabled={!canGoBackInPicker}
+                    className="document-workspace__back-btn"
+                    title="Atrás"
+                    aria-label="Atrás"
+                  >
+                    <ArrowLeft size={15} strokeWidth={2.2} />
+                  </button>
+
                   {siteTrail.map((trailSite, index) => (
                     <button
                       key={trailSite.id}
@@ -419,18 +524,40 @@ export function DocumentWorkspace() {
           {showItemsList && (
             <>
               <div className="document-workspace__toolbar">
-                <div className="document-workspace__breadcrumbs">
-                  {breadcrumbs.map((breadcrumb, index) => (
-                    <button
-                      key={breadcrumb.id}
-                      type="button"
-                      onClick={() => goToBreadcrumb(breadcrumb.id)}
-                      className="document-workspace__breadcrumb"
-                    >
-                      {index > 0 ? "/ " : ""}
-                      {breadcrumb.name}
-                    </button>
-                  ))}
+                <div className="document-workspace__path-row">
+                  <button
+                    type="button"
+                    onClick={handleGoBackInItems}
+                    disabled={!canGoBackInItems}
+                    className="document-workspace__back-btn"
+                    title="Atrás"
+                    aria-label="Atrás"
+                  >
+                    <ArrowLeft size={15} strokeWidth={2.2} />
+                  </button>
+
+                  <div className="document-workspace__breadcrumbs">
+                    {fullPathSegments.map((segment, index) => (
+                      <span
+                        key={segment.id}
+                        className="document-workspace__path-segment"
+                      >
+                        {index > 0 && (
+                          <ChevronRight
+                            size={12}
+                            className="document-workspace__path-separator"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={segment.onClick}
+                          className="document-workspace__breadcrumb"
+                        >
+                          {segment.name}
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="document-workspace__local-search">

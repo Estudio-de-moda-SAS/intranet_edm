@@ -14,6 +14,19 @@
  * 6. Si las cookies ya existen redirige de inmediato.
  * 7. Si no, consulta Graph, escribe cookies y redirige.
  * 8. `window.location.href` fuerza request nuevo al servidor.
+ *
+ * **Nota sobre iframes ocultos de MSAL:**
+ * `getAccessToken()` puede renovar tokens en silencio usando un `iframe`
+ * oculto que navega a nuestro propio `redirectUri` (la raíz de la app).
+ * Como esa raíz redirige a `/login` para sesiones sin cookies visibles,
+ * este mismo componente puede montarse también DENTRO de ese iframe. Si
+ * se dejara correr esta lógica ahí, dispararía otro
+ * `getAccessToken()`/`acquireTokenSilent()` anidado dentro del iframe que
+ * MSAL ya está usando para el primero — MSAL bloquea eso a propósito
+ * (`block_iframe_reload`) para no caer en un bucle de iframes
+ * recargándose entre sí. Por eso el `useEffect` corta de entrada si
+ * detecta que se está ejecutando dentro de un iframe (`window.self !==
+ * window.top`), dejando que el flujo silencioso original resuelva solo.
  */
 
 "use client";
@@ -115,6 +128,12 @@ export default function LoginPage() {
   // Esperar a que MSAL termine de procesar el redirect (inProgress === "none")
   // antes de actuar. Esto evita el error interaction_in_progress.
   useEffect(() => {
+    // Cortar de entrada si este montaje ocurre dentro de un iframe oculto
+    // (renovación silenciosa de MSAL) — ver nota en el header del módulo.
+    if (typeof window !== "undefined" && window.self !== window.top) {
+      return;
+    }
+
     if (inProgress !== InteractionStatus.None) return;
     if (!isAuthenticated) return;
     if (handledRef.current) return;

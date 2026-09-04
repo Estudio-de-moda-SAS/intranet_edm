@@ -57,3 +57,16 @@ export function getDocumentIcon(name: string): DocumentIconInfo {
   const extension = getFileExtension(name);
   return ICON_MAP[extension] ?? DEFAULT_ICON;
 }
+/**
+ * Indica si una extensión de archivo corresponde a un tipo de documento
+ * reconocido por la intranet (los mismos tipos mapeados con ícono).
+ *
+ * @remarks
+ * Usado para filtrar ruido del índice de búsqueda de SharePoint (archivos
+ * técnicos/de sistema como `.sql`, `.pdc`, etc. que no son documentos de
+ * trabajo reales).
+ */
+export function isRecognizedDocumentExtension(name: string): boolean {
+  const extension = getFileExtension(name);
+  return extension in ICON_MAP;
+}

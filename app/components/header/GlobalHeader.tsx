@@ -6,7 +6,10 @@
  * Este archivo gestiona la experiencia principal de navegacion, incluyendo:
  * - Branding corporativo.
  * - Navegacion por departamentos.
- * - Busqueda global.
+ * - Busqueda global: un modal tipo "paleta de comandos" (campo editable
+ *   propio, filtros por tipo de archivo, pie con atajos de teclado),
+ *   renderizado vía React Portal para no interferir con las animaciones
+ *   del header. En movil se usa la superposicion de pantalla completa.
  * - Menu de usuario.
  * - Acceso al chatbot.
  * - Adaptacion entre vista movil y escritorio.
@@ -16,9 +19,14 @@
 
 import { useGlobalSearch }   from '@/app/hooks/useGlobalSearch';
 import GlobalSearchResults   from '../ui/search/GlobalSearchResults';
+import {
+  FILE_TYPE_FILTERS,
+  applyFileTypeFilter,
+} from '../ui/search/searchFileTypeFilters';
 import type { AccessLevel }  from '@/lib/roles';
 
 import { useEffect, useRef, useState, type ElementType } from 'react';
+import { createPortal } from 'react-dom';
 import Image       from 'next/image';
 import Link        from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -38,10 +46,6 @@ const EMPTY_USER = { name: '', role: '', email: '' };
 
 /**
  * Extiende el modelo de departamento para soportar íconos opcionales.
- *
- * @remarks
- * Se usa para permitir que elementos especiales de navegación, como Home,
- * puedan mostrarse con ícono en lugar de texto sin romper los demás items.
  */
 type DepartmentWithIcon = Department & {
   icon?: ElementType;
@@ -49,14 +53,6 @@ type DepartmentWithIcon = Department & {
 
 /**
  * Determina si un item de navegación está activo según la ruta actual.
- *
- * @param pathname Ruta actual.
- * @param href Ruta del item de navegación.
- * @returns `true` si la ruta corresponde al item activo.
- *
- * @remarks
- * El Home usa `href: "/"`, por lo que debe compararse con igualdad exacta.
- * Si se usara `startsWith("/")`, Home quedaría activo en todas las rutas.
  */
 function isDepartmentActive(pathname: string, href: string) {
   return href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -64,13 +60,6 @@ function isDepartmentActive(pathname: string, href: string) {
 
 /**
  * Renderiza el contenido visual de un item de navegación.
- *
- * @param dept Departamento o item de navegación.
- * @returns Ícono cuando existe; de lo contrario, texto del label.
- *
- * @remarks
- * Permite que el item Home se muestre como ícono y que los demás módulos
- * continúen usando su texto normal.
  */
 function renderDepartmentLabel(dept: DepartmentWithIcon) {
   const Icon = dept.icon;
@@ -86,36 +75,151 @@ function renderDepartmentLabel(dept: DepartmentWithIcon) {
   return dept.label;
 }
 
+/**
+ * Panel de búsqueda global — paleta de comandos con campo editable,
+ * filtros por tipo de archivo y atajos de teclado. Se renderiza vía
+ * portal directo a `document.body`, completamente aislado del árbol
+ * del header.
+ */
+function GlobalSearchPortal({
+  open,
+  query,
+  setQuery,
+  results,
+  fileTypeFilter,
+  setFileTypeFilter,
+  onClose,
+}: {
+  open: boolean;
+  query: string;
+  setQuery: (value: string) => void;
+  results: ReturnType<typeof useGlobalSearch>['results'];
+  fileTypeFilter: string;
+  setFileTypeFilter: (value: string) => void;
+  onClose: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 60);
+    }
+  }, [open]);
+
+  if (!mounted || !open) return null;
+
+  const filteredResults = applyFileTypeFilter(results, fileTypeFilter);
+  const hasQuery = query.trim().length > 0;
+
+  const content = (
+    <div className="hidden md:block">
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="gsearch-overlay"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: -16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            onClick={(e) => e.stopPropagation()}
+            className="gsearch-panel"
+          >
+            <div className="gsearch-panel__header">
+              <Search className="h-4.5 w-4.5 shrink-0 text-slate-400 dark:text-[#545d68]" />
+              <input
+                ref={inputRef}
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar módulos, documentos, carpetas..."
+                className="gsearch-panel__input"
+              />
+              <button
+                onClick={onClose}
+                aria-label="Cerrar busqueda"
+                className="gsearch-panel__close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {hasQuery && (
+              <div className="gsearch-panel__filters">
+                {FILE_TYPE_FILTERS.map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setFileTypeFilter(filter.id)}
+                    className={`gsearch-filter-pill ${
+                      fileTypeFilter === filter.id ? 'gsearch-filter-pill--active' : ''
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="gsearch-panel__body">
+              {hasQuery ? (
+                <GlobalSearchResults
+                  results={filteredResults}
+                  query={query}
+                  onSelect={onClose}
+                />
+              ) : (
+                <div className="gsearch-placeholder">
+                  <Search className="h-8 w-8" />
+                  <p>Escribe para buscar módulos, documentos o carpetas...</p>
+                </div>
+              )}
+            </div>
+
+            <div className="gsearch-panel__footer">
+              <span><kbd>↑</kbd><kbd>↓</kbd>Navegar</span>
+              <span><kbd>Enter</kbd>Abrir</span>
+              <span><kbd>Esc</kbd>Cerrar</span>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+
+  return createPortal(content, document.body);
+}
+
 // -- Componente ----------------------------------------------------------------
 
 /**
  * Componente principal del encabezado global.
- *
- * @returns Encabezado responsive con navegacion, busqueda y acciones de usuario.
  */
 export default function GlobalHeader() {
   const hasLogo  = Boolean((BRAND as any).logoUrl);
   const pathname = usePathname();
 
-  const [isScrolled,     setIsScrolled]     = useState(false);
-  const [searchOpen,     setSearchOpen]     = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled,      setIsScrolled]      = useState(false);
+  const [searchOpen,      setSearchOpen]       = useState(false);
+  const [searchModalOpen, setSearchModalOpen]  = useState(false);
+  const [fileTypeFilter,  setFileTypeFilter]   = useState('all');
+  const [mobileMenuOpen,  setMobileMenuOpen]   = useState(false);
 
-  const searchInputRef     = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-  const ticking            = useRef(false);
-  const scrolledRef        = useRef(false);
-  const stateRef           = useRef(false);
-  const lockRef            = useRef(false);
+  const headerSearchInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef       = useRef<HTMLInputElement>(null);
+  const ticking               = useRef(false);
+  const scrolledRef           = useRef(false);
+  const stateRef              = useRef(false);
+  const lockRef                = useRef(false);
 
   const { user: sessionUser, isLoading } = useAppSession();
-
-  console.log('SESSION:', {
-    isAuthed: !!sessionUser,
-    isLoading,
-    level: sessionUser?.accessLevel,
-    email: sessionUser?.email,
-  });
 
   /**
    * Usuario adaptado al formato esperado por {@link UserMenu}.
@@ -133,6 +237,17 @@ export default function GlobalHeader() {
   const accessLevel: AccessLevel = sessionUser?.accessLevel ?? 'employee';
 
   const { query, setQuery, results } = useGlobalSearch(accessLevel);
+
+  const closeSearch = () => {
+    setSearchModalOpen(false);
+    setQuery('');
+    setFileTypeFilter('all');
+  };
+
+  const openSearchModal = () => {
+    setSearchModalOpen(true);
+    headerSearchInputRef.current?.blur();
+  };
 
   useEffect(() => { stateRef.current = isScrolled; }, [isScrolled]);
 
@@ -178,27 +293,24 @@ export default function GlobalHeader() {
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(event.target as Node)
-      ) {
-        setQuery('');
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [setQuery]);
-
-  useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setQuery('');
+      if (e.key === 'Escape') closeSearch();
     };
 
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [setQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Bloquea el scroll de la página mientras el buscador (escritorio o
+  // móvil) está abierto.
+  useEffect(() => {
+    const isSearchActive = searchModalOpen || searchOpen;
+    document.body.style.overflow = isSearchActive ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [searchModalOpen, searchOpen]);
 
   const showUserMenu = !isLoading && Boolean(user.name);
 
@@ -292,8 +404,6 @@ export default function GlobalHeader() {
         </div>
 
         {/* Vista escritorio: barra superior */}
-        {/* El div wrapper controla el padding horizontal — fuera del motion.div
-            para que Framer Motion no lo sobreescriba con su layout engine */}
         <div className={`hidden md:block w-full border-b relative z-[60] transition-all duration-300 ${
           isScrolled
             ? 'bg-white/95 dark:bg-[#161b22]/95 backdrop-blur-xl border-slate-200 dark:border-[#30363d] shadow-sm dark:shadow-none'
@@ -355,18 +465,19 @@ export default function GlobalHeader() {
                 >
                   <div className="flex items-center gap-3">
                     <motion.div
-                      ref={searchContainerRef}
                       layout
                       animate={{ width: isScrolled ? 200 : 240, opacity: 1 }}
                       transition={TRANSITION}
-                      className="relative z-[999]"
+                      className="relative"
                     >
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none text-slate-400 dark:text-[#545d68]" />
                       <input
+                        ref={headerSearchInputRef}
                         id="global-search-input"
                         type="search"
                         placeholder="Buscar en la intranet..."
                         value={query}
+                        onFocus={openSearchModal}
                         onChange={(e) => setQuery(e.target.value)}
                         className="w-full rounded-lg border py-2 text-[13px] pl-9 pr-4 transition-all duration-200
                                    border-slate-200 bg-slate-50 text-slate-700 placeholder:text-slate-400
@@ -375,13 +486,6 @@ export default function GlobalHeader() {
                                    focus:bg-white dark:focus:bg-[#1c2128]
                                    focus:ring-2 focus:ring-violet-500/15 dark:focus:ring-violet-500/20"
                       />
-                      {query && (
-                        <GlobalSearchResults
-                          results={results}
-                          query={query}
-                          onSelect={() => setQuery('')}
-                        />
-                      )}
                     </motion.div>
                     {showUserMenu && <UserMenu user={user} />}
                   </div>
@@ -433,13 +537,25 @@ export default function GlobalHeader() {
 
       </header>
 
+      {/* Panel de resultados de escritorio — vive fuera del árbol del
+          header vía portal, así nunca interfiere con sus animaciones. */}
+      <GlobalSearchPortal
+        open={searchModalOpen}
+        query={query}
+        setQuery={setQuery}
+        results={results}
+        fileTypeFilter={fileTypeFilter}
+        setFileTypeFilter={setFileTypeFilter}
+        onClose={closeSearch}
+      />
+
       {/* Overlay de busqueda movil */}
       <AnimatePresence>
         {searchOpen && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[60] flex flex-col bg-white/97 dark:bg-[#161b22]/97 backdrop-blur-xl"
+            className="fixed inset-0 z-[300] flex flex-col bg-white/97 dark:bg-[#161b22]/97 backdrop-blur-xl"
           >
             <div className="flex items-center gap-3 px-5 pt-5">
               <Search className="h-5 w-5 shrink-0 text-slate-400 dark:text-[#545d68]" />
@@ -453,7 +569,7 @@ export default function GlobalHeader() {
                            placeholder:text-slate-300 dark:placeholder:text-[#545d68]"
               />
               <button
-                onClick={() => setSearchOpen(false)}
+                onClick={() => { setSearchOpen(false); setQuery(''); }}
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition
                            text-slate-400 dark:text-[#768390]
                            hover:text-slate-700 dark:hover:text-[#e6edf3]"
@@ -463,7 +579,7 @@ export default function GlobalHeader() {
               </button>
             </div>
             <div className="mx-5 mt-3 h-px bg-slate-100 dark:bg-[#30363d]" />
-            <div className="px-5 mt-4">
+            <div className="mt-2 flex-1 overflow-y-auto">
               {query ? (
                 <GlobalSearchResults
                   query={query}
