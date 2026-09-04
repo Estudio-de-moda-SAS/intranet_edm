@@ -29,6 +29,7 @@ import { motion, type Variants } from "framer-motion";
 import { useEffect, useState } from "react";
 import UserGreetingWrapper from "@/app/components/auth/UserGreetingWrapper";
 import { Sparkles } from "lucide-react";
+import { TrmButton } from "@/app/components/home/TrmButton";
 
 interface Props {
   /** Usuario de respaldo usado en el saludo principal. */
@@ -116,7 +117,13 @@ export function AnimatedHeroBanner({ user }: Props) {
             <UserGreetingWrapper fallbackUser={user} />
           </motion.div>
 
-          <motion.div variants={fadeUp} initial="hidden" animate="show">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            className="flex items-center gap-4"
+          >
+            <TrmButton />
             <LiveClock />
           </motion.div>
         </div>
