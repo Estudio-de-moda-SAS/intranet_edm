@@ -7,27 +7,20 @@
  * Este módulo constituye la única puerta de acceso al catálogo de áreas
  * documentales de la Intranet.
  *
- * El catálogo se descubre dinámicamente vía Microsoft Graph: se listan los
- * subsitios directos de {@link DOCUMENTS_ROOT_SITE_ID} (`getSharePointSubsites`)
- * y se enriquecen con la cosmética curada en `documentSites.ts`. El
- * resultado se cachea en memoria para no repetir la llamada a Graph en cada
- * render; {@link invalidateDocumentDepartmentsCache} fuerza un refetch.
+ * El catálogo se construye a partir de la lista explícita de sitios de
+ * gerencia ({@link DOCUMENT_SITES}): cada URL se resuelve vía Microsoft
+ * Graph en paralelo y se enriquece con su cosmética. Los sitios que fallen
+ * (sin permiso, URL inexistente) se descartan en silencio, de modo que cada
+ * usuario solo ve las gerencias a las que tiene acceso. El resultado se
+ * cachea en memoria; {@link invalidateDocumentDepartmentsCache} fuerza un
+ * refetch.
  */
 
 import {
-  DEFAULT_DEPARTMENT_ORDER_BASE,
-  DEPARTMENT_OVERRIDES,
-  DOCUMENTS_ROOT_SITE_ID,
-  EXCLUDED_SUBSITE_KEYS,
-  KNOWN_SUBSITE_URLS,
+  DOCUMENT_SITES,
   normalizeDepartmentKey,
 } from "../config/documentSites";
-import {
-  GraphRequestError,
-  getSharePointSubsites,
-  resolveSharePointSiteByUrl,
-  type SharePointSiteDiscoveryResult,
-} from "./sharepointDiscovery.service";
+import { resolveSharePointSiteByUrl } from "./sharepointDiscovery.service";
 import type { DocumentDepartment } from "../types/documentDepartment.types";
 
 let cachedDepartments: readonly DocumentDepartment[] | null = null;
@@ -39,68 +32,39 @@ export function invalidateDocumentDepartmentsCache(): void {
   pendingFetch = null;
 }
 
-/**
- * Respaldo para cuando `getSharePointSubsites(DOCUMENTS_ROOT_SITE_ID)` falla
- * con 403 — el usuario no tiene permiso sobre el sitio raíz, pero puede
- * tenerlo sobre uno o varios subsitios conocidos. Resuelve cada URL de
- * {@link KNOWN_SUBSITE_URLS} de forma individual y descarta en silencio las
- * que también fallen (el usuario tampoco tiene acceso ahí).
- */
-async function resolveKnownSubsitesIndividually(): Promise<
-  SharePointSiteDiscoveryResult[]
-> {
-  const results = await Promise.allSettled(
-    KNOWN_SUBSITE_URLS.map((url) => resolveSharePointSiteByUrl(url))
-  );
-
-  return results.flatMap((result) =>
-    result.status === "fulfilled" ? [result.value] : []
-  );
-}
-
 async function fetchDepartmentsFromGraph(): Promise<
   readonly DocumentDepartment[]
 > {
-  let subsites: SharePointSiteDiscoveryResult[];
-
-  try {
-    subsites = await getSharePointSubsites(DOCUMENTS_ROOT_SITE_ID);
-  } catch (error) {
-    if (error instanceof GraphRequestError && error.status === 403) {
-      subsites = await resolveKnownSubsitesIndividually();
-    } else {
-      throw error;
-    }
-  }
-
-  const excluded = new Set(EXCLUDED_SUBSITE_KEYS);
-
-  const departments = subsites
-    .map((subsite) => {
-      const name = subsite.displayName ?? subsite.name ?? "Área sin nombre";
-      const key = normalizeDepartmentKey(name);
-      return { subsite, name, key };
-    })
-    .filter(({ key }) => !excluded.has(key))
-    .map(({ subsite, name, key }, index): DocumentDepartment => {
-      const override = DEPARTMENT_OVERRIDES[key];
-
-      return {
-        id: key,
-        name,
-        siteId: subsite.id,
-        siteUrl: subsite.webUrl ?? "",
-        ...(override?.description ? { description: override.description } : {}),
-        ...(override?.icon ? { icon: override.icon } : {}),
-        ...(override?.accentColor ? { accentColor: override.accentColor } : {}),
-        order: override?.order ?? DEFAULT_DEPARTMENT_ORDER_BASE + index,
-        enabled: true,
-      };
-    });
-
-  return departments.sort(
-    (left, right) => left.order - right.order || left.name.localeCompare(right.name, "es")
+  const results = await Promise.allSettled(
+    DOCUMENT_SITES.map(async (config) => ({
+      config,
+      site: await resolveSharePointSiteByUrl(config.url),
+    }))
   );
+
+  return results.flatMap((result, index): DocumentDepartment[] => {
+    // 403/404: el usuario no tiene acceso a esa gerencia (o la URL ya no
+    // existe). Se omite sin romper el resto del catálogo.
+    if (result.status === "rejected") return [];
+
+    const { config, site } = result.value;
+    const name =
+      config.name ?? site.displayName ?? site.name ?? "Área sin nombre";
+
+    return [
+      {
+        id: config.id ?? normalizeDepartmentKey(name),
+        name,
+        siteId: site.id,
+        siteUrl: site.webUrl ?? config.url,
+        ...(config.description ? { description: config.description } : {}),
+        ...(config.icon ? { icon: config.icon } : {}),
+        ...(config.accentColor ? { accentColor: config.accentColor } : {}),
+        order: index + 1,
+        enabled: true,
+      },
+    ];
+  });
 }
 
 /**
