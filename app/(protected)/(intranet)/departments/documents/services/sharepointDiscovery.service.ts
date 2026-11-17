@@ -26,6 +26,7 @@ import {
   uploadFileToDriveFolder
 } from "./driveNavigation.service";
 import type { DocumentItem } from "../types/document.types";
+import { GraphApiError } from "./graphClient";
 
 const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
 
@@ -80,22 +81,6 @@ interface GraphCollectionResponse<T> {
   "@odata.nextLink"?: string;
 }
 
-/**
- * Error de una llamada a Graph que sí llegó a responder (a diferencia de un
- * error de red). Conserva el status HTTP para que el llamador pueda
- * distinguir, por ejemplo, un 403 (sin permiso sobre ese recurso puntual)
- * de otros fallos que sí deban propagarse como error real.
- */
-export class GraphRequestError extends Error {
-  readonly status: number;
-
-  constructor(status: number, statusText: string) {
-    super(`[SharePoint Graph] ${status} ${statusText}`);
-    this.name = "GraphRequestError";
-    this.status = status;
-  }
-}
-
 async function getSharePointToken() {
   return getAccessToken({
     silentExtraScopesToConsent: Array.from(SHAREPOINT_DISCOVERY_SCOPES),
@@ -116,7 +101,12 @@ async function graphFetch<T>(pathOrUrl: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new GraphRequestError(response.status, response.statusText);
+    // Misma clase de error que el resto del módulo, para que los llamadores
+    // puedan distinguir un 403 (sin permiso) con un único `instanceof`.
+    throw new GraphApiError(
+      response.status,
+      `[SharePoint Graph] ${response.status} ${response.statusText}`
+    );
   }
 
   return response.json() as Promise<T>;
@@ -213,8 +203,22 @@ export async function discoverSharePointSites(
 export async function resolveSharePointSiteByUrl(
   siteUrl: string
 ): Promise<SharePointSiteDiscoveryResult> {
+  const { hostname, serverRelativePath } = parseSharePointSiteUrl(siteUrl);
+
+  return graphFetch<SharePointSiteDiscoveryResult>(
+    `/sites/${hostname}:${serverRelativePath}`
+  );
+}
+
+/**
+ * Normaliza la URL de un sitio a `hostname` + ruta relativa al servidor,
+ * descartando páginas (`default.aspx`) y el segmento `Forms`.
+ */
+export function parseSharePointSiteUrl(siteUrl: string): {
+  hostname: string;
+  serverRelativePath: string;
+} {
   const url = new URL(siteUrl.trim());
-  const hostname = url.hostname;
 
   const segments = url.pathname
     .replace(/\/+$/, "")
@@ -234,11 +238,30 @@ export async function resolveSharePointSiteByUrl(
     segments.pop();
   }
 
-  const serverRelativePath = "/" + segments.join("/");
+  return {
+    hostname: url.hostname,
+    serverRelativePath: "/" + segments.join("/"),
+  };
+}
 
-  return graphFetch<SharePointSiteDiscoveryResult>(
-    `/sites/${hostname}:${serverRelativePath}`
+/**
+ * Todos los sitios y subsitios a los que el usuario actual tiene acceso.
+ *
+ * @remarks
+ * Usa `GET /sites?search=*`, que solo devuelve sitios sobre los que el
+ * usuario tiene permiso. Depende del índice de búsqueda de SharePoint, así
+ * que un subsitio recién creado o un permiso recién otorgado puede tardar
+ * en aparecer.
+ */
+export async function searchAccessibleSharePointSites(): Promise<
+  SharePointSiteDiscoveryResult[]
+> {
+  const sites = await graphFetchCollection<SharePointSiteDiscoveryResult>(
+    "/sites?search=*",
+    10
   );
+
+  return uniqueById(sites);
 }
 
 export async function getSharePointSiteDrives(

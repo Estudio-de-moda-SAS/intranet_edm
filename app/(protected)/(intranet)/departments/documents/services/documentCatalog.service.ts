@@ -11,7 +11,10 @@
  * gerencia ({@link DOCUMENT_SITES}): cada URL se resuelve vía Microsoft
  * Graph en paralelo y se enriquece con su cosmética. Los sitios que fallen
  * (sin permiso, URL inexistente) se descartan en silencio, de modo que cada
- * usuario solo ve las gerencias a las que tiene acceso. El resultado se
+ * usuario solo ve las gerencias a las que tiene acceso. Si el usuario no
+ * tiene acceso a una gerencia pero sí a alguno de sus subsitios, éstos se
+ * encuentran con la búsqueda de Graph y se muestran en su lugar, con la
+ * cosmética de la gerencia. El resultado se
  * cachea en memoria; {@link invalidateDocumentDepartmentsCache} fuerza un
  * refetch.
  */
@@ -19,8 +22,15 @@
 import {
   DOCUMENT_SITES,
   normalizeDepartmentKey,
+  type DocumentSiteConfig,
 } from "../config/documentSites";
-import { resolveSharePointSiteByUrl } from "./sharepointDiscovery.service";
+import { GraphApiError } from "./graphClient";
+import {
+  parseSharePointSiteUrl,
+  resolveSharePointSiteByUrl,
+  searchAccessibleSharePointSites,
+  type SharePointSiteDiscoveryResult,
+} from "./sharepointDiscovery.service";
 import type { DocumentDepartment } from "../types/documentDepartment.types";
 
 let cachedDepartments: readonly DocumentDepartment[] | null = null;
@@ -32,35 +42,135 @@ export function invalidateDocumentDepartmentsCache(): void {
   pendingFetch = null;
 }
 
+interface CatalogEntry {
+  config: DocumentSiteConfig;
+  site: SharePointSiteDiscoveryResult;
+  /** `true` si se encontró por búsqueda bajo una gerencia sin acceso. */
+  isFallback: boolean;
+}
+
+/** 403/404: el usuario no puede ver ese sitio (o la URL no existe). */
+function isNoAccessError(reason: unknown): boolean {
+  return (
+    reason instanceof GraphApiError &&
+    (reason.status === 403 || reason.status === 404)
+  );
+}
+
+/** Clave comparable de una URL de sitio: `host/ruta`, en minúsculas y decodificada. */
+function siteUrlKey(siteUrl: string): string | null {
+  try {
+    const { hostname, serverRelativePath } = parseSharePointSiteUrl(siteUrl);
+    return decodeURIComponent(`${hostname}${serverRelativePath}`).toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Subsitios accesibles que cuelgan de `parentUrl`, quedándose solo con los
+ * de nivel más alto (los más profundos se alcanzan navegando desde ellos).
+ */
+function findTopmostAccessibleSubsites(
+  parentUrl: string,
+  accessibleSites: readonly SharePointSiteDiscoveryResult[]
+): SharePointSiteDiscoveryResult[] {
+  const parentKey = siteUrlKey(parentUrl);
+  if (!parentKey) return [];
+
+  const candidates = accessibleSites.flatMap((site) => {
+    const key = site.webUrl ? siteUrlKey(site.webUrl) : null;
+    return key?.startsWith(`${parentKey}/`) ? [{ site, key }] : [];
+  });
+
+  return candidates
+    .filter(
+      (candidate) =>
+        !candidates.some((other) =>
+          candidate.key.startsWith(`${other.key}/`)
+        )
+    )
+    .map((candidate) => candidate.site);
+}
+
 async function fetchDepartmentsFromGraph(): Promise<
   readonly DocumentDepartment[]
 > {
   const results = await Promise.allSettled(
-    DOCUMENT_SITES.map(async (config) => ({
-      config,
-      site: await resolveSharePointSiteByUrl(config.url),
-    }))
+    DOCUMENT_SITES.map((config) => resolveSharePointSiteByUrl(config.url))
   );
 
-  return results.flatMap((result, index): DocumentDepartment[] => {
-    // 403/404: el usuario no tiene acceso a esa gerencia (o la URL ya no
-    // existe). Se omite sin romper el resto del catálogo.
-    if (result.status === "rejected") return [];
+  // Respaldo: si el usuario no tiene acceso a alguna gerencia, puede que sí
+  // lo tenga a uno de sus subsitios. Solo se consulta la búsqueda cuando
+  // hace falta, y una sola vez para todas las gerencias.
+  const needsFallback = results.some(
+    (result) => result.status === "rejected" && isNoAccessError(result.reason)
+  );
+  const accessibleSites = needsFallback
+    ? await searchAccessibleSharePointSites().catch((error: unknown) => {
+        console.error("[Document Catalog] searchAccessibleSites", error);
+        return [];
+      })
+    : [];
 
-    const { config, site } = result.value;
+  const explicitSiteIds = new Set(
+    results.flatMap((result) =>
+      result.status === "fulfilled" ? [result.value.id] : []
+    )
+  );
+
+  const entries = results.flatMap((result, index): CatalogEntry[] => {
+    const config = DOCUMENT_SITES[index];
+    if (!config) return [];
+
+    if (result.status === "fulfilled") {
+      return [{ config, site: result.value, isFallback: false }];
+    }
+
+    // Cualquier otro error (red, 5xx) se omite sin romper el catálogo.
+    if (!isNoAccessError(result.reason)) return [];
+
+    return findTopmostAccessibleSubsites(config.url, accessibleSites)
+      // Un subsitio listado explícitamente en DOCUMENT_SITES ya aparece por sí mismo.
+      .filter((site) => !explicitSiteIds.has(site.id))
+      .map((site) => ({ config, site, isFallback: true }));
+  });
+
+  const seenSiteIds = new Set<string>();
+  const usedIds = new Set<string>();
+
+  return entries.flatMap(({ config, site, isFallback }): DocumentDepartment[] => {
+    if (seenSiteIds.has(site.id)) return [];
+    seenSiteIds.add(site.id);
+
+    // En un subsitio de respaldo, `name`, `id` y `description` de la
+    // config describen a la gerencia principal; solo se hereda la cosmética.
     const name =
-      config.name ?? site.displayName ?? site.name ?? "Área sin nombre";
+      (isFallback ? undefined : config.name) ??
+      site.displayName ??
+      site.name ??
+      "Área sin nombre";
+
+    const baseId =
+      (isFallback ? undefined : config.id) ?? normalizeDepartmentKey(name);
+    let id = baseId;
+    for (let suffix = 2; usedIds.has(id); suffix += 1) {
+      id = `${baseId}-${suffix}`;
+    }
+    usedIds.add(id);
+
+    const description = isFallback ? undefined : config.description;
 
     return [
       {
-        id: config.id ?? normalizeDepartmentKey(name),
+        id,
         name,
         siteId: site.id,
         siteUrl: site.webUrl ?? config.url,
-        ...(config.description ? { description: config.description } : {}),
+        ...(description ? { description } : {}),
         ...(config.icon ? { icon: config.icon } : {}),
         ...(config.accentColor ? { accentColor: config.accentColor } : {}),
-        order: index + 1,
+        order: usedIds.size,
         enabled: true,
       },
     ];

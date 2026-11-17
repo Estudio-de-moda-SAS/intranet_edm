@@ -53,76 +53,41 @@ export const DOCUMENT_SITES: readonly DocumentSiteConfig[] = [
     description: "Repositorio documental de los documentos generales de la compañia.",
   }, 
   {
-    url: "https://estudiodemoda.sharepoint.com/sites/GerenciadeTI/PS",
+    url: "https://estudiodemoda.sharepoint.com/sites/GerenciadeTI/",
     icon: "Laptop",
     accentColor: "indigo",
     description: "Repositorio documental de la Gerencia de TI.",
   },
-  //  juridica: {
-  //   icon: "Scale",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental del área Jurídica.",
-  //   order: 1,
-  // },
-  // ecommerce: {
-  //   icon: "ShoppingCart",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental del área de Ecommerce.",
-  //   order: 2,
-  // },
-  // producto: {
-  //   icon: "Package",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental del área de Producto.",
-  //   order: 3,
-  // financiero: {
-  //   icon: "Landmark",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental del área Financiera.",
-  //   order: 5,
-  // },
-  // "cadena-de-abastecimiento": {
-  //   icon: "Truck",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental de Cadena de Abastecimiento.",
-  //   order: 6,
-  // },
-  // "capital-humano": {
-  //   icon: "Users",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental de Capital Humano.",
-  //   order: 7,
-  // },
-  // "control-interno": {
-  //   icon: "ShieldCheck",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental de Control Interno.",
-  //   order: 8,
-  // },
-  // "gerencia-de-marcas": {
-  //   icon: "Tag",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental de Gerencia de Marcas.",
-  //   order: 9,
-  // },
-  // "inteligencia-comercial": {
-  //   icon: "TrendingUp",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental de Inteligencia Comercial.",
-  //   order: 10,
-  // },
-  // "servicios-administrativos": {
-  //   icon: "Building2",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental de Servicios Administrativos.",
-  //   order: 11,
-  // },
-  // "socios-comerciales": {
-  //   icon: "Handshake",
-  //   accentColor: "indigo",
-  //   description: "Repositorio documental de Socios Comerciales.",
-  //   order: 12,
-  // },
+  {
+    icon: "ShoppingCart",
+    accentColor: "indigo",
+    description: "Repositorio documental del área de Ecommerce.",
+    url: "https://estudiodemoda.sharepoint.com/sites/GerenciadeMultimarca/E-Commerce",
+  },
+  {
+    icon: "Landmark",
+    accentColor: "indigo",
+    description: "Repositorio documental del área Financiera.",
+    url: "https://estudiodemoda.sharepoint.com/sites/GerenciadeFinanciera/Contabilidad"
+  },
+  {
+    icon: "Tag",
+    accentColor: "indigo",
+    description: "Repositorio documental de Gerencia multimarcas.",
+    url: "https://estudiodemoda.sharepoint.com/sites/GerenciadeMultimarca",
+  },
+  {
+    icon: "Tag",
+    accentColor: "indigo",
+    description: "Repositorio documental de Producto.",
+    url: "https://estudiodemoda.sharepoint.com/sites/GerenciadeMonomarca/Producto",
+  },
+  {
+    icon: "Tag",
+    accentColor: "indigo",
+    description: "Repositorio documental de Producto.",
+    url: "https://estudiodemoda.sharepoint.com/sites/GerenciadeMonomarca",
+  },
 
 ];
 
